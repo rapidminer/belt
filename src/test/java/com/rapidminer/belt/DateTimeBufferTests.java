@@ -39,23 +39,23 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Enclosed.class)
 public class DateTimeBufferTests {
 
-	private static final String HIGH_PRECISION = "HighPrecision";
-	private static final String LOW_PRECISION = "LowPrecision";
+	private static final String HIGH_PRECISION = "NanosecondPrecision";
+	private static final String LOW_PRECISION = "SecondPrecision";
 
 
-	private static AbstractDateTimeBuffer buffer(int length, String format) {
+	private static DateTimeBuffer buffer(int length, String format) {
 		if (HIGH_PRECISION.equals(format)) {
-			return new HighPrecisionDateTimeBuffer(length);
+			return Buffers.dateTimeBuffer(length, true);
 		} else {
-			return new LowPrecisionDateTimeBuffer(length);
+			return Buffers.dateTimeBuffer(length, false);
 		}
 	}
 
-	private static AbstractDateTimeBuffer buffer(Column column, String format) {
+	private static DateTimeBuffer buffer(int length, String format, boolean initialize) {
 		if (HIGH_PRECISION.equals(format)) {
-			return new HighPrecisionDateTimeBuffer(column);
+			return Buffers.dateTimeBuffer(length, true, initialize);
 		} else {
-			return new LowPrecisionDateTimeBuffer(column);
+			return Buffers.dateTimeBuffer(length, false, initialize);
 		}
 	}
 
@@ -79,13 +79,13 @@ public class DateTimeBufferTests {
 			return Arrays.asList(HIGH_PRECISION, LOW_PRECISION);
 		}
 
-		private AbstractDateTimeBuffer buffer(int length) {
+		private DateTimeBuffer buffer(int length) {
 			return DateTimeBufferTests.buffer(length, format);
 		}
 
 		@Test
 		public void testBufferLength() {
-			AbstractDateTimeBuffer buffer = buffer(197);
+			DateTimeBuffer buffer = buffer(197);
 			assertEquals(197, buffer.size());
 		}
 
@@ -97,7 +97,7 @@ public class DateTimeBufferTests {
 
 		@Test
 		public void testZeroBufferLength() {
-			AbstractDateTimeBuffer buffer = buffer(0);
+			DateTimeBuffer buffer = buffer(0);
 			assertEquals(0, buffer.size());
 		}
 
@@ -105,7 +105,7 @@ public class DateTimeBufferTests {
 		public void testSet() {
 			int n = 1234;
 			int[] testData = random(n);
-			AbstractDateTimeBuffer buffer = buffer(n);
+			DateTimeBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, Instant.ofEpochSecond(1526634325L + testData[i]));
 			}
@@ -125,7 +125,7 @@ public class DateTimeBufferTests {
 		@Test(expected = IllegalStateException.class)
 		public void testSetAfterFreeze() {
 			int n = 12;
-			AbstractDateTimeBuffer buffer = buffer(n);
+			DateTimeBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, Instant.EPOCH);
 			}
@@ -133,11 +133,27 @@ public class DateTimeBufferTests {
 			buffer.set(5, Instant.MAX);
 		}
 
+		@Test
+		public void testInitialization() {
+			int n = 42;
+			DateTimeBuffer initialized = buffer(n);
+			DateTimeBuffer notInitialized = DateTimeBufferTests.buffer(n, format, false);
+			for(int i = 0; i< notInitialized.size(); i++){
+				notInitialized.set(i, null);
+			}
+
+			Instant[] expected = new Instant[n];
+			Arrays.setAll(expected, initialized::get);
+
+			Instant[] result = new Instant[n];
+			Arrays.setAll(result, notInitialized::get);
+
+			assertArrayEquals(expected, result);
+		}
 
 	}
 
-
-	public static class HighPrecision {
+	public static class NanosecondPrecision {
 
 		@Test
 		public void testSetPrimitive() {
@@ -149,7 +165,7 @@ public class DateTimeBufferTests {
 							.ofEpochSecond(1526634325L + i, 424749700 + i))
 					.toArray(Instant[]::new);
 
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(n);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, true);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, expected[i].getEpochSecond(), expected[i].getNano());
 			}
@@ -160,33 +176,56 @@ public class DateTimeBufferTests {
 			assertArrayEquals(expected, result);
 		}
 
+		@Test
+		public void testSetPrimitiveWithoutNanos() {
+			int n = 14;
+			int[] testData = random(n);
+
+			Instant[] instantData = Arrays.stream(testData)
+					.mapToObj(i -> Instant
+							.ofEpochSecond(1526634325L + i, 424749700 + i))
+					.toArray(Instant[]::new);
+
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, true);
+			for (int i = 0; i < n; i++) {
+				buffer.set(i, instantData[i].getEpochSecond());
+			}
+
+			Instant[] result = new Instant[n];
+			Arrays.setAll(result, buffer::get);
+
+			Instant[] expected = new Instant[n];
+			Arrays.setAll(expected, i -> Instant.ofEpochSecond(instantData[i].getEpochSecond()));
+			assertArrayEquals(expected, result);
+		}
+
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveSecondsTooHigh() {
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(4);
-			buffer.set(1, HighPrecisionDateTimeBuffer.MIN_SECOND - 1, 0);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, true);
+			buffer.set(1, DateTimeBuffer.MIN_SECOND - 1, 0);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveSecondsTooLow() {
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(4);
-			buffer.set(1, HighPrecisionDateTimeBuffer.MAX_SECOND + 1, 0);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, true);
+			buffer.set(1, DateTimeBuffer.MAX_SECOND + 1, 0);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveNanosTooHigh() {
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(4);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, true);
 			buffer.set(1, 0, 1_000_000_000);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveNanosTooLow() {
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(4);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, true);
 			buffer.set(1, 0, -1);
 		}
 
 		@Test(expected = IllegalStateException.class)
 		public void testSetPrimitiveFrozen() {
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(4);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, true);
 			buffer.toColumn();
 			buffer.set(1, 0, 1);
 		}
@@ -201,7 +240,7 @@ public class DateTimeBufferTests {
 							.ofEpochSecond(1526634325L + i, 424749700 + i))
 					.toArray(Instant[]::new);
 
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(n);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, true);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, expected[i]);
 			}
@@ -225,7 +264,7 @@ public class DateTimeBufferTests {
 
 			DateTimeColumn column = new DateTimeColumn(longData, intData);
 
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(column);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(column);
 
 			Instant[] result = new Instant[n];
 			Arrays.setAll(result, buffer::get);
@@ -241,7 +280,7 @@ public class DateTimeBufferTests {
 			Instant[] instantData = Arrays.stream(testData)
 					.mapToObj(i -> Instant.ofEpochSecond(1526634325L + i, 424749700 + i))
 					.toArray(Instant[]::new);
-			AbstractDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(n);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, true);
 
 			for(int i = 0; i<n; i++){
 				buffer.set(i, instantData[i]);
@@ -256,7 +295,7 @@ public class DateTimeBufferTests {
 
 	}
 
-	public static class LowPrecision {
+	public static class SecondPrecision {
 
 		@Test
 		public void testSetPrimitive() {
@@ -268,7 +307,7 @@ public class DateTimeBufferTests {
 							.ofEpochSecond(1526634325L + i, 424749700 + i))
 					.toArray(Instant[]::new);
 
-			LowPrecisionDateTimeBuffer buffer = new LowPrecisionDateTimeBuffer(n);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, false);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, instantData[i].getEpochSecond());
 			}
@@ -281,21 +320,44 @@ public class DateTimeBufferTests {
 			assertArrayEquals(expected, result);
 		}
 
+		@Test
+		public void testSetPrimitiveWithNanos() {
+			int n = 14;
+			int[] testData = random(n);
+
+			Instant[] instantData = Arrays.stream(testData)
+					.mapToObj(i -> Instant
+							.ofEpochSecond(1526634325L + i, 424749700 + i))
+					.toArray(Instant[]::new);
+
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, false);
+			for (int i = 0; i < n; i++) {
+				buffer.set(i, instantData[i].getEpochSecond(), instantData[i].getNano());
+			}
+
+			Instant[] result = new Instant[n];
+			Arrays.setAll(result, buffer::get);
+
+			Instant[] expected = new Instant[n];
+			Arrays.setAll(expected, i -> Instant.ofEpochSecond(instantData[i].getEpochSecond()));
+			assertArrayEquals(expected, result);
+		}
+
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveSecondsTooHigh() {
-			LowPrecisionDateTimeBuffer buffer = new LowPrecisionDateTimeBuffer(4);
-			buffer.set(1, HighPrecisionDateTimeBuffer.MIN_SECOND - 1);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, false);
+			buffer.set(1, DateTimeBuffer.MIN_SECOND - 1);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveSecondsTooLow() {
-			LowPrecisionDateTimeBuffer buffer = new LowPrecisionDateTimeBuffer(4);
-			buffer.set(1, HighPrecisionDateTimeBuffer.MAX_SECOND + 1);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, false);
+			buffer.set(1, DateTimeBuffer.MAX_SECOND + 1);
 		}
 
 		@Test(expected = IllegalStateException.class)
 		public void testSetPrimitiveFrozen() {
-			LowPrecisionDateTimeBuffer buffer = new LowPrecisionDateTimeBuffer(4);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(4, false);
 			buffer.toColumn();
 			buffer.set(1, 1);
 		}
@@ -310,35 +372,10 @@ public class DateTimeBufferTests {
 							.ofEpochSecond(1526634325L + i, 424749700 + i))
 					.toArray(Instant[]::new);
 
-			LowPrecisionDateTimeBuffer buffer = new LowPrecisionDateTimeBuffer(n);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(n, false);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, instantData[i]);
 			}
-
-			Instant[] result = new Instant[n];
-			Arrays.setAll(result, buffer::get);
-
-			Instant[] expected = new Instant[n];
-			Arrays.setAll(expected, i -> Instant.ofEpochSecond(instantData[i].getEpochSecond()));
-			assertArrayEquals(expected, result);
-		}
-
-
-
-		@Test
-		public void testFromHighPrecisionColumn() {
-			int n = 112;
-			int[] testData = random(n);
-			Instant[] instantData = Arrays.stream(testData)
-					.mapToObj(i -> Instant
-							.ofEpochSecond(1526634325L + i, 424749700 + i))
-					.toArray(Instant[]::new);
-			long[] longData = Arrays.stream(instantData).mapToLong(Instant::getEpochSecond).toArray();
-			int[] intData = Arrays.stream(instantData).mapToInt(Instant::getNano).toArray();
-
-			DateTimeColumn column = new DateTimeColumn(longData, intData);
-
-			LowPrecisionDateTimeBuffer buffer = new LowPrecisionDateTimeBuffer(column);
 
 			Instant[] result = new Instant[n];
 			Arrays.setAll(result, buffer::get);
@@ -364,7 +401,7 @@ public class DateTimeBufferTests {
 		}
 
 		@Test
-		public void testFromMappedColumn() {
+		public void testFromLowPrecisionMappedColumn() {
 			int n = 112;
 			int[] testData = random(n);
 
@@ -378,7 +415,33 @@ public class DateTimeBufferTests {
 			Arrays.setAll(dummyMapping, i -> i);
 			MappedDateTimeColumn column = new MappedDateTimeColumn(longData, dummyMapping);
 
-			AbstractDateTimeBuffer buffer = buffer(column, format);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(column);
+
+			Instant[] result = new Instant[n];
+			Arrays.setAll(result, buffer::get);
+
+			Instant[] expected = new Instant[n];
+			Arrays.setAll(expected, i -> Instant.ofEpochSecond(instantData[i].getEpochSecond()));
+			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testFromHighPrecisionMappedColumn() {
+			int n = 112;
+			int[] testData = random(n);
+
+			Instant[] instantData = Arrays.stream(testData)
+					.mapToObj(i -> Instant
+							.ofEpochSecond(1526634325L + i))
+					.toArray(Instant[]::new);
+			long[] longData = Arrays.stream(instantData).mapToLong(Instant::getEpochSecond).toArray();
+			int[] intData = Arrays.stream(instantData).mapToInt(Instant::getNano).toArray();
+
+			int[] dummyMapping = new int[longData.length];
+			Arrays.setAll(dummyMapping, i -> i);
+			MappedDateTimeColumn column = new MappedDateTimeColumn(longData, intData, dummyMapping);
+
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(column);
 
 			Instant[] result = new Instant[n];
 			Arrays.setAll(result, buffer::get);
@@ -401,7 +464,7 @@ public class DateTimeBufferTests {
 
 			DateTimeColumn column = new DateTimeColumn(longData);
 
-			AbstractDateTimeBuffer buffer = buffer(column,format);
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(column);
 
 			Instant[] result = new Instant[n];
 			Arrays.setAll(result, buffer::get);
@@ -415,22 +478,22 @@ public class DateTimeBufferTests {
 		public void testFromCategoricalColumn() {
 			int[] data = random(177);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>());
-			buffer(column, format);
+			Buffers.dateTimeBuffer(column);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromNumericColumn() {
 			Column column = new DoubleArrayColumn(new double[101]);
-			buffer(column, format);
+			Buffers.dateTimeBuffer(column);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromFreeColumn() {
 			Column column =
-					new SimpleFreeColumn<>(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
+					new SimpleObjectColumn<>(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
 							Object.class, null), new Object[0]
 					);
-			buffer(column, format);
+			Buffers.dateTimeBuffer(column);
 		}
 
 		@Test
@@ -441,7 +504,7 @@ public class DateTimeBufferTests {
 			Instant[] instantData = Arrays.stream(testData)
 					.mapToObj(i -> Instant.ofEpochSecond(1526634325L + i))
 					.toArray(Instant[]::new);
-			AbstractDateTimeBuffer buffer = buffer(n,format);
+			DateTimeBuffer buffer = buffer(n,format);
 
 			for(int i = 0; i<n; i++){
 				buffer.set(i, instantData[i]);
@@ -467,7 +530,7 @@ public class DateTimeBufferTests {
 			return Arrays.asList(HIGH_PRECISION, LOW_PRECISION);
 		}
 
-		private AbstractDateTimeBuffer buffer(int length) {
+		private DateTimeBuffer buffer(int length) {
 			return DateTimeBufferTests.buffer(length, format);
 		}
 
@@ -476,7 +539,7 @@ public class DateTimeBufferTests {
 			String[] data =
 					{"2018-05-18T09:05:25Z", "2018-01-18T09:05:25Z", "2018-05-18T06:05:25Z", "2018-05-18T09:05:25Z",
 							"2010-05-18T09:05:25Z", "2018-05-18T09:05:24Z", "2017-05-17T09:05:25Z"};
-			AbstractDateTimeBuffer buffer = buffer(8);
+			DateTimeBuffer buffer = buffer(8);
 			for (int i = 0; i < data.length; i++) {
 				buffer.set(i, Instant.parse(data[i]));
 			}
@@ -498,7 +561,7 @@ public class DateTimeBufferTests {
 					{"2018-05-18T09:05:25Z", "2018-01-18T09:05:25Z", "2018-05-18T06:05:25Z", "2018-05-18T09:05:25Z",
 							"2010-05-18T09:05:25Z", "2018-05-18T09:05:24Z", "2017-05-17T09:05:25Z",
 							"2017-03-11T09:05:25Z"};
-			AbstractDateTimeBuffer buffer = buffer(32);
+			DateTimeBuffer buffer = buffer(32);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, Instant.parse(datablock[i % datablock.length]));
 			}
@@ -520,7 +583,7 @@ public class DateTimeBufferTests {
 							"2010-05-18T09:05:25Z", "2018-05-18T09:05:24Z", "2017-05-17T09:05:25Z",
 							"2017-03-11T09:05:25Z"};
 			int length = 33;
-			AbstractDateTimeBuffer buffer = buffer(length);
+			DateTimeBuffer buffer = buffer(length);
 			for (int i = 0; i < buffer.size() - 1; i++) {
 				buffer.set(i, Instant.parse(datablock[i % datablock.length]));
 			}
@@ -549,7 +612,7 @@ public class DateTimeBufferTests {
 							"2010-05-18T09:05:25Z", "2018-05-18T09:05:24Z", "2017-05-17T09:05:25Z",
 							"2017-03-11T09:05:25Z"};
 			int length = 33;
-			AbstractDateTimeBuffer buffer = buffer(length);
+			DateTimeBuffer buffer = buffer(length);
 			for (int i = 0; i < buffer.size() - 1; i++) {
 				buffer.set(i, Instant.parse(datablock[i % datablock.length]));
 			}

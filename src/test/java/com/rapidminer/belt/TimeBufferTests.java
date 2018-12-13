@@ -47,25 +47,22 @@ public class TimeBufferTests {
 
 	public static class ValueStoring {
 
-		private TimeColumnBuffer buffer(int length) {
-			return new TimeColumnBuffer(length);
-		}
 
 		@Test
 		public void testBufferLength() {
-			TimeColumnBuffer buffer = buffer(197);
+			TimeBuffer buffer = Buffers.timeBuffer(197);
 			assertEquals(197, buffer.size());
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testBufferNegativeLength() {
-			buffer(-5);
+			Buffers.timeBuffer(-5);
 		}
 
 
 		@Test
 		public void testZeroBufferLength() {
-			TimeColumnBuffer buffer = buffer(0);
+			TimeBuffer buffer = Buffers.timeBuffer(0);
 			assertEquals(0, buffer.size());
 		}
 
@@ -73,7 +70,7 @@ public class TimeBufferTests {
 		public void testSet() {
 			int n = 1234;
 			int[] testData = random(n);
-			TimeColumnBuffer buffer = buffer(n);
+			TimeBuffer buffer = Buffers.timeBuffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, LocalTime.ofNanoOfDay(29854001230045L + testData[i]));
 			}
@@ -89,11 +86,28 @@ public class TimeBufferTests {
 			assertArrayEquals(expected, result);
 		}
 
+		@Test
+		public void testInitialization() {
+			int n = 42;
+			TimeBuffer initialized = Buffers.timeBuffer(n);
+			TimeBuffer notInitialized = Buffers.timeBuffer(n, false);
+			for(int i = 0; i<notInitialized.size(); i++){
+				notInitialized.set(i, null);
+			}
+
+			LocalTime[] expected = new LocalTime[n];
+			Arrays.setAll(expected, initialized::get);
+			LocalTime[] result = new LocalTime[n];
+			Arrays.setAll(result, notInitialized::get);
+
+			assertArrayEquals(expected, result);
+		}
+
 
 		@Test(expected = IllegalStateException.class)
 		public void testSetAfterFreeze() {
 			int n = 12;
-			TimeColumnBuffer buffer = buffer(n);
+			TimeBuffer buffer = Buffers.timeBuffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, LocalTime.NOON);
 			}
@@ -111,7 +125,7 @@ public class TimeBufferTests {
 					.mapToObj(i -> LocalTime.ofNanoOfDay(29854001230045L + i))
 					.toArray(LocalTime[]::new);
 
-			TimeColumnBuffer buffer = new TimeColumnBuffer(n);
+			TimeBuffer buffer = Buffers.timeBuffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, instantData[i].toNanoOfDay());
 			}
@@ -124,19 +138,19 @@ public class TimeBufferTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveTooHigh() {
-			TimeColumnBuffer buffer = new TimeColumnBuffer(4);
+			TimeBuffer buffer = Buffers.timeBuffer(4);
 			buffer.set(1, LocalTime.MAX.toNanoOfDay() + 1);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetPrimitiveTooLow() {
-			TimeColumnBuffer buffer = new TimeColumnBuffer(4);
+			TimeBuffer buffer = Buffers.timeBuffer(4);
 			buffer.set(1, LocalTime.MIN.toNanoOfDay() - 1);
 		}
 
 		@Test(expected = IllegalStateException.class)
 		public void testSetPrimitiveFrozen() {
-			TimeColumnBuffer buffer = new TimeColumnBuffer(4);
+			TimeBuffer buffer = Buffers.timeBuffer(4);
 			buffer.toColumn();
 			buffer.set(1, 1);
 		}
@@ -160,7 +174,7 @@ public class TimeBufferTests {
 			Arrays.setAll(dummyMapping, i -> i);
 			MappedTimeColumn column = new MappedTimeColumn(longData, dummyMapping);
 
-			TimeColumnBuffer buffer = new TimeColumnBuffer(column);
+			TimeBuffer buffer = Buffers.timeBuffer(column);
 
 			LocalTime[] result = new LocalTime[n];
 			Arrays.setAll(result, buffer::get);
@@ -179,7 +193,7 @@ public class TimeBufferTests {
 			long[] longData = Arrays.stream(instantData).mapToLong(LocalTime::toNanoOfDay).toArray();
 
 			TimeColumn column = new TimeColumn(longData);
-			TimeColumnBuffer buffer = new TimeColumnBuffer(column);
+			TimeBuffer buffer = Buffers.timeBuffer(column);
 
 			LocalTime[] result = new LocalTime[n];
 			Arrays.setAll(result, buffer::get);
@@ -191,28 +205,28 @@ public class TimeBufferTests {
 		public void testFromCategoricalColumn() {
 			int[] data = random(177);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>());
-			new TimeColumnBuffer(column);
+			Buffers.timeBuffer(column);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromNumericColumn() {
 			Column column = new DoubleArrayColumn(new double[101]);
-			new TimeColumnBuffer(column);
+			Buffers.timeBuffer(column);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromFreeColumn() {
 			Column column =
-					new SimpleFreeColumn<>(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
+					new SimpleObjectColumn<>(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
 							Object.class, null), new Object[0]
 					);
-			new TimeColumnBuffer(column);
+			Buffers.timeBuffer(column);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromDateColumn() {
 			Column column = new DateTimeColumn(new long[10]);
-			new TimeColumnBuffer(column);
+			Buffers.timeBuffer(column);
 		}
 
 		@Test
@@ -223,7 +237,7 @@ public class TimeBufferTests {
 			LocalTime[] instantData = Arrays.stream(testData)
 					.mapToObj(i -> LocalTime.ofNanoOfDay(29854001230045L + i))
 					.toArray(LocalTime[]::new);
-			TimeColumnBuffer buffer = new TimeColumnBuffer(n);
+			TimeBuffer buffer = Buffers.timeBuffer(n);
 
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, instantData[i]);
@@ -240,8 +254,8 @@ public class TimeBufferTests {
 
 	public static class ToString {
 
-		private TimeColumnBuffer buffer(int length) {
-			return new TimeColumnBuffer(length);
+		private TimeBuffer buffer(int length) {
+			return Buffers.timeBuffer(length);
 		}
 
 		@Test
@@ -249,7 +263,7 @@ public class TimeBufferTests {
 			String[] data =
 					{"10:15:30.123", "23:23:23.100", "23:23:23.100000101", "11:17",
 							"12:13:14.156", "12:34:56.789101", "00:00"};
-			TimeColumnBuffer buffer = buffer(8);
+			TimeBuffer buffer = buffer(8);
 			for (int i = 0; i < data.length; i++) {
 				buffer.set(i, LocalTime.parse(data[i]));
 			}
@@ -270,7 +284,7 @@ public class TimeBufferTests {
 			String[] datablock =
 					{"10:15:30.123", "23:23:23.100", "23:23:23.100000101", "11:17",
 							"12:13:14.156", "12:34:56.789101", "00:00", "11:11:11"};
-			TimeColumnBuffer buffer = buffer(32);
+			TimeBuffer buffer = buffer(32);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, LocalTime.parse(datablock[i % datablock.length]));
 			}
@@ -291,7 +305,7 @@ public class TimeBufferTests {
 					{"10:15:30.123", "23:23:23.100", "23:23:23.100000101", "11:17",
 							"12:13:14.156", "12:34:56.789101", "00:00", "11:11:11"};
 			int length = 33;
-			TimeColumnBuffer buffer = buffer(length);
+			TimeBuffer buffer = buffer(length);
 			for (int i = 0; i < buffer.size() - 1; i++) {
 				buffer.set(i, LocalTime.parse(datablock[i % datablock.length]));
 			}
@@ -319,7 +333,7 @@ public class TimeBufferTests {
 					{"10:15:30.123", "23:23:23.100", "23:23:23.100000101", "11:17",
 							"12:13:14.156", "12:34:56.789101", "00:00", "11:11:11"};
 			int length = 33;
-			TimeColumnBuffer buffer = buffer(length);
+			TimeBuffer buffer = buffer(length);
 			for (int i = 0; i < buffer.size() - 1; i++) {
 				buffer.set(i, LocalTime.parse(datablock[i % datablock.length]));
 			}

@@ -22,14 +22,14 @@ import java.util.function.Function;
 
 
 /**
- * Maps a {@link Column.Capability#OBJECT_READABLE} {@link Column} to a {@link HighPrecisionDateTimeBuffer} using a
+ * Maps a {@link Column.Capability#OBJECT_READABLE} {@link Column} to a {@link NanosecondDateTimeBuffer} using a
  * given mapping operator.
  *
  * @author Gisa Meier
  */
-final class ApplierObjectToDateTime<R> implements ParallelExecutor.Calculator<HighPrecisionDateTimeBuffer> {
+final class ApplierObjectToDateTime<R> implements ParallelExecutor.Calculator<NanosecondDateTimeBuffer> {
 
-	private HighPrecisionDateTimeBuffer target;
+	private NanosecondDateTimeBuffer target;
 	private final Column source;
 	private final Class<R> sourceType;
 	private final Function<R, Instant> operator;
@@ -43,7 +43,7 @@ final class ApplierObjectToDateTime<R> implements ParallelExecutor.Calculator<Hi
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = new HighPrecisionDateTimeBuffer(source.size());
+		target = new NanosecondDateTimeBuffer(source.size(), false);
 	}
 
 	@Override
@@ -57,7 +57,7 @@ final class ApplierObjectToDateTime<R> implements ParallelExecutor.Calculator<Hi
 	}
 
 	@Override
-	public HighPrecisionDateTimeBuffer getResult() {
+	public NanosecondDateTimeBuffer getResult() {
 		return target;
 	}
 
@@ -66,8 +66,8 @@ final class ApplierObjectToDateTime<R> implements ParallelExecutor.Calculator<Hi
 	 * the result in target.
 	 */
 	private static <R> void mapPart(Column source, Class<R> sourceType, Function<R, Instant> operator,
-									HighPrecisionDateTimeBuffer target, int from, int to) {
-		final ObjectColumnReader<R> reader = new ObjectColumnReader<>(source, sourceType, to);
+									NanosecondDateTimeBuffer target, int from, int to) {
+		final ObjectReader<R> reader = new ObjectReader<>(source, sourceType, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			R value = reader.read();

@@ -76,7 +76,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingFromSingleCompleteBuffer() {
-			int nRows = ColumnReader.SMALL_BUFFER_SIZE;
+			int nRows = NumericReader.SMALL_BUFFER_SIZE;
 			int nColumns = 5;
 
 			int[][] inputs = new int[nColumns][];
@@ -94,7 +94,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingFromSingleIncompleteBuffer() {
-			int nRows = (int) (0.33 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (0.33 * NumericReader.SMALL_BUFFER_SIZE);
 			int nColumns = 5;
 
 			int[][] inputs = new int[nColumns][];
@@ -112,7 +112,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingFromMultipleCompleteBuffers() {
-			int nRows = 7 * ColumnReader.SMALL_BUFFER_SIZE;
+			int nRows = 7 * NumericReader.SMALL_BUFFER_SIZE;
 			int nColumns = 3;
 
 			int[][] inputs = new int[nColumns][];
@@ -130,7 +130,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingFromMultipleIncompleteBuffers() {
-			int nRows = (int) (6.67 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 			int nColumns = 3;
 
 			int[][] inputs = new int[nColumns][];
@@ -147,8 +147,15 @@ public class CategoricalRowReaderTests {
 		}
 
 		@Test
+		public void testReadingZeroColumns() {
+			CategoricalRowReader reader = new CategoricalRowReader(new Column[0]);
+			int[][] outputs = readAllColumnsToArrays(reader);
+			assertEquals(0, outputs.length);
+		}
+
+		@Test
 		public void testReadingFromSingleColumn() {
-			int nRows = (int) (6.67 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input = randomNumbers(nRows);
 			Column[] columns = new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, input, new ArrayList<>())};
@@ -162,7 +169,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingFromTwoColumns() {
-			int nRows = (int) (6.67 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input0 = randomNumbers(nRows);
 			int[] input1 = randomNumbers(nRows);
@@ -182,7 +189,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingWholeTable() {
-			int nRows = (int) (6.67 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input0 = randomNumbers(nRows);
 			int[] input1 = randomNumbers(nRows);
@@ -205,7 +212,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testReadingFromThreeColumns() {
-			int nRows = (int) (6.67 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input0 = randomNumbers(nRows);
 			int[] input1 = randomNumbers(nRows);
@@ -228,7 +235,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testColumnInteractionWithSingleBuffer() {
-			int nRows = ColumnReader.SMALL_BUFFER_SIZE;
+			int nRows = NumericReader.SMALL_BUFFER_SIZE;
 			int nColumns = 5;
 
 			int[][] inputs = new int[nColumns][];
@@ -248,7 +255,7 @@ public class CategoricalRowReaderTests {
 
 		@Test
 		public void testColumnInteractionWithMultipleBuffer() {
-			int nRows = (int) (2.5 * ColumnReader.SMALL_BUFFER_SIZE);
+			int nRows = (int) (2.5 * NumericReader.SMALL_BUFFER_SIZE);
 			int nColumns = 3;
 
 			int[][] inputs = new int[nColumns][];
@@ -262,8 +269,8 @@ public class CategoricalRowReaderTests {
 
 			for (Column column : columns) {
 				verify(column).fill(any(int[].class), eq(0), anyInt(), anyInt());
-				verify(column).fill(any(int[].class), eq(ColumnReader.SMALL_BUFFER_SIZE), anyInt(), anyInt());
-				verify(column).fill(any(int[].class), eq(2 * ColumnReader.SMALL_BUFFER_SIZE), anyInt(), anyInt());
+				verify(column).fill(any(int[].class), eq(NumericReader.SMALL_BUFFER_SIZE), anyInt(), anyInt());
+				verify(column).fill(any(int[].class), eq(2 * NumericReader.SMALL_BUFFER_SIZE), anyInt(), anyInt());
 				verify(column, times(3)).fill(any(int[].class), anyInt(), anyInt(), anyInt());
 			}
 		}
@@ -368,7 +375,7 @@ public class CategoricalRowReaderTests {
 
 			CategoricalRowReader reader = new CategoricalRowReader(columns);
 
-			assertEquals(Row.BEFORE_FIRST, reader.position());
+			assertEquals(Readers.BEFORE_FIRST_ROW, reader.position());
 		}
 
 		@Test
@@ -506,7 +513,7 @@ public class CategoricalRowReaderTests {
 			Arrays.setAll(columns, i -> new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(columns, 10 * nColumns);
 			reader.setPosition(-1);
-			assertEquals(Row.BEFORE_FIRST, reader.position());
+			assertEquals(Readers.BEFORE_FIRST_ROW, reader.position());
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
 				assertEquals(0, reader.get(0), EPSILON);
@@ -543,7 +550,7 @@ public class CategoricalRowReaderTests {
 			CategoricalRowReader reader = new CategoricalRowReader(columns, 10 * nColumns);
 			reader.move();
 			reader.move();
-			reader.setPosition(Row.BEFORE_FIRST);
+			reader.setPosition(Readers.BEFORE_FIRST_ROW);
 			assertEquals(-1, reader.position());
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
@@ -649,7 +656,8 @@ public class CategoricalRowReaderTests {
 			Column[] columns = new Column[nColumns];
 			Arrays.setAll(columns, i -> new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(columns, 10 * nColumns);
-			String expected = "Categorical row reader (" + nRows + "x" + nColumns + ")\n" + "Row position: " + Row.BEFORE_FIRST;
+			String expected = "Categorical row reader (" + nRows + "x" + nColumns + ")\n"
+					+ "Row position: " + Readers.BEFORE_FIRST_ROW;
 			assertEquals(expected, reader.toString());
 		}
 

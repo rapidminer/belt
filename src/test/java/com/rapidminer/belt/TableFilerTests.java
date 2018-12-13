@@ -71,7 +71,7 @@ public class TableFilerTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -295,7 +295,7 @@ public class TableFilerTests {
 					StandardOpenOption.DELETE_ON_CLOSE,
 					StandardOpenOption.READ,
 					StandardOpenOption.WRITE)) {
-				Table table = Table.newTable(3)
+				Table table = Builders.newTableBuilder(3)
 						.addInt("int", i -> 0)
 						.addReal("real", i -> 0)
 						.build(Belt.defaultContext());
@@ -311,7 +311,7 @@ public class TableFilerTests {
 					StandardOpenOption.DELETE_ON_CLOSE,
 					StandardOpenOption.READ,
 					StandardOpenOption.WRITE)) {
-				Table table = Table.newTable(0).build(Belt.defaultContext());
+				Table table = Builders.newTableBuilder(0).build(Belt.defaultContext());
 				long result = TableFiler.writeColumnTypes(table, 0, channel, Integer.MAX_VALUE);
 				assertEquals(0, result);
 			}
@@ -324,7 +324,7 @@ public class TableFilerTests {
 					StandardOpenOption.DELETE_ON_CLOSE,
 					StandardOpenOption.READ,
 					StandardOpenOption.WRITE)) {
-				TableBuilder builder = Table.newTable(3);
+				TableBuilder builder = Builders.newTableBuilder(3);
 				for (int i = 0; i < 100; i++) {
 					builder.addInt("int" + i, j -> 0).addReal("real" + i, j -> 0);
 				}
@@ -337,7 +337,7 @@ public class TableFilerTests {
 		@Test
 		public void testRead() throws IOException {
 			File file = File.createTempFile("test", ".data");
-			Table table = Table.newTable(3)
+			Table table = Builders.newTableBuilder(3)
 					.addInt("int", i -> 0)
 					.addReal("real", i -> 0)
 					.build(Belt.defaultContext());
@@ -360,7 +360,7 @@ public class TableFilerTests {
 		@Test
 		public void testReadEmpty() throws IOException {
 			File file = File.createTempFile("test", ".data");
-			Table table = Table.newTable(0).build(Belt.defaultContext());
+			Table table = Builders.newTableBuilder(0).build(Belt.defaultContext());
 			try (FileChannel channel = FileChannel.open(file.toPath(),
 					StandardOpenOption.READ,
 					StandardOpenOption.WRITE)) {
@@ -379,7 +379,7 @@ public class TableFilerTests {
 		@Test
 		public void testReadBlocks() throws IOException {
 			File file = File.createTempFile("test", ".data");
-			TableBuilder builder = Table.newTable(3);
+			TableBuilder builder = Builders.newTableBuilder(3);
 			for (int i = 0; i < 100; i++) {
 				builder.addInt("int" + i, j -> 0).addReal("real" + i, j -> 0);
 			}
@@ -403,7 +403,7 @@ public class TableFilerTests {
 		@Test
 		public void testReadWrittenBlocks() throws IOException {
 			File file = File.createTempFile("test", ".data");
-			TableBuilder builder = Table.newTable(3);
+			TableBuilder builder = Builders.newTableBuilder(3);
 			for (int i = 0; i < 100; i++) {
 				builder.addInt("int" + i, j -> 0).addReal("real" + i, j -> 0);
 			}
@@ -427,7 +427,7 @@ public class TableFilerTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testReadTooShort() throws IOException {
 			File file = File.createTempFile("test", ".data");
-			TableBuilder builder = Table.newTable(3);
+			TableBuilder builder = Builders.newTableBuilder(3);
 			for (int i = 0; i < 5; i++) {
 				builder.addInt("int" + i, j -> 0).addReal("real" + i, j -> 0);
 			}
@@ -1224,7 +1224,6 @@ public class TableFilerTests {
 			Table table = new Table(columns, labels);
 			Table.store(table, null);
 		}
-
 
 		@Test
 		public void testRead() throws IOException {

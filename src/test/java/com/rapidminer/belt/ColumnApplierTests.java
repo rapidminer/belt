@@ -45,7 +45,7 @@ import com.rapidminer.belt.util.IntegerFormats;
 
 
 /**
- * Tests {@link ApplierNumericToNumeric} and {@link ApplierNumericToNumericMulti}.
+ * Tests {@link ApplierNumericToNumeric} and {@link ApplierNNumericToNumeric}.
  *
  * @author Gisa Meier
  */
@@ -63,7 +63,7 @@ public class ColumnApplierTests {
 	 * deadlocks!
 	 */
 	@SuppressWarnings("Convert2Lambda")
-	private static final Table table = Table.newTable(NUMBER_OF_ROWS)
+	private static final Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 			.addReal("a", new IntToDoubleFunction() {
 						@Override
 						public double applyAsDouble(int value) {
@@ -102,7 +102,7 @@ public class ColumnApplierTests {
 	};
 
 
-	private static double[] readBufferToArray(ColumnBuffer buffer) {
+	private static double[] readBufferToArray(NumericBuffer buffer) {
 		double[] data = new double[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = buffer.get(j);
@@ -110,8 +110,8 @@ public class ColumnApplierTests {
 		return data;
 	}
 
-	private static Object[] readBufferToArray(CategoricalColumnBuffer<?> buffer) {
-		AbstractCategoricalColumnBuffer<?> readBuffer = (AbstractCategoricalColumnBuffer<?>) buffer;
+	private static Object[] readBufferToArray(CategoricalBuffer<?> buffer) {
+		CategoricalBuffer<?> readBuffer = (CategoricalBuffer<?>) buffer;
 		Object[] data = new Object[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = readBuffer.get(j);
@@ -119,7 +119,7 @@ public class ColumnApplierTests {
 		return data;
 	}
 
-	private static Object[] readBufferToArray(FreeColumnBuffer<?> buffer) {
+	private static Object[] readBufferToArray(ObjectBuffer<?> buffer) {
 		Object[] data = new Object[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = buffer.get(j);
@@ -127,7 +127,7 @@ public class ColumnApplierTests {
 		return data;
 	}
 
-	private static Object[] readBufferToArray(TimeColumnBuffer buffer) {
+	private static Object[] readBufferToArray(TimeBuffer buffer) {
 		Object[] data = new Object[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = buffer.get(j);
@@ -135,7 +135,7 @@ public class ColumnApplierTests {
 		return data;
 	}
 
-	private static Object[] readBufferToArray(AbstractDateTimeBuffer buffer) {
+	private static Object[] readBufferToArray(DateTimeBuffer buffer) {
 		Object[] data = new Object[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = buffer.get(j);
@@ -169,24 +169,18 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnNumericToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a").applyNumericToReal(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform("a").applyNumericToReal(i -> 0, Workload.DEFAULT, null);
+			table.transform("a").applyNumericToReal(i -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform("b").applyNumericToReal(null, Workload.DEFAULT, CTX);
+			table.transform("b").applyNumericToReal(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToReal(i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10])).applyNumericToReal(i -> 0, CTX);
 		}
 
 	}
@@ -194,48 +188,38 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnNumericToInteger {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyNumericToInteger(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyNumericToInteger(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyNumericToInteger(i -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyNumericToInteger(null, Workload.DEFAULT, CTX);
+			table.transform(0).applyNumericToInteger(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToInteger(i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10])).applyNumericToInteger(i -> 0,
+					CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnCategoricalToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyCategoricalToReal(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyCategoricalToReal(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToReal(i -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyCategoricalToReal(null, Workload.DEFAULT, CTX);
+			table.transform(0).applyCategoricalToReal(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToReal(i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToReal(i -> 0, CTX);
 		}
 
 	}
@@ -243,24 +227,19 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnCategoricalToInteger {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyCategoricalToInteger(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyCategoricalToInteger(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToInteger(i -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyCategoricalToInteger(null, Workload.DEFAULT, CTX);
+			table.transform(0).applyCategoricalToInteger(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToInteger(i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToInteger(i -> 0, CTX);
 		}
 
 	}
@@ -268,33 +247,28 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnObjectToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyObjectToReal(String.class, i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOpeator() {
-			table.transform(0).applyObjectToReal(String.class, null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToReal(String.class, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(0).applyObjectToReal(null, i -> 0, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToReal(null, i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyObjectToReal(String.class, i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToReal(String.class, i -> 0, null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(0).applyObjectToReal(String.class, i -> 0, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToReal(String.class, i -> 0, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToReal(String.class, i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToReal(String.class, i -> 0, CTX);
 		}
 
 	}
@@ -302,196 +276,156 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnObjectToInteger {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyObjectToInteger(String.class, i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyObjectToInteger(String.class, null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToInteger(String.class, null,CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(0).applyObjectToInteger(null, i -> 0, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToInteger(null, i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyObjectToInteger(String.class, i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToInteger(String.class, i -> 0, null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(0).applyObjectToInteger(String.class, i -> 0, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToInteger(String.class, i -> 0,  CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
 			new Transformer(OBJECT_NOT_READABLE_COLUMN)
-					.applyObjectToInteger(String.class, i -> 0, Workload.DEFAULT, CTX);
+					.applyObjectToInteger(String.class, i -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnNumericToCategorical {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyNumericToCategorical(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyNumericToCategorical(null, Workload.LARGE, CTX);
+			table.transform(0).applyNumericToCategorical(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyNumericToCategorical(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyNumericToCategorical(i -> 0, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToCategorical(i -> 0, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(0).applyNumericToCategorical(i -> 0, 1, null, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyNumericToCategorical(i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(0).applyNumericToCategorical(i -> 0, 1, Workload.DEFAULT, null);
+			table.transform(0).applyNumericToCategorical(i -> 0, 1, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperatorFormat() {
-			table.transform(0).applyNumericToCategorical(null, 1, Workload.DEFAULT, CTX);
+			table.transform(0).applyNumericToCategorical(null, 1,  CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToCategorical(i -> 0, Integer.MAX_VALUE, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyNumericToCategorical(i -> 0, Integer.MAX_VALUE, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnNumericToFree {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyNumericToFree(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyNumericToFree(null, Workload.LARGE, CTX);
+			table.transform(0).applyNumericToObject(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyNumericToFree(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyNumericToObject(i -> 0, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToFree(i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyNumericToObject(i -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnNumericToTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyNumericToTime(i -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyNumericToTime(null, Workload.LARGE, CTX);
+			table.transform(0).applyNumericToTime(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyNumericToTime(i -> null, Workload.DEFAULT, null);
+			table.transform(0).applyNumericToTime(i -> null, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToTime(i -> null, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyNumericToTime(i -> null, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnNumericToDateTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyNumericToDateTime(i -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyNumericToDateTime(null, Workload.LARGE, CTX);
+			table.transform(0).applyNumericToDateTime(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyNumericToDateTime(i -> null, Workload.DEFAULT, null);
+			table.transform(0).applyNumericToDateTime(i -> null, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyNumericToDateTime(i -> null, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyNumericToDateTime(i -> null, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnCategoricalToCategorical {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyCategoricalToCategorical(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyCategoricalToCategorical(null, Workload.LARGE, CTX);
+			table.transform(0).applyCategoricalToCategorical(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyCategoricalToCategorical(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToCategorical(i -> 0, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToCategorical(i -> 0, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(0).applyCategoricalToCategorical(i -> 0, 1, null, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToCategorical(i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(0).applyCategoricalToCategorical(i -> 0, 1, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToCategorical(i -> 0, 1, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperatorFormat() {
-			table.transform(0).applyCategoricalToCategorical(null, 1, Workload.LARGE, CTX);
+			table.transform(0).applyCategoricalToCategorical(null, 1, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToCategorical(i -> 0, Integer.MAX_VALUE, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToCategorical(i -> 0, Integer.MAX_VALUE, CTX);
 		}
 
 	}
@@ -499,48 +433,38 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnCategoricalToFree {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyCategoricalToFree(i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyCategoricalToFree(null, Workload.LARGE, CTX);
+			table.transform(0).applyCategoricalToObject(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyCategoricalToFree(i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToObject(i -> 0, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToFree(i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToObject(i -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnCategoricalToTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyCategoricalToTime(i -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyCategoricalToTime(null, Workload.LARGE, CTX);
+			table.transform(0).applyCategoricalToTime(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyCategoricalToTime(i -> null, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToTime(i -> null, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToTime(i -> null, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToTime(i -> null, CTX);
 		}
 	}
 
@@ -548,214 +472,175 @@ public class ColumnApplierTests {
 	public static class InputValidationOneColumnCategoricalToDateTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyCategoricalToDateTime(i -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyCategoricalToDateTime(null, Workload.LARGE, CTX);
+			table.transform(0).applyCategoricalToDateTime(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyCategoricalToDateTime(i -> null, Workload.DEFAULT, null);
+			table.transform(0).applyCategoricalToDateTime(i -> null, null);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(new SimpleFreeColumn<>(STRING_FREE_TYPE, new Object[10]))
-					.applyCategoricalToDateTime(i -> null, Workload.DEFAULT, CTX);
+			new Transformer(new SimpleObjectColumn<>(STRING_FREE_TYPE, new Object[10]))
+					.applyCategoricalToDateTime(i -> null,CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnObjectToCategorical {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyObjectToCategorical(String.class, i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(0).applyObjectToCategorical(null, i -> 0, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToCategorical(null, i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyObjectToCategorical(String.class, i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToCategorical(String.class, i -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyObjectToCategorical(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToCategorical(String.class, null, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(0).applyObjectToCategorical(String.class, i -> 0, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToCategorical(String.class, i -> 0, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(OBJECT_NOT_READABLE_COLUMN)
-					.applyObjectToCategorical(String.class, i -> 0, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(0).applyObjectToCategorical(String.class, i -> 0, 1, null, CTX);
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToCategorical(String.class, i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullTypeFormat() {
-			table.transform(0).applyObjectToCategorical(null, i -> 0, 1, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToCategorical(null, i -> 0, 1, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(0).applyObjectToCategorical(String.class, i -> 0, 1, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToCategorical(String.class, i -> 0, 1, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOperatorFormat() {
-			table.transform(0).applyObjectToCategorical(String.class, null, 1, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToCategorical(String.class, null, 1, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongTypeFormat() {
-			table.transform(0).applyObjectToCategorical(String.class, i -> 0, 2, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToCategorical(String.class, i -> 0, 2, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new Transformer(OBJECT_NOT_READABLE_COLUMN)
-					.applyObjectToCategorical(String.class, i -> 0, 3, Workload.DEFAULT, CTX);
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToCategorical(String.class, i -> 0, 3, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnObjectToFree {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyObjectToFree(String.class, i -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyObjectToFree(String.class, null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToObject(String.class, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(0).applyObjectToFree(null, i -> 0, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToObject(null, i -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyObjectToFree(String.class, i -> 0, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToObject(String.class, i -> 0, null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(0).applyObjectToFree(String.class, i -> 0, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToObject(String.class, i -> 0, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToFree(String.class, i -> 0, Workload.DEFAULT, CTX);
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToObject(String.class, i -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnObjectToTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyObjectToTime(String.class, i -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyObjectToTime(String.class, null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToTime(String.class, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(0).applyObjectToTime(null, i -> null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToTime(null, i -> null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyObjectToTime(String.class, i -> null, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToTime(String.class, i -> null, null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(0).applyObjectToTime(String.class, i -> null, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToTime(String.class, i -> null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(OBJECT_NOT_READABLE_COLUMN)
-					.applyObjectToTime(String.class, i -> null, Workload.DEFAULT, CTX);
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToTime(String.class, i -> null, CTX);
 		}
 	}
 
 	public static class InputValidationOneColumnObjectToDateTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(0).applyObjectToDateTime(String.class, i -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullOperator() {
-			table.transform(0).applyObjectToDateTime(String.class, null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToDateTime(String.class, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(0).applyObjectToDateTime(null, i -> null, Workload.LARGE, CTX);
+			table.transform(0).applyObjectToDateTime(null, i -> null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(0).applyObjectToDateTime(String.class, i -> null, Workload.DEFAULT, null);
+			table.transform(0).applyObjectToDateTime(String.class, i -> null, null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(0).applyObjectToDateTime(String.class, i -> null, Workload.DEFAULT, CTX);
+			table.transform(0).applyObjectToDateTime(String.class, i -> null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new Transformer(OBJECT_NOT_READABLE_COLUMN)
-					.applyObjectToDateTime(String.class, i -> null, Workload.DEFAULT, CTX);
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToDateTime(String.class, i -> null, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsNumericToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a", "b").applyNumericToReal(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform("a", "b").applyNumericToReal(row -> 0, Workload.DEFAULT, null);
+			table.transform("a", "b").applyNumericToReal(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform("a", "b").applyNumericToReal((ToDoubleFunction<Row>) null, Workload.DEFAULT, CTX);
+			table.transform("a", "b").applyNumericToReal((ToDoubleFunction<NumericRow>) null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Arrays.asList(table.column("a"), OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToReal(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Arrays.asList(table.column("a"), OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToReal(row -> 0, CTX);
 		}
 
 
@@ -764,72 +649,57 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsNumericToInteger {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyNumericToInteger(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyNumericToInteger(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyNumericToInteger(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyNumericToInteger(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyNumericToInteger(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Arrays.asList(table.column("a"), OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToInteger(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Arrays.asList(table.column("a"), OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToInteger(row -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsCategoricalToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyCategoricalToReal(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyCategoricalToReal(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToReal(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyCategoricalToReal(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToReal(null,CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyCategoricalToReal(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyCategoricalToReal(row -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsCategoricalToInteger {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyCategoricalToInteger(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyCategoricalToInteger(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToInteger(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyCategoricalToInteger(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToInteger(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyCategoricalToInteger(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyCategoricalToInteger(row -> 0,CTX);
 		}
 
 	}
@@ -837,18 +707,13 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsGeneralToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyGeneralToReal(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyGeneralToReal(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToReal(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyGeneralToReal(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToReal(null, CTX);
 		}
 
 	}
@@ -856,18 +721,13 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsGeneralToInteger {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyGeneralToInteger(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyGeneralToInteger(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToInteger(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyGeneralToInteger(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToInteger(null, CTX);
 		}
 
 	}
@@ -875,34 +735,29 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsObjectToReal {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform().applyObjectToReal(String.class, row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyObjectToReal(String.class, row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyObjectToReal(String.class, row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(new int[]{0, 1}).applyObjectToReal(null, row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToReal(null, row -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyObjectToReal(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToReal(String.class, null,CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToReal(String.class, row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToReal(String.class, row -> 0, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(new int[]{0, 1}).applyObjectToReal(String.class, row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToReal(String.class, row -> 0, CTX);
 		}
 	}
 
@@ -910,34 +765,28 @@ public class ColumnApplierTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(new int[]{0, 1}).applyObjectToInteger(null, row -> 0, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform().applyObjectToInteger(String.class, row -> 0, null, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToInteger(null, row -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(Arrays.asList("a", "b"))
-					.applyObjectToInteger(String.class, row -> 0, Workload.DEFAULT, null);
+			table.transform(Arrays.asList("a", "b")).applyObjectToInteger(String.class, row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyObjectToInteger(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToInteger(String.class, null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToInteger(String.class, row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToInteger(String.class, row -> 0, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(new int[]{0, 1}).applyObjectToInteger(String.class, row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToInteger(String.class, row -> 0, CTX);
 		}
 	}
 
@@ -945,67 +794,55 @@ public class ColumnApplierTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(null, row -> 0, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, row -> 0, null, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToCategorical(null, row -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
 			table.transform(Arrays.asList("a", "b"))
-					.applyObjectToCategorical(String.class, row -> 0, Workload.DEFAULT, null);
+					.applyObjectToCategorical(String.class, row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToCategorical(String.class, row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToCategorical(String.class, row -> 0, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, row -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullTypeFormat() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(null, row -> 0, 1, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, row -> 0, 1, null, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToCategorical(null, row -> 0, 1, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(Arrays.asList("a", "b"))
-					.applyObjectToCategorical(String.class, row -> 0, 1, Workload.DEFAULT,
-							null);
+			table.transform(Arrays.asList("a", "b")).applyObjectToCategorical(String.class, row -> 0, 1, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunctionFormat() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, null, 1, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, null, 1, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToCategorical(String.class, row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToCategorical(String.class, row -> 0, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongTypeForamt() {
-			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToCategorical(String.class, row -> 0, CTX);
 		}
 
 	}
@@ -1013,40 +850,29 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsCategoricalToCategorical {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(null, Workload.DEFAULT, CTX);
-		}
-
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(row -> 0, 1, null, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(row -> 0, 1, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(row -> 0, 1, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunctionFormat() {
-			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(null, 1, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToCategorical(null, 1, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyCategoricalToCategorical(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyCategoricalToCategorical(row -> 0, CTX);
 		}
 
 	}
@@ -1055,78 +881,58 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsNumericToCategorical {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyNumericToCategorical(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyNumericToCategorical(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyNumericToCategorical(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyNumericToCategorical(null, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(new int[]{0, 1}).applyNumericToCategorical(row -> 0, 1, null, CTX);
+			table.transform(new int[]{0, 1}).applyNumericToCategorical(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(new int[]{0, 1}).applyNumericToCategorical(row -> 0, 1, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyNumericToCategorical(row -> 0, 1,null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunctionFormat() {
-			table.transform(new int[]{0, 1}).applyNumericToCategorical(null, 1, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyNumericToCategorical(null, 1, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
-			new TransformerMulti(Arrays.asList(table.column(0), OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToCategorical(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Arrays.asList(table.column(0), OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToCategorical(row -> 0, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Arrays.asList(table.column(0), OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToCategorical(row -> 0, 1, Workload.DEFAULT, CTX);
+			new RowTransformer(Arrays.asList(table.column(0), OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToCategorical(row -> 0, 1, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsGeneralToCategorical {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyGeneralToCategorical(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyGeneralToCategorical(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToCategorical(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyGeneralToCategorical(null, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkloadFormat() {
-			table.transform(new int[]{0, 1}).applyGeneralToCategorical(row -> 0, 1, null, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToCategorical(null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextFormat() {
-			table.transform(new int[]{0, 1}).applyGeneralToCategorical(row -> 0, 1, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToCategorical(row -> 0, 1, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunctionFormat() {
-			table.transform(new int[]{0, 1}).applyGeneralToCategorical(null, 1, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToCategorical(null, 1, CTX);
 		}
 
 	}
@@ -1135,33 +941,28 @@ public class ColumnApplierTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(new int[]{0, 1}).applyObjectToFree(null, row -> 0, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyObjectToFree(String.class, row -> 0, null, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToObject(null, row -> 0, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyObjectToFree(String.class, row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyObjectToObject(String.class, row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyObjectToFree(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToObject(String.class, null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToFree(String.class, row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToObject(String.class, row -> 0, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongTypeForamt() {
-			table.transform(new int[]{0, 1}).applyObjectToFree(String.class, row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToObject(String.class, row -> 0, CTX);
 		}
 
 	}
@@ -1170,33 +971,28 @@ public class ColumnApplierTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(new int[]{0, 1}).applyObjectToTime(null, row -> null, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, row -> null, null, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToTime(null, row -> null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToTime(String.class, row -> null, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToTime(String.class, row -> null, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongTypeForamt() {
-			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, row -> null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToTime(String.class, row -> null, CTX);
 		}
 
 	}
@@ -1205,33 +1001,28 @@ public class ColumnApplierTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform(new int[]{0, 1}).applyObjectToDateTime(null, row -> null, Workload.DEFAULT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, row -> null, null, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToDateTime(null, row -> null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyObjectToDateTime(String.class, row -> null, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToDateTime(String.class, row -> null, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongTypeForamt() {
-			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, row -> null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class, row -> null, CTX);
 		}
 
 	}
@@ -1239,159 +1030,124 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsCategoricalToFree {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyCategoricalToFree(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyCategoricalToFree(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToObject(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyCategoricalToFree(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToObject(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			table.transform(new int[]{0, 1}).applyCategoricalToFree(row -> 0, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToObject(row -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsCategoricalToTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyCategoricalToTime(row -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyCategoricalToTime(row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToTime(row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyCategoricalToTime(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToTime(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			table.transform(new int[]{0, 1}).applyCategoricalToTime(row -> null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToTime(row -> null, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsCategoricalToDateTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(row -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(row -> null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyCategoricalToDateTime(row -> null, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsNumericToFree {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyNumericToFree(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyNumericToFree(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyNumericToObject(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyNumericToFree(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyNumericToObject(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToFree(row -> 0, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToObject(row -> 0, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsNumericToTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyNumericToTime(row -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyNumericToTime(row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyNumericToTime(row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyNumericToTime(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyNumericToTime(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToTime(row -> null, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToTime(row -> null, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsNumericToDateTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyNumericToDateTime(row -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyNumericToDateTime(row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyNumericToDateTime(row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyNumericToDateTime(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyNumericToDateTime(null, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapabilityFormat() {
-			new TransformerMulti(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
-					.applyNumericToDateTime(row -> null, Workload.DEFAULT, CTX);
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToDateTime(row -> null, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsGeneralToFree {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyGeneralToFree(row -> 0, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyGeneralToFree(row -> 0, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToObject(row -> 0, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyGeneralToFree(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToObject(null, CTX);
 		}
 
 	}
@@ -1399,60 +1155,44 @@ public class ColumnApplierTests {
 	public static class InputValidationMoreColumnsGeneralToTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyGeneralToTime(row -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyGeneralToTime(row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToTime(row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyGeneralToTime(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToTime(null, CTX);
 		}
 	}
 
 	public static class InputValidationMoreColumnsGeneralToDateTime {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform(new int[]{0, 1}).applyGeneralToDateTime(row -> null, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform(new int[]{0, 1}).applyGeneralToDateTime(row -> null, Workload.DEFAULT, null);
+			table.transform(new int[]{0, 1}).applyMixedToDateTime(row -> null, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform(new int[]{0, 1}).applyGeneralToDateTime(null, Workload.DEFAULT, CTX);
+			table.transform(new int[]{0, 1}).applyMixedToDateTime(null, CTX);
 		}
 	}
 
 	public static class InputValidationTwoColumns {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a", "b").applyNumericToReal((a, b) -> a + b, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform("a", "b").applyNumericToReal((a, b) -> a + b, Workload.DEFAULT, null);
+			table.transform("a", "b").applyNumericToReal((a, b) -> a + b, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.transform().applyNumericToReal((DoubleBinaryOperator) null, Workload.DEFAULT, CTX);
+			table.transform().applyNumericToReal((DoubleBinaryOperator) null, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongNumberOfColumns() {
-			new TransformerMulti(new Column[]{table.column("a")})
-					.applyNumericToReal((a, b) -> a + b, Workload.DEFAULT, CTX);
+			new RowTransformer(new Column[]{table.column("a")}).applyNumericToReal((a, b) -> a + b, CTX);
 		}
 
 	}
@@ -1481,7 +1221,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[data.length];
 			for (int i = start; i < end; i++) {
@@ -1494,7 +1234,7 @@ public class ColumnApplierTests {
 		@Test
 		public void testWhole() {
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(0).applyNumericToReal(v -> 2.5 * v, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(0).applyNumericToReal(v -> 2.5 * v, CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -1502,6 +1242,13 @@ public class ColumnApplierTests {
 			double[] expected = new double[result.length];
 			Arrays.setAll(expected, i -> 2.5 * i);
 			assertArrayEquals(expected, result, EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			NumericBuffer buffer =
+					new Transformer(new DoubleArrayColumn(new double[0])).applyNumericToReal(v -> 2.5 * v, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -1530,7 +1277,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[data.length];
 			for (int i = start; i < end; i++) {
@@ -1543,7 +1290,7 @@ public class ColumnApplierTests {
 		@Test
 		public void testWhole() {
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(0).applyNumericToInteger(v -> 2 * v, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(0).applyNumericToInteger(v -> 2 * v, CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -1552,6 +1299,14 @@ public class ColumnApplierTests {
 			Arrays.setAll(expected, i -> 2 * i);
 			assertArrayEquals(expected, result, EPSILON);
 		}
+
+		@Test
+		public void testNullSize() {
+			NumericBuffer buffer =
+					new Transformer(new DoubleArrayColumn(new double[0])).applyNumericToInteger(v -> 2 * v, CTX);
+			assertEquals(0, buffer.size());
+		}
+
 
 	}
 
@@ -1579,7 +1334,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer buffer = calculator.getResult();
+			CategoricalBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -1588,14 +1343,19 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
-
 		@Test
 		public void testWhole() {
-			Int32CategoricalBuffer<String> buffer = table.transform(0).applyNumericToCategorical(v -> v + "", Workload
-					.DEFAULT, CTX);
+			Int32CategoricalBuffer<String> buffer = table.transform(0).applyNumericToCategorical(v -> v + "", CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> (double) i + "");
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			CategoricalBuffer<String> buffer =
+					new Transformer(new DoubleArrayColumn(new double[0])).applyNumericToCategorical(v -> v + "", CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -1634,7 +1394,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer buffer = calculator.getResult();
+			CategoricalBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -1649,9 +1409,9 @@ public class ColumnApplierTests {
 			int size = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			double[] data = random(size);
 			Table table = new Table(new Column[]{new DoubleArrayColumn(data)}, new String[]{"one"});
-			CategoricalColumnBuffer<String> buffer = table.transform(0).applyNumericToCategorical(v -> v > 0.5 ? "Big"
+			CategoricalBuffer<String> buffer = table.transform(0).applyNumericToCategorical(v -> v > 0.5 ? "Big"
 							: "Small",
-					format.maxValue(), Workload.DEFAULT, CTX);
+					format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> data[i] > 0.5 ? "Big" : "Small");
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -1666,7 +1426,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			double[] data = new double[size];
-			ApplierNumericToFree<String> calculator = new ApplierNumericToFree<>(
+			ApplierNumericToObject<String> calculator = new ApplierNumericToObject<>(
 					new DoubleArrayColumn(data), i -> i + "");
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -1677,13 +1437,13 @@ public class ColumnApplierTests {
 		public void testMappingPart() {
 			int size = 75;
 			double[] data = random(size);
-			ApplierNumericToFree<String> calculator = new ApplierNumericToFree<>(
+			ApplierNumericToObject<String> calculator = new ApplierNumericToObject<>(
 					new DoubleArrayColumn(data), i -> i + "");
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer buffer = calculator.getResult();
+			ObjectBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -1695,11 +1455,17 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testWhole() {
-			FreeColumnBuffer<String> buffer = table.transform(0).applyNumericToFree(v -> v + "", Workload.DEFAULT,
-					CTX);
+			ObjectBuffer<String> buffer = table.transform(0).applyNumericToObject(v -> v + "", CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> (double) i + "");
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			ObjectBuffer<String> buffer =
+					new Transformer(new DoubleArrayColumn(new double[0])).applyNumericToObject(v -> v + "", CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -1728,9 +1494,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.ofNanoOfDay(Math.round(1_000_000_000 * data[i]));
 			}
@@ -1740,12 +1508,18 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testWhole() {
-			TimeColumnBuffer buffer = table.transform(0)
-					.applyNumericToTime(v -> LocalTime.ofNanoOfDay(Math.round(10_000_000_000L * v)), Workload.DEFAULT,
-							CTX);
+			TimeBuffer buffer = table.transform(0)
+					.applyNumericToTime(v -> LocalTime.ofNanoOfDay(Math.round(10_000_000_000L * v)), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> LocalTime.ofNanoOfDay(Math.round(10_000_000_000L * (double) i)));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			TimeBuffer buffer =
+					new Transformer(new DoubleArrayColumn(new double[0])).applyNumericToTime(v -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -1774,9 +1548,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(Math.round(1_000_000_000 * data[i]));
 			}
@@ -1786,13 +1562,19 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testWhole() {
-			HighPrecisionDateTimeBuffer buffer = table.transform(0)
-					.applyNumericToDateTime(v -> Instant.ofEpochMilli(Math.round(10_000_000_000L * v)),
-							Workload.DEFAULT,
-							CTX);
+			NanosecondDateTimeBuffer buffer = table.transform(0)
+					.applyNumericToDateTime(v -> Instant.ofEpochMilli(Math.round(10_000_000_000L * v)), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> Instant.ofEpochMilli(Math.round(10_000_000_000L * (double) i)));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			DateTimeBuffer buffer =
+					new Transformer(new DoubleArrayColumn(new double[0]))
+							.applyNumericToDateTime(v -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -1822,7 +1604,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[data.length];
 			for (int i = start; i < end; i++) {
@@ -1840,11 +1622,20 @@ public class ColumnApplierTests {
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>
 							())},
 							new String[]{"one"});
-			ColumnBuffer buffer = table.transform(0).applyCategoricalToReal(v -> 2.5 * v, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(0).applyCategoricalToReal(v -> 2.5 * v, CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			double[] expected = new double[data.length];
 			Arrays.setAll(expected, i -> 2.5 * i);
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			NumericBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyCategoricalToReal(v -> v * 0.5, CTX);
+			assertEquals(0, buffer.size());
 		}
 	}
 
@@ -1872,7 +1663,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[data.length];
 			for (int i = start; i < end; i++) {
@@ -1890,11 +1681,20 @@ public class ColumnApplierTests {
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>
 							())},
 							new String[]{"one"});
-			ColumnBuffer buffer = table.transform(0).applyCategoricalToInteger(v -> 2 * v, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(0).applyCategoricalToInteger(v -> 2 * v, CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			double[] expected = new double[data.length];
 			Arrays.setAll(expected, i -> 2 * i);
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			NumericBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyCategoricalToInteger(v -> v * 0.5, CTX);
+			assertEquals(0, buffer.size());
 		}
 	}
 
@@ -1924,7 +1724,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer buffer = calculator.getResult();
+			CategoricalBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -1940,11 +1740,19 @@ public class ColumnApplierTests {
 			Table table =
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>())}
 							, new String[]{"one"});
-			Int32CategoricalBuffer<String> buffer = table.transform(0).applyCategoricalToCategorical(v -> v + "",
-					Workload.DEFAULT, CTX);
+			Int32CategoricalBuffer<String> buffer = table.transform(0).applyCategoricalToCategorical(v -> v + "", CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> data[i] + "");
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			CategoricalBuffer<String> buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyCategoricalToCategorical(v -> v + "", CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -1985,7 +1793,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer buffer = calculator.getResult();
+			CategoricalBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -2002,9 +1810,9 @@ public class ColumnApplierTests {
 			Table table =
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>())}
 							, new String[]{"one"});
-			CategoricalColumnBuffer<String> buffer = table.transform(0).applyCategoricalToCategorical(v -> v == 0 ?
+			CategoricalBuffer<String> buffer = table.transform(0).applyCategoricalToCategorical(v -> v == 0 ?
 							"Missing" : "Data",
-					format.maxValue(), Workload.DEFAULT, CTX);
+					format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> data[i] == 0 ? "Missing" : "Data");
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -2019,7 +1827,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = new int[size];
-			ApplierCategoricalToFree<String> calculator = new ApplierCategoricalToFree<>(
+			ApplierCategoricalToObject<String> calculator = new ApplierCategoricalToObject<>(
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>()), i -> i + "");
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2030,13 +1838,13 @@ public class ColumnApplierTests {
 		public void testMappingPart() {
 			int size = 75;
 			int[] data = randomInts(size);
-			ApplierCategoricalToFree<String> calculator = new ApplierCategoricalToFree<>(
+			ApplierCategoricalToObject<String> calculator = new ApplierCategoricalToObject<>(
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>()), i -> i + "");
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer buffer = calculator.getResult();
+			ObjectBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -2052,11 +1860,19 @@ public class ColumnApplierTests {
 			Table table =
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>())}
 							, new String[]{"one"});
-			FreeColumnBuffer<String> buffer = table.transform(0).applyCategoricalToFree(v -> v + "", Workload.DEFAULT,
-					CTX);
+			ObjectBuffer<String> buffer = table.transform(0).applyCategoricalToObject(v -> v + "", CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> data[i] + "");
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			ObjectBuffer<String> buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyCategoricalToObject(v -> v + "", CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2087,9 +1903,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.of(data[i] / 24, data[i] % 60);
 			}
@@ -2103,12 +1921,20 @@ public class ColumnApplierTests {
 			Table table =
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>())}
 							, new String[]{"one"});
-			TimeColumnBuffer buffer =
-					table.transform(0).applyCategoricalToTime(i -> LocalTime.of(i / 24, i % 60), Workload.DEFAULT,
-							CTX);
+			TimeBuffer buffer =
+					table.transform(0).applyCategoricalToTime(i -> LocalTime.of(i / 24, i % 60), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> LocalTime.of(data[i] / 24, data[i] % 60));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			TimeBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyCategoricalToTime(v -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2140,9 +1966,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(data[i] * 100_000);
 			}
@@ -2156,13 +1984,21 @@ public class ColumnApplierTests {
 			Table table =
 					new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>())}
 							, new String[]{"one"});
-			HighPrecisionDateTimeBuffer buffer =
+			NanosecondDateTimeBuffer buffer =
 					table.transform(0)
-							.applyCategoricalToDateTime(i -> Instant.ofEpochMilli(i * 1_000_000), Workload.DEFAULT,
-									CTX);
+							.applyCategoricalToDateTime(i -> Instant.ofEpochMilli(i * 1_000_000), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> Instant.ofEpochMilli(data[i] * 1_000_000));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			DateTimeBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyCategoricalToDateTime(v -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2196,7 +2032,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[data.length];
 			for (int i = start; i < end; i++) {
@@ -2213,12 +2049,21 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data,
 					mappingList)},
 					new String[]{"one"});
-			ColumnBuffer buffer = table.transform(0).applyObjectToReal(String.class, v -> v.equals("value1") ? 0.5 :
-					-0.5, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(0).applyObjectToReal(String.class, v -> v.equals("value1") ? 0.5 :
+					-0.5, CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			double[] expected = new double[data.length];
 			Arrays.setAll(expected, i -> mappingList.get(data[i]).equals("value1") ? 0.5 : -0.5);
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			NumericBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyObjectToReal(String.class, v -> v.length(), CTX);
+			assertEquals(0, buffer.size());
 		}
 	}
 
@@ -2251,7 +2096,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[data.length];
 			for (int i = start; i < end; i++) {
@@ -2268,12 +2113,21 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data,
 					mappingList)},
 					new String[]{"one"});
-			ColumnBuffer buffer = table.transform(0).applyObjectToInteger(String.class, v -> v.equals("value1") ? 1 :
-					0, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(0).applyObjectToInteger(String.class, v -> v.equals("value1") ? 1 :
+					0, CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			double[] expected = new double[data.length];
 			Arrays.setAll(expected, i -> mappingList.get(data[i]).equals("value1") ? 1 : 0);
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			NumericBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyObjectToInteger(String.class, String::length, CTX);
+			assertEquals(0, buffer.size());
 		}
 	}
 
@@ -2305,7 +2159,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer buffer = calculator.getResult();
+			CategoricalBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -2322,10 +2176,19 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(0).applyObjectToCategorical(String.class,
-					v -> v.equals("value1"), Workload.DEFAULT, CTX);
+					v -> v.equals("value1"), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> mappingList.get(data[i]).equals("value1"));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			CategoricalBuffer<Object> buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyObjectToCategorical(String.class, v -> v, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2368,7 +2231,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer buffer = calculator.getResult();
+			CategoricalBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -2386,8 +2249,8 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data,
 					mappingList)},
 					new String[]{"one"});
-			CategoricalColumnBuffer<Integer> buffer = table.transform(0).applyObjectToCategorical(String.class,
-					v -> v.equals("value1") ? 1 : 0, format.maxValue(), Workload.DEFAULT, CTX);
+			CategoricalBuffer<Integer> buffer = table.transform(0).applyObjectToCategorical(String.class,
+					v -> v.equals("value1") ? 1 : 0, format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> mappingList.get(data[i]).equals("value1") ? 1 : 0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -2402,7 +2265,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = new int[size];
-			ApplierObjectToFree<String, Integer> calculator = new ApplierObjectToFree<>(
+			ApplierObjectToObject<String, Integer> calculator = new ApplierObjectToObject<>(
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					String::length);
 			calculator.init(1);
@@ -2415,14 +2278,14 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToFree<String, Integer> calculator = new ApplierObjectToFree<>(
+			ApplierObjectToObject<String, Integer> calculator = new ApplierObjectToObject<>(
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, mappingList), String.class,
 					String::length);
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer buffer = calculator.getResult();
+			ObjectBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
 			for (int i = start; i < end; i++) {
@@ -2438,11 +2301,20 @@ public class ColumnApplierTests {
 			List<String> mappingList = getMappingList();
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
-			FreeColumnBuffer<Boolean> buffer = table.transform(0).applyObjectToFree(String.class, "value1"::equals,
-					Workload.DEFAULT, CTX);
+			ObjectBuffer<Boolean> buffer = table.transform(0).applyObjectToObject(String.class, "value1"::equals,
+					CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> mappingList.get(data[i]).equals("value1"));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			ObjectBuffer<Integer> buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyObjectToObject(String.class, String::length, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2475,9 +2347,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.of(mappingList.get(data[i]).length(), 1);
 			}
@@ -2491,12 +2365,20 @@ public class ColumnApplierTests {
 			List<String> mappingList = getMappingList();
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
-			TimeColumnBuffer buffer =
-					table.transform(0).applyObjectToTime(String.class, v -> LocalTime.of(12, v.length()),
-							Workload.DEFAULT, CTX);
+			TimeBuffer buffer =
+					table.transform(0).applyObjectToTime(String.class, v -> LocalTime.of(12, v.length()), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> LocalTime.of(12, mappingList.get(data[i]).length()));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			TimeBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyObjectToTime(Object.class, v -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2528,9 +2410,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[data.length];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(mappingList.get(data[i]).length() * 100_000);
 			}
@@ -2544,15 +2428,22 @@ public class ColumnApplierTests {
 			List<String> mappingList = getMappingList();
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
-			HighPrecisionDateTimeBuffer buffer =
+			NanosecondDateTimeBuffer buffer =
 					table.transform(0)
-							.applyObjectToDateTime(String.class, v -> Instant.ofEpochMilli(v.length() * 1_000_000),
-									Workload.DEFAULT, CTX);
+							.applyObjectToDateTime(String.class, v -> Instant.ofEpochMilli(v.length() * 1_000_000), CTX);
 			Object[] expected = new Object[buffer.size()];
 			Arrays.setAll(expected, i -> Instant.ofEpochMilli(mappingList.get(data[i]).length() * 1_000_000));
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			DateTimeBuffer buffer =
+					new Transformer(
+							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							.applyObjectToDateTime(Object.class, v -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorNumericToReal {
@@ -2563,8 +2454,8 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			double[] data = new double[size];
-			ApplierNumericToNumericMulti calculator =
-					new ApplierNumericToNumericMulti(new Column[]{new DoubleArrayColumn(data),
+			ApplierNNumericToNumeric calculator =
+					new ApplierNNumericToNumeric(new Column[]{new DoubleArrayColumn(data),
 							new DoubleArrayColumn(data), new DoubleArrayColumn(data)}, row -> 0, false);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2577,15 +2468,15 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToNumericMulti calculator =
-					new ApplierNumericToNumericMulti(new Column[]{new DoubleArrayColumn(first),
+			ApplierNNumericToNumeric calculator =
+					new ApplierNNumericToNumeric(new Column[]{new DoubleArrayColumn(first),
 							new DoubleArrayColumn(second), new DoubleArrayColumn(third)},
 							row -> row.get(2) + row.get(0) * 2.5, false);
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2598,8 +2489,8 @@ public class ColumnApplierTests {
 		@Test
 		public void testWhole() {
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToReal(row -> row.get(0) + row.get(1) /
-					2.0, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToReal(row -> row.get(0) + row.get(1) /
+					2.0, CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -2607,6 +2498,17 @@ public class ColumnApplierTests {
 			double[] expected = new double[result.length];
 			Arrays.setAll(expected, i -> 2 * i);
 			assertArrayEquals(expected, result, EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			int size = 0;
+			double[] data = new double[size];
+			NumericBuffer buffer = new RowTransformer(new Column[]{new DoubleArrayColumn(data),
+					new DoubleArrayColumn(data), new DoubleArrayColumn(data)})
+					.applyNumericToReal(row -> row.get(0) + row.get(1) /
+							2.0, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2619,8 +2521,8 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			double[] data = new double[size];
-			ApplierNumericToNumericMulti calculator =
-					new ApplierNumericToNumericMulti(new Column[]{new DoubleArrayColumn(data),
+			ApplierNNumericToNumeric calculator =
+					new ApplierNNumericToNumeric(new Column[]{new DoubleArrayColumn(data),
 							new DoubleArrayColumn(data), new DoubleArrayColumn(data)}, row -> 0, true);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2633,15 +2535,15 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToNumericMulti calculator =
-					new ApplierNumericToNumericMulti(new Column[]{new DoubleArrayColumn(first),
+			ApplierNNumericToNumeric calculator =
+					new ApplierNNumericToNumeric(new Column[]{new DoubleArrayColumn(first),
 							new DoubleArrayColumn(second), new DoubleArrayColumn(third)},
 							row -> row.get(2) + row.get(0) * 2, true);
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2653,8 +2555,8 @@ public class ColumnApplierTests {
 		@Test
 		public void testWhole() {
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToInteger(row -> row.get(0) + row.get
-					(1) / 2 + 0.1, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToInteger(row -> row.get(0) + row.get
+					(1) / 2 + 0.1, CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -2662,6 +2564,17 @@ public class ColumnApplierTests {
 			double[] expected = new double[result.length];
 			Arrays.setAll(expected, i -> 2 * i);
 			assertArrayEquals(expected, result, EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			int size = 0;
+			double[] data = new double[size];
+			NumericBuffer buffer = new RowTransformer(new Column[]{new DoubleArrayColumn(data),
+					new DoubleArrayColumn(data), new DoubleArrayColumn(data)})
+					.applyNumericToInteger(row -> row.get(0) + row.get(1) /
+							2.0, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -2676,7 +2589,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierCategoricalToNumericMulti calculator = new ApplierCategoricalToNumericMulti(new Column[]{column,
+			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(new Column[]{column,
 					column, column}, row -> 0, false);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2689,7 +2602,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
-			ApplierCategoricalToNumericMulti calculator = new ApplierCategoricalToNumericMulti(new Column[]{
+			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, new ArrayList<>())},
@@ -2698,7 +2611,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2719,8 +2632,8 @@ public class ColumnApplierTests {
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>())}
 							, new String[]{"one", "two"});
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToReal(row -> row.get(0) + row.get
-					(1) * 2 + 0.1, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToReal(row -> row.get(0) + row.get
+					(1) * 2 + 0.1, CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -2730,6 +2643,14 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, result, EPSILON);
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyCategoricalToReal(row -> row.get(0) + row.get
+							(1) * 2 + 0.1, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorCategoricalToInteger {
@@ -2741,7 +2662,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierCategoricalToNumericMulti calculator = new ApplierCategoricalToNumericMulti(new Column[]{column,
+			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(new Column[]{column,
 					column, column}, row -> 0, true);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2754,7 +2675,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
-			ApplierCategoricalToNumericMulti calculator = new ApplierCategoricalToNumericMulti(new Column[]{
+			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, new ArrayList<>())},
@@ -2763,7 +2684,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2783,8 +2704,8 @@ public class ColumnApplierTests {
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>())}
 							, new String[]{"one", "two"});
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToInteger(row -> row.get(0) + row
-					.get(1) * 2 + 0.1, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToInteger(row -> row.get(0) + row
+					.get(1) * 2 + 0.1, CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -2794,6 +2715,14 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, result, EPSILON);
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyCategoricalToInteger(row -> row.get(0) + row.get
+							(1) * 2, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorObjectToReal {
@@ -2805,7 +2734,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToNumericMulti<Object> calculator = new ApplierObjectToNumericMulti<>(new Column[]{column,
+			ApplierNObjectToNumeric<Object> calculator = new ApplierNObjectToNumeric<>(new Column[]{column,
 					column, column}, Object.class, row -> 0, false);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2818,7 +2747,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToNumericMulti<String> calculator = new ApplierObjectToNumericMulti<>(new Column[]{
+			ApplierNObjectToNumeric<String> calculator = new ApplierNObjectToNumeric<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -2827,7 +2756,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2847,8 +2776,8 @@ public class ColumnApplierTests {
 					mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToReal(String.class,
-					row -> row.get(0).length() + row.get(1).length() * 2.5, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToReal(String.class,
+					row -> row.get(0).length() + row.get(1).length() * 2.5, CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			double[] expected = new double[table.height()];
 			Arrays.setAll(expected,
@@ -2856,6 +2785,13 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToReal(Object.class,row -> row.get(0).hashCode()*row.get(2).hashCode(), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorObjectToInteger {
@@ -2867,7 +2803,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToNumericMulti<Object> calculator = new ApplierObjectToNumericMulti<>(new Column[]{column,
+			ApplierNObjectToNumeric<Object> calculator = new ApplierNObjectToNumeric<>(new Column[]{column,
 					column, column}, Object.class, row -> 0, true);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2881,7 +2817,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToNumericMulti<String> calculator = new ApplierObjectToNumericMulti<>(new Column[]{
+			ApplierNObjectToNumeric<String> calculator = new ApplierNObjectToNumeric<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -2890,7 +2826,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2910,8 +2846,8 @@ public class ColumnApplierTests {
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			double[] result = new double[table.height()];
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToInteger(String.class,
-					row -> row.get(0).length() + row.get(1).length() * 2 + 0.1, Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToInteger(String.class,
+					row -> row.get(0).length() + row.get(1).length() * 2 + 0.1, CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			for (int i = 0; i < buffer.size(); i++) {
 				result[i] = buffer.get(i);
@@ -2921,6 +2857,13 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, result, EPSILON);
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToInteger(Object.class,row -> row.get(0).hashCode()*row.get(2).hashCode(), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 
@@ -2933,7 +2876,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToNumericMulti calculator = new ApplierGeneralToNumericMulti(new Column[]{column,
+			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(new Column[]{column,
 					column, column}, row -> 0, false);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2946,7 +2889,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
-			ApplierGeneralToNumericMulti calculator = new ApplierGeneralToNumericMulti(new Column[]{
+			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new DoubleArrayColumn(third)},
@@ -2955,7 +2898,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -2974,9 +2917,8 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first,
 					mappingList), new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyGeneralToReal(
-					row -> Objects.toString(row.getObject(0), "").length() * 2.5 + row.getNumeric(1),
-					Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToReal(
+					row -> Objects.toString(row.getObject(0), "").length() * 2.5 + row.getNumeric(1), CTX);
 			assertEquals(Column.TypeId.REAL, buffer.type());
 			double[] expected = new double[table.height()];
 			Arrays.setAll(expected,
@@ -2984,6 +2926,13 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToReal(row -> row.getObject(0).hashCode() * row.getNumeric(2), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorGeneralToInteger {
@@ -2995,7 +2944,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToNumericMulti calculator = new ApplierGeneralToNumericMulti(new Column[]{column,
+			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(new Column[]{column,
 					column, column}, row -> 0, true);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3009,7 +2958,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
-			ApplierGeneralToNumericMulti calculator = new ApplierGeneralToNumericMulti(new Column[]{
+			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new DoubleArrayColumn(third)},
@@ -3018,7 +2967,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			ColumnBuffer buffer = calculator.getResult();
+			NumericBuffer buffer = calculator.getResult();
 
 			double[] expected = new double[first.length];
 			for (int i = start; i < end; i++) {
@@ -3037,14 +2986,21 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first,
 					mappingList), new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			ColumnBuffer buffer = table.transform(new int[]{0, 1}).applyGeneralToInteger(
-					row -> Objects.toString(row.getObject(0), "").length() * 2 + (int) (row.getNumeric(1) * 5),
-					Workload.DEFAULT, CTX);
+			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToInteger(
+					row -> Objects.toString(row.getObject(0), "").length() * 2 + (int) (row.getNumeric(1) * 5), CTX);
 			assertEquals(Column.TypeId.INTEGER, buffer.type());
 			double[] expected = new double[table.height()];
 			Arrays.setAll(expected,
 					i -> Objects.toString(mappingList.get(first[i]), "").length() * 2 + (int) (5 * second[i]));
 			assertArrayEquals(expected, readBufferToArray(buffer), EPSILON);
+		}
+
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToInteger(row -> row.getObject(0).hashCode() * row.getNumeric(2), CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -3058,8 +3014,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToCategoricalMulti<Object, Object> calculator =
-					new ApplierObjectToCategoricalMulti<>(new Column[]{column,
+			ApplierNObjectToCategorical<Object, Object> calculator =
+					new ApplierNObjectToCategorical<>(new Column[]{column,
 							column, column}, Object.class, row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3073,8 +3029,8 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToCategoricalMulti<String, Integer> calculator =
-					new ApplierObjectToCategoricalMulti<>(new Column[]{
+			ApplierNObjectToCategorical<String, Integer> calculator =
+					new ApplierNObjectToCategorical<>(new Column[]{
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -3083,7 +3039,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Integer> buffer = calculator.getResult();
+			CategoricalBuffer<Integer> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3104,12 +3060,19 @@ public class ColumnApplierTests {
 					, new String[]{"one", "two"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyObjectToCategorical(String
 							.class,
-					v -> v.get(0).equals(v.get(1)), Workload.DEFAULT, CTX);
+					v -> v.get(0).equals(v.get(1)), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> mappingList.get(first[i]).equals(mappingList.get(second[i])));
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			CategoricalBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToCategorical(Object.class, row -> row.get(0)== row.get(2), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 
@@ -3131,8 +3094,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToCategoricalMulti<Object, Integer> calculator =
-					new ApplierObjectToCategoricalMulti<>(new Column[]{column,
+			ApplierNObjectToCategorical<Object, Integer> calculator =
+					new ApplierNObjectToCategorical<>(new Column[]{column,
 							column, column}, Object.class, row -> 0, format);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3146,8 +3109,8 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToCategoricalMulti<String, Boolean> calculator =
-					new ApplierObjectToCategoricalMulti<>(new Column[]{
+			ApplierNObjectToCategorical<String, Boolean> calculator =
+					new ApplierNObjectToCategorical<>(new Column[]{
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -3156,7 +3119,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Boolean> buffer = calculator.getResult();
+			CategoricalBuffer<Boolean> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3175,12 +3138,20 @@ public class ColumnApplierTests {
 					mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			CategoricalColumnBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyObjectToCategorical(String
+			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyObjectToCategorical(String
 							.class,
-					v -> v.get(0).equals(v.get(1)) ? 1 : 0, format.maxValue(), Workload.DEFAULT, CTX);
+					v -> v.get(0).equals(v.get(1)) ? 1 : 0, format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> mappingList.get(first[i]).equals(mappingList.get(second[i])) ? 1 : 0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			CategoricalBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToCategorical(Object.class, row -> row.get(0) == row.get(2), CTX);
+			assertEquals(0, buffer.size());
 		}
 	}
 
@@ -3194,8 +3165,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>());
-			ApplierCategoricalToCategoricalMulti<Object> calculator =
-					new ApplierCategoricalToCategoricalMulti<>(new Column[]{column,
+			ApplierNCategoricalToCategorical<Object> calculator =
+					new ApplierNCategoricalToCategorical<>(new Column[]{column,
 							column, column}, row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3208,8 +3179,8 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
-			ApplierCategoricalToCategoricalMulti<Integer> calculator =
-					new ApplierCategoricalToCategoricalMulti<>(new Column[]{
+			ApplierNCategoricalToCategorical<Integer> calculator =
+					new ApplierNCategoricalToCategorical<>(new Column[]{
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, new ArrayList<>()),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>()),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, new ArrayList<>())},
@@ -3218,7 +3189,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Integer> buffer = calculator.getResult();
+			CategoricalBuffer<Integer> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3239,10 +3210,18 @@ public class ColumnApplierTests {
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyCategoricalToCategorical(
-					v -> v.get(0) == v.get(1), Workload.DEFAULT, CTX);
+					v -> v.get(0) == v.get(1), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] == second[i]);
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			CategoricalBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyCategoricalToCategorical(row -> row.get(0) == row.get(1) * 2, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -3266,8 +3245,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierCategoricalToCategoricalMulti<Object> calculator =
-					new ApplierCategoricalToCategoricalMulti<>(new Column[]{column,
+			ApplierNCategoricalToCategorical<Object> calculator =
+					new ApplierNCategoricalToCategorical<>(new Column[]{column,
 							column, column}, row -> 0, format);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3281,8 +3260,8 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierCategoricalToCategoricalMulti<Boolean> calculator =
-					new ApplierCategoricalToCategoricalMulti<>(new Column[]{
+			ApplierNCategoricalToCategorical<Boolean> calculator =
+					new ApplierNCategoricalToCategorical<>(new Column[]{
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)},
@@ -3291,7 +3270,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Boolean> buffer = calculator.getResult();
+			CategoricalBuffer<Boolean> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3310,8 +3289,8 @@ public class ColumnApplierTests {
 					mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			CategoricalColumnBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyCategoricalToCategorical(
-					v -> v.get(0) == v.get(1) ? 1 : 0, format.maxValue(), Workload.DEFAULT, CTX);
+			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyCategoricalToCategorical(
+					v -> v.get(0) == v.get(1) ? 1 : 0, format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> mappingList.get(first[i]).equals(mappingList.get(second[i])) ? 1 : 0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -3327,8 +3306,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToCategoricalMulti<Object> calculator =
-					new ApplierGeneralToCategoricalMulti<>(new Column[]{column,
+			ApplierMixedToCategorical<Object> calculator =
+					new ApplierMixedToCategorical<>(new Column[]{column,
 							column, column}, row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3341,7 +3320,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			double[] third = random(size);
-			ApplierGeneralToCategoricalMulti<Integer> calculator = new ApplierGeneralToCategoricalMulti<>(new Column[]{
+			ApplierMixedToCategorical<Integer> calculator = new ApplierMixedToCategorical<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, getMappingList()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, getMappingList()),
 					new DoubleArrayColumn(third)},
@@ -3350,7 +3329,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Integer> buffer = calculator.getResult();
+			CategoricalBuffer<Integer> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3368,8 +3347,8 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first,
 					mappingList), new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyGeneralToCategorical(
-					v -> v.getNumeric(1) < getLengthOrNull(v.getObject(0)) / 10.0, Workload.DEFAULT, CTX);
+			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyMixedToCategorical(
+					v -> v.getNumeric(1) < getLengthOrNull(v.getObject(0)) / 10.0, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> second[i] < getLengthOrNull(mappingList.get(first[i])) / 10.0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -3382,6 +3361,13 @@ public class ColumnApplierTests {
 			return ((String) object).length();
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			CategoricalBuffer<String> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToCategorical(row -> row.getObject(0, String.class)+ row.getIndex(2), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 
@@ -3403,8 +3389,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToCategoricalMulti<Object> calculator =
-					new ApplierGeneralToCategoricalMulti<>(new Column[]{column,
+			ApplierMixedToCategorical<Object> calculator =
+					new ApplierMixedToCategorical<>(new Column[]{column,
 							column, column}, row -> 0, format);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3418,7 +3404,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
-			ApplierGeneralToCategoricalMulti<Boolean> calculator = new ApplierGeneralToCategoricalMulti<>(new Column[]{
+			ApplierMixedToCategorical<Boolean> calculator = new ApplierMixedToCategorical<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new DoubleArrayColumn(third)},
@@ -3427,7 +3413,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Boolean> buffer = calculator.getResult();
+			CategoricalBuffer<Boolean> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3445,9 +3431,8 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first,
 					mappingList), new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			CategoricalColumnBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyGeneralToCategorical(
-					v -> getLengthOrNull(v.getObject(0)) <= v.getNumeric(1) * 10 ? 1 : 0, format.maxValue(),
-					Workload.DEFAULT, CTX);
+			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyMixedToCategorical(
+					v -> getLengthOrNull(v.getObject(0)) <= v.getNumeric(1) * 10 ? 1 : 0, format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> getLengthOrNull(mappingList.get(first[i])) <= 10 * second[i] ? 1 : 0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -3470,8 +3455,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			double[] data = random(size);
 			Column column = new DoubleArrayColumn(data);
-			ApplierNumericToCategoricalMulti<Object> calculator =
-					new ApplierNumericToCategoricalMulti<>(new Column[]{column,
+			ApplierNNumericToCategorical<Object> calculator =
+					new ApplierNNumericToCategorical<>(new Column[]{column,
 							column, column}, row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3484,7 +3469,7 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToCategoricalMulti<String> calculator = new ApplierNumericToCategoricalMulti<>(new Column[]{
+			ApplierNNumericToCategorical<String> calculator = new ApplierNNumericToCategorical<>(new Column[]{
 					new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second),
 					new DoubleArrayColumn(third)},
@@ -3493,7 +3478,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<String> buffer = calculator.getResult();
+			CategoricalBuffer<String> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3511,12 +3496,21 @@ public class ColumnApplierTests {
 					new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
 			Int32CategoricalBuffer<String> buffer = table.transform(new int[]{0, 1}).applyNumericToCategorical(
-					v -> v.get(0) * v.get(1) + "", Workload.DEFAULT, CTX);
+					v -> v.get(0) * v.get(1) + "", CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] * second[i] + "");
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			int size = 0;
+			double[] data = new double[size];
+			CategoricalBuffer<String> buffer = new RowTransformer(new Column[]{new DoubleArrayColumn(data),
+					new DoubleArrayColumn(data), new DoubleArrayColumn(data)})
+					.applyNumericToCategorical(row -> row.get(0) + "," + row.get(1), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 
@@ -3538,8 +3532,8 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			double[] data = random(size);
 			Column column = new DoubleArrayColumn(data);
-			ApplierNumericToCategoricalMulti<Object> calculator =
-					new ApplierNumericToCategoricalMulti<>(new Column[]{column,
+			ApplierNNumericToCategorical<Object> calculator =
+					new ApplierNNumericToCategorical<>(new Column[]{column,
 							column, column}, row -> 0, format);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3552,7 +3546,7 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToCategoricalMulti<Boolean> calculator = new ApplierNumericToCategoricalMulti<>(new Column[]{
+			ApplierNNumericToCategorical<Boolean> calculator = new ApplierNNumericToCategorical<>(new Column[]{
 					new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second),
 					new DoubleArrayColumn(third)},
@@ -3561,7 +3555,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			CategoricalColumnBuffer<Boolean> buffer = calculator.getResult();
+			CategoricalBuffer<Boolean> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3578,8 +3572,8 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			CategoricalColumnBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyNumericToCategorical(
-					v -> v.get(0) + v.get(1) / 2 > 0.5 ? 1 : 0, format.maxValue(), Workload.DEFAULT, CTX);
+			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyNumericToCategorical(
+					v -> v.get(0) + v.get(1) / 2 > 0.5 ? 1 : 0, format.maxValue(), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] + second[i] / 2 > 0.5 ? 1 : 0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
@@ -3595,7 +3589,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			double[] data = random(size);
 			Column column = new DoubleArrayColumn(data);
-			ApplierNumericToFreeMulti<Object> calculator = new ApplierNumericToFreeMulti<>(new Column[]{column,
+			ApplierNNumericToObject<Object> calculator = new ApplierNNumericToObject<>(new Column[]{column,
 					column, column}, row -> new Object());
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3608,7 +3602,7 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToFreeMulti<String> calculator = new ApplierNumericToFreeMulti<>(new Column[]{
+			ApplierNNumericToObject<String> calculator = new ApplierNNumericToObject<>(new Column[]{
 					new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second),
 					new DoubleArrayColumn(third)},
@@ -3617,7 +3611,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer<String> buffer = calculator.getResult();
+			ObjectBuffer<String> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3634,11 +3628,21 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			FreeColumnBuffer<String> buffer = table.transform(new int[]{0, 1}).applyNumericToFree(
-					v -> v.get(0) * v.get(1) + "", Workload.DEFAULT, CTX);
+			ObjectBuffer<String> buffer = table.transform(new int[]{0, 1}).applyNumericToObject(
+					v -> v.get(0) * v.get(1) + "", CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] * second[i] + "");
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			int size = 0;
+			double[] data = new double[size];
+			ObjectBuffer<String> buffer = new RowTransformer(new Column[]{new DoubleArrayColumn(data),
+					new DoubleArrayColumn(data), new DoubleArrayColumn(data)})
+					.applyNumericToObject(row -> row.get(0) + "," + row.get(1), CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -3652,7 +3656,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			double[] data = random(size);
 			Column column = new DoubleArrayColumn(data);
-			ApplierNumericToTimeMulti calculator = new ApplierNumericToTimeMulti(new Column[]{column,
+			ApplierNNumericToTime calculator = new ApplierNNumericToTime(new Column[]{column,
 					column, column}, row -> LocalTime.NOON);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3665,7 +3669,7 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToTimeMulti calculator = new ApplierNumericToTimeMulti(new Column[]{
+			ApplierNNumericToTime calculator = new ApplierNNumericToTime(new Column[]{
 					new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second),
 					new DoubleArrayColumn(third)},
@@ -3674,9 +3678,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.of((int) Math.floor(third[i] * 24), (int) Math.floor(first[i] * 60));
 			}
@@ -3691,13 +3697,22 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			TimeColumnBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToTime(
-					row -> LocalTime.of((int) Math.floor(row.get(0) * 24), (int) Math.floor(row.get(1) * 60)),
-					Workload.DEFAULT, CTX);
+			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToTime(
+					row -> LocalTime.of((int) Math.floor(row.get(0) * 24), (int) Math.floor(row.get(1) * 60)), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected,
 					i -> LocalTime.of((int) Math.floor(first[i] * 24), (int) Math.floor(second[i] * 60)));
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			int size = 0;
+			double[] data = new double[size];
+			TimeBuffer buffer = new RowTransformer(new Column[]{new DoubleArrayColumn(data),
+					new DoubleArrayColumn(data), new DoubleArrayColumn(data)})
+					.applyNumericToTime(row -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -3711,7 +3726,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			double[] data = random(size);
 			Column column = new DoubleArrayColumn(data);
-			ApplierNumericToDateTimeMulti calculator = new ApplierNumericToDateTimeMulti(new Column[]{column,
+			ApplierNNumericToDateTime calculator = new ApplierNNumericToDateTime(new Column[]{column,
 					column, column}, row -> Instant.MAX);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3724,7 +3739,7 @@ public class ColumnApplierTests {
 			double[] first = random(size);
 			double[] second = random(size);
 			double[] third = random(size);
-			ApplierNumericToDateTimeMulti calculator = new ApplierNumericToDateTimeMulti(new Column[]{
+			ApplierNNumericToDateTime calculator = new ApplierNNumericToDateTime(new Column[]{
 					new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second),
 					new DoubleArrayColumn(third)},
@@ -3733,9 +3748,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(Math.round(Math.pow(10 * third[i], 30 * first[i])));
 			}
@@ -3750,15 +3767,23 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new DoubleArrayColumn(second)}
 					, new String[]{"one", "two"});
-			HighPrecisionDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToDateTime(
-					row -> Instant.ofEpochMilli(Math.round(Math.pow(10 * row.get(0), 30 * row.get(1)))),
-					Workload.DEFAULT, CTX);
+			NanosecondDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyNumericToDateTime(
+					row -> Instant.ofEpochMilli(Math.round(Math.pow(10 * row.get(0), 30 * row.get(1)))), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected,
 					i -> Instant.ofEpochMilli(Math.round(Math.pow(10 * first[i], 30 * second[i]))));
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			int size = 0;
+			double[] data = new double[size];
+			DateTimeBuffer buffer = new RowTransformer(new Column[]{new DoubleArrayColumn(data),
+					new DoubleArrayColumn(data), new DoubleArrayColumn(data)})
+					.applyNumericToDateTime(row -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorCategoricalToFree {
@@ -3770,7 +3795,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>());
-			ApplierCategoricalToFreeMulti<Object> calculator = new ApplierCategoricalToFreeMulti<>(new Column[]{column,
+			ApplierNCategoricalToObject<Object> calculator = new ApplierNCategoricalToObject<>(new Column[]{column,
 					column, column}, row -> new Object());
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3783,7 +3808,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
-			ApplierCategoricalToFreeMulti<Integer> calculator = new ApplierCategoricalToFreeMulti<>(new Column[]{
+			ApplierNCategoricalToObject<Integer> calculator = new ApplierNCategoricalToObject<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, new ArrayList<>())},
@@ -3792,7 +3817,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer<Integer> buffer = calculator.getResult();
+			ObjectBuffer<Integer> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3812,13 +3837,20 @@ public class ColumnApplierTests {
 							()),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
-			FreeColumnBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyCategoricalToFree(
-					v -> v.get(0) == v.get(1), Workload.DEFAULT, CTX);
+			ObjectBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyCategoricalToObject(
+					v -> v.get(0) == v.get(1), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] == second[i]);
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			ObjectBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyCategoricalToObject(row -> row.get(0) == row.get(1), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorCategoricalToTime {
@@ -3830,7 +3862,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>());
-			ApplierCategoricalToTimeMulti calculator = new ApplierCategoricalToTimeMulti(new Column[]{column,
+			ApplierNCategoricalToTime calculator = new ApplierNCategoricalToTime(new Column[]{column,
 					column, column}, row -> LocalTime.NOON);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3843,7 +3875,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
-			ApplierCategoricalToTimeMulti calculator = new ApplierCategoricalToTimeMulti(new Column[]{
+			ApplierNCategoricalToTime calculator = new ApplierNCategoricalToTime(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, new ArrayList<>())},
@@ -3852,9 +3884,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.of(third[i] % 24, first[i]);
 			}
@@ -3872,11 +3906,19 @@ public class ColumnApplierTests {
 							()),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
-			TimeColumnBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToTime(
-					v -> v.get(0) == v.get(1) ? LocalTime.NOON : LocalTime.MIDNIGHT, Workload.DEFAULT, CTX);
+			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToTime(
+					v -> v.get(0) == v.get(1) ? LocalTime.NOON : LocalTime.MIDNIGHT, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] == second[i] ? LocalTime.NOON : LocalTime.MIDNIGHT);
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			TimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyCategoricalToTime(row -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -3890,7 +3932,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, new ArrayList<>());
-			ApplierCategoricalToDateTimeMulti calculator = new ApplierCategoricalToDateTimeMulti(new Column[]{column,
+			ApplierNCategoricalToDateTime calculator = new ApplierNCategoricalToDateTime(new Column[]{column,
 					column, column}, row -> Instant.MIN);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3903,7 +3945,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
-			ApplierCategoricalToDateTimeMulti calculator = new ApplierCategoricalToDateTimeMulti(new Column[]{
+			ApplierNCategoricalToDateTime calculator = new ApplierNCategoricalToDateTime(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, new ArrayList<>()),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, new ArrayList<>())},
@@ -3912,9 +3954,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(Math.round(Math.pow(third[i], first[i])));
 			}
@@ -3932,13 +3976,20 @@ public class ColumnApplierTests {
 							()),
 							new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
-			HighPrecisionDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToDateTime(
-					v -> v.get(0) == v.get(1) ? Instant.MIN : Instant.MAX, Workload.DEFAULT, CTX);
+			NanosecondDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToDateTime(
+					v -> v.get(0) == v.get(1) ? Instant.MIN : Instant.MAX, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] == second[i] ? Instant.MIN : Instant.MAX);
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			DateTimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyCategoricalToDateTime(row -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorObjectToFree {
@@ -3950,7 +4001,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToFreeMulti<Object, Object> calculator = new ApplierObjectToFreeMulti<>(new Column[]{column,
+			ApplierNObjectToObject<Object, Object> calculator = new ApplierNObjectToObject<>(new Column[]{column,
 					column, column}, Object.class, row -> new Object());
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -3964,7 +4015,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToFreeMulti<String, Integer> calculator = new ApplierObjectToFreeMulti<>(new Column[]{
+			ApplierNObjectToObject<String, Integer> calculator = new ApplierNObjectToObject<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -3973,7 +4024,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer<Integer> buffer = calculator.getResult();
+			ObjectBuffer<Integer> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -3992,13 +4043,20 @@ public class ColumnApplierTests {
 					mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			FreeColumnBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyObjectToFree(String.class,
-					v -> v.get(0).equals(v.get(1)), Workload.DEFAULT, CTX);
+			ObjectBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyObjectToObject(String.class,
+					v -> v.get(0).equals(v.get(1)), CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> mappingList.get(first[i]).equals(mappingList.get(second[i])));
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			ObjectBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToObject(Object.class, row -> row.get(0)== row.get(2), CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorObjectToTime {
@@ -4010,7 +4068,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToTimeMulti<Object> calculator = new ApplierObjectToTimeMulti<>(new Column[]{column,
+			ApplierNObjectToTime<Object> calculator = new ApplierNObjectToTime<>(new Column[]{column,
 					column, column}, Object.class, row -> LocalTime.NOON);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -4024,7 +4082,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToTimeMulti<String> calculator = new ApplierObjectToTimeMulti<>(new Column[]{
+			ApplierNObjectToTime<String> calculator = new ApplierNObjectToTime<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -4033,9 +4091,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.of(mappingList.get(third[i]).length(), 2 * mappingList.get(first[i]).length());
 			}
@@ -4052,8 +4112,8 @@ public class ColumnApplierTests {
 					mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			TimeColumnBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToTime(String.class,
-					v -> v.get(0).equals(v.get(1)) ? LocalTime.NOON : LocalTime.MIDNIGHT, Workload.DEFAULT, CTX);
+			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToTime(String.class,
+					v -> v.get(0).equals(v.get(1)) ? LocalTime.NOON : LocalTime.MIDNIGHT, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> mappingList.get(first[i]).equals(mappingList.get(second[i])) ? LocalTime
 					.NOON :
@@ -4061,6 +4121,13 @@ public class ColumnApplierTests {
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			TimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToTime(String.class, row -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorObjectToDateTime {
@@ -4072,7 +4139,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierObjectToDateTimeMulti<Object> calculator = new ApplierObjectToDateTimeMulti<>(new Column[]{column,
+			ApplierNObjectToDateTime<Object> calculator = new ApplierNObjectToDateTime<>(new Column[]{column,
 					column, column}, Object.class, row -> Instant.MAX);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -4086,7 +4153,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
-			ApplierObjectToDateTimeMulti<String> calculator = new ApplierObjectToDateTimeMulti<>(new Column[]{
+			ApplierNObjectToDateTime<String> calculator = new ApplierNObjectToDateTime<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)}, String.class,
@@ -4095,9 +4162,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(
 						mappingList.get(third[i]).length() * 1_999_999 * mappingList.get(first[i]).length());
@@ -4115,14 +4184,21 @@ public class ColumnApplierTests {
 					mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			HighPrecisionDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class,
-					v -> v.get(0).equals(v.get(1)) ? Instant.MAX : Instant.MIN, Workload.DEFAULT, CTX);
+			NanosecondDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class,
+					v -> v.get(0).equals(v.get(1)) ? Instant.MAX : Instant.MIN, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected,
 					i -> mappingList.get(first[i]).equals(mappingList.get(second[i])) ? Instant.MAX : Instant.MIN);
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			DateTimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyObjectToDateTime(String.class, row -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorGeneralToFree {
@@ -4133,7 +4209,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToFreeMulti<Object> calculator = new ApplierGeneralToFreeMulti<>(new Column[]{column,
+			ApplierMixedToObject<Object> calculator = new ApplierMixedToObject<>(new Column[]{column,
 					column, column}, row -> new Object());
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -4147,7 +4223,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
-			ApplierGeneralToFreeMulti<Double> calculator = new ApplierGeneralToFreeMulti<>(new Column[]{
+			ApplierMixedToObject<Double> calculator = new ApplierMixedToObject<>(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new DoubleArrayColumn(third)},
@@ -4156,7 +4232,7 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			FreeColumnBuffer<Double> buffer = calculator.getResult();
+			ObjectBuffer<Double> buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
 			for (int i = start; i < end; i++) {
@@ -4174,11 +4250,19 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			FreeColumnBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyGeneralToFree(
-					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0, Workload.DEFAULT, CTX);
+			ObjectBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyMixedToObject(
+					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] < mappingList.get(second[i]).length() / 10.0);
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			ObjectBuffer<String> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToObject(row -> row.getObject(0, String.class)+row.getNumeric(1), CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}
@@ -4192,7 +4276,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToTimeMulti calculator = new ApplierGeneralToTimeMulti(new Column[]{column,
+			ApplierMixedToTime calculator = new ApplierMixedToTime(new Column[]{column,
 					column, column}, row -> LocalTime.NOON);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -4206,7 +4290,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
-			ApplierGeneralToTimeMulti calculator = new ApplierGeneralToTimeMulti(new Column[]{
+			ApplierMixedToTime calculator = new ApplierMixedToTime(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new DoubleArrayColumn(third)},
@@ -4215,9 +4299,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			TimeColumnBuffer buffer = calculator.getResult();
+			TimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 00:00
+			Arrays.fill(expected, LocalTime.MIN);
 			for (int i = start; i < end; i++) {
 				expected[i] = LocalTime.of((int) Math.round(12 * third[i]), 2 * first[i]);
 			}
@@ -4233,15 +4319,22 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			TimeColumnBuffer buffer = table.transform(new int[]{0, 1}).applyGeneralToTime(
+			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToTime(
 					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0 ?
-							LocalTime.NOON : LocalTime.MIDNIGHT, Workload.DEFAULT, CTX);
+							LocalTime.NOON : LocalTime.MIDNIGHT, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] < mappingList.get(second[i]).length() / 10.0 ?
 					LocalTime.NOON : LocalTime.MIDNIGHT);
 			assertArrayEquals(expected, readBufferToArray(buffer));
 		}
 
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			TimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToTime( row -> LocalTime.NOON, CTX);
+			assertEquals(0, buffer.size());
+		}
 	}
 
 	public static class MoreColumnsCalculatorGeneralToDateTime {
@@ -4253,7 +4346,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
 			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, data, getMappingList());
-			ApplierGeneralToDateTimeMulti calculator = new ApplierGeneralToDateTimeMulti(new Column[]{column,
+			ApplierMixedToDateTime calculator = new ApplierMixedToDateTime(new Column[]{column,
 					column, column}, row -> Instant.MAX);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -4267,7 +4360,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
-			ApplierGeneralToDateTimeMulti calculator = new ApplierGeneralToDateTimeMulti(new Column[]{
+			ApplierMixedToDateTime calculator = new ApplierMixedToDateTime(new Column[]{
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, first, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new DoubleArrayColumn(third)},
@@ -4276,9 +4369,11 @@ public class ColumnApplierTests {
 			int start = 10;
 			int end = 30;
 			calculator.doPart(start, end, 0);
-			HighPrecisionDateTimeBuffer buffer = calculator.getResult();
+			NanosecondDateTimeBuffer buffer = calculator.getResult();
 
 			Object[] expected = new Object[size];
+			//values outside of start-end are initially 1.1.1970
+			Arrays.fill(expected, Instant.EPOCH);
 			for (int i = start; i < end; i++) {
 				expected[i] = Instant.ofEpochMilli(Math.round(100_000 * third[i] * first[i]));
 			}
@@ -4294,13 +4389,21 @@ public class ColumnApplierTests {
 			Table table = new Table(new Column[]{new DoubleArrayColumn(first),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
-			HighPrecisionDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyGeneralToDateTime(
+			NanosecondDateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToDateTime(
 					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0 ?
-							Instant.MAX : Instant.MIN, Workload.DEFAULT, CTX);
+							Instant.MAX : Instant.MIN, CTX);
 			Object[] expected = new Object[size];
 			Arrays.setAll(expected, i -> first[i] < mappingList.get(second[i]).length() / 10.0 ?
 					Instant.MAX : Instant.MIN);
 			assertArrayEquals(expected, readBufferToArray(buffer));
+		}
+
+		@Test
+		public void testNullSize() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			DateTimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToDateTime(row -> Instant.EPOCH, CTX);
+			assertEquals(0, buffer.size());
 		}
 
 	}

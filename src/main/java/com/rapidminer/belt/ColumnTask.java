@@ -20,7 +20,7 @@ import com.rapidminer.belt.util.ScheduledTaskRunner;
 
 
 /**
- * Task to compute a new {@link ColumnBuffer}. Requires an active {@link Context} to run.
+ * Task to compute a new {@link NumericBuffer}. Requires an active {@link Context} to run.
  *
  * @author Gisa Meier
  */
@@ -28,9 +28,9 @@ public class ColumnTask {
 
 
 	private final int size;
-	private final ScheduledTaskRunner<ColumnBuffer> task;
+	private final ScheduledTaskRunner<NumericBuffer> task;
 
-	ColumnTask(ScheduledTaskRunner<ColumnBuffer> task, int size) {
+	ColumnTask(ScheduledTaskRunner<NumericBuffer> task, int size) {
 		this.task = task;
 		this.size = size;
 	}
@@ -45,7 +45,7 @@ public class ColumnTask {
 	 * @throws NullPointerException
 	 * 		if the given context is {@code null}
 	 */
-	public ColumnBuffer run(Context context) {
+	public NumericBuffer run(Context context) {
 		return task.run(context);
 	}
 

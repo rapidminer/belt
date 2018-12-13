@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,7 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 /**
  * Tests functionality of columns with capability {@link Column.Capability#OBJECT_READABLE}. In particular, the
- * corresponding methods to fill the buffers of {@link ObjectColumnReader}s.
+ * corresponding methods to fill the buffers of {@link ObjectReader}s.
  *
  * @author Michael Knopf, Gisa Meier
  */
@@ -322,7 +323,7 @@ public class ObjectReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			objectData[i] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 		}
-		return new SimpleFreeColumn<>(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
+		return new SimpleObjectColumn<>(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
 				Object.class, null), objectData);
 	}
 
@@ -332,7 +333,7 @@ public class ObjectReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			mappedObjectData[mapping[i]] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 		}
-		return new MappedFreeColumn<>(ColumnTypes.freeType(
+		return new MappedObjectColumn<>(ColumnTypes.freeType(
 				"com.rapidminer.belt.column.test.objectcolumn", Object.class, null),
 				mappedObjectData, mapping);
 	}

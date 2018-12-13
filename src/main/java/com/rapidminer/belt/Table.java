@@ -28,21 +28,22 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
+import java.util.function.DoubleConsumer;
 import java.util.function.DoublePredicate;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
-import com.rapidminer.belt.Column.TypeId;
 import com.rapidminer.belt.function.DoubleBinaryPredicate;
 import com.rapidminer.belt.function.IntBinaryPredicate;
 import com.rapidminer.belt.util.ColumnMetaData;
+import com.rapidminer.belt.util.ColumnReference;
 import com.rapidminer.belt.util.Order;
 import com.rapidminer.belt.util.TaskAbortedException;
 
 
 /**
- * Immutable table using a column-oriented data layout. Values can be read either column-wise view {@link ColumnReader}
- * (recommended) or row-wise via {@link RowReader}.
+ * Immutable table using a column-oriented data layout. Values can be read either column-wise (recommended) or row-wise
+ * using the readers provided by the {@link Readers} class.
  *
  * @author Michael Knopf
  */
@@ -61,6 +62,26 @@ public final class Table {
 	 * Message for aborted table tasks.
 	 */
 	private static final String TASK_ABORTED_BY_INVOKER = "Task aborted by invoker";
+
+	/**
+	 * Message for {@code null} filter function.
+	 */
+	private static final String MESSAGE_FILTER_FUNCTION_NULL = "Filter function must not be null";
+
+	/**
+	 * Default progress callback which does nothing at all.
+	 */
+	private static final DoubleConsumer NOOP_CALLBACK = i -> {};
+
+	/**
+	 * Columns array in case of no columns.
+	 */
+	private static final Column[] EMPTY_COLUMNS = new Column[0];
+
+	/**
+	 * Labels array in case of no columns.
+	 */
+	private static final String[] EMPTY_LABELS = new String[0];
 
 	private final Column[] columns;
 
@@ -130,6 +151,38 @@ public final class Table {
 	 */
 	Table(Column[] srcColumns, String[] srcLabels) {
 		this(srcColumns, srcLabels, null);
+	}
+
+	/**
+	 * Creates an empty table with the given height.
+	 *
+	 * @param height the height of the table
+	 * @throws IllegalArgumentException
+	 * 		if the given height is negative
+	 */
+	Table(int height) {
+		if (height < 0) {
+			throw new IllegalArgumentException("Negative height not supported");
+		}
+		columns = EMPTY_COLUMNS;
+		labels = EMPTY_LABELS;
+		labelMap = Collections.emptyMap();
+		metaDataMap = Collections.emptyMap();
+		width = 0;
+		this.height = height;
+	}
+
+	/**
+	 * Constructor without any checks.
+	 */
+	private Table(Column[] columns, String[] labels, Map<String, Integer> labelMap,
+				  Map<String, List<ColumnMetaData>> metaDataMap, int height) {
+		this.columns = columns;
+		this.labels = labels;
+		this.labelMap = labelMap;
+		this.metaDataMap = metaDataMap;
+		this.height = height;
+		this.width = columns.length;
 	}
 
 	/**
@@ -246,9 +299,13 @@ public final class Table {
 	 */
 	public Table columns(int[] columns) {
 		Objects.requireNonNull(columns, "Column array must not be null");
+		if (columns.length == 0) {
+			return new Table(height);
+		}
 		Column[] newColumns = new Column[columns.length];
 		String[] newLabels = new String[columns.length];
 		Map<String, List<ColumnMetaData>> labelMetaMap = new HashMap<>();
+
 		int position = 0;
 		for (int index : columns) {
 			if (index < 0 || index >= this.columns.length) {
@@ -257,13 +314,57 @@ public final class Table {
 			newColumns[position] = this.columns[index];
 			String label = labels[index];
 			newLabels[position] = label;
-			List<ColumnMetaData> metaList = metaDataMap.get(label);
-			if (metaList != null) {
-				labelMetaMap.put(label, metaList);
-			}
 			position++;
 		}
+
+		// If the meta data contains a now invalid columns reference, we have to create deep copies, otherwise a shallow
+		// copy suffices due to the immutability of the tables.
+		for (String label : newLabels) {
+			List<ColumnMetaData> metaList = metaDataMap.get(label);
+			if (metaList != null) {
+				ColumnMetaData invalid = findInvalidReference(metaList, newLabels);
+				if (invalid == null) {
+					labelMetaMap.put(label, metaList);
+				} else if (metaList.size() > 1) {
+					List<ColumnMetaData> filtered = new ArrayList<>(metaList);
+					filtered.remove(invalid);
+					labelMetaMap.put(label, filtered);
+				}
+			}
+		}
+
 		return new Table(newColumns, newLabels, labelMetaMap);
+	}
+
+	/**
+	 * Checks whether the given list of {@link ColumnMetaData} contains a {@link ColumnReference} to a column label not
+	 * in the given array of valid labels.
+	 *
+	 * @param metaData
+	 * 		the list of meta data
+	 * @param validLabels
+	 * 		the array of valid labels
+	 * @return the invalid reference or {@code null}
+	 */
+	private ColumnMetaData findInvalidReference(List<ColumnMetaData> metaData, String[] validLabels) {
+		ColumnMetaData invalidReference = null;
+		for (ColumnMetaData entry : metaData) {
+			if (entry instanceof ColumnReference) {
+				ColumnReference reference = (ColumnReference) entry;
+				boolean invalid = true;
+				for (String label : validLabels) {
+					if (reference.getColumn().equals(label)) {
+						invalid = false;
+						break;
+					}
+				}
+				if (invalid) {
+					invalidReference = entry;
+				}
+				break;
+			}
+		}
+		return invalidReference;
 	}
 
 	/**
@@ -276,10 +377,13 @@ public final class Table {
 	 * @throws NullPointerException
 	 * 		if the given label list is or contains {@code null}
 	 * @throws IllegalArgumentException
-	 * 		if the label list contains duplicates of is empty
+	 * 		if the label list contains duplicates
 	 */
 	public Table columns(List<String> columns) {
-		requireExistingLabels(columns);
+		Objects.requireNonNull(columns, "Label list must not be null");
+		for (String label : labels) {
+			requireExistingLabel(label);
+		}
 		return columns(lookupLabels(columns));
 	}
 
@@ -303,6 +407,29 @@ public final class Table {
 	}
 
 	/**
+	 * Creates a new table with rows reordered according to the given row set using the given execution context. If the
+	 * mapping contains invalid indices (i.e., values outside of the range {@code [0, size())}), the new table will
+	 * contain missing value at that place. In particular, sub- and supersets, as well as duplicate indices are
+	 * supported.
+	 *
+	 * @param rows
+	 * 		the rows to select
+	 * @param view
+	 * 		if this is {@code true} the data will not be copied, only a view will be attached. Otherwise a heuristic is
+	 * 		applied that might decide to copy the rows into a new table. Set this to {@code true} in case of several
+	 * 		calls to this method for the same table.
+	 * @param ctx
+	 * 		the execution context to use
+	 * @return the new table
+	 * @throws NullPointerException
+	 * 		if the context or row index array is {@code null}
+	 */
+	public Table rows(int[] rows, boolean view, Context ctx) {
+		Objects.requireNonNull(ctx, MESSAGE_CONTEXT_NULL);
+		return rows(rows, view).run(ctx);
+	}
+
+	/**
 	 * Creates a new table task to reorder the rows according to the given row set. If the mapping contains invalid
 	 * indices (i.e., values outside of the range {@code [0, size())}), the new table will contain missing value at that
 	 * place. In particular, sub- and supersets, as well as duplicate indices are supported.
@@ -314,8 +441,30 @@ public final class Table {
 	 * 		if the row index array is {@code null}
 	 */
 	public TableTask rows(int[] rows) {
+		return rows(rows, false);
+	}
+
+	/**
+	 * Creates a new table task to reorder the rows according to the given row set. If the mapping contains invalid
+	 * indices (i.e., values outside of the range {@code [0, size())}), the new table will contain missing value at
+	 * that place. In particular, sub- and supersets, as well as duplicate indices are supported.
+	 *
+	 * @param rows
+	 * 		the rows to select
+	 * @param view
+	 * 		if this is {@code true} the data will not be copied, only a view will be attached. Otherwise a heuristic is
+	 * 		applied that might decide to copy the rows into a new table. Set this to {@code true} in case of several
+	 * 		calls to this method for the same table.
+	 * @return the table task
+	 * @throws NullPointerException
+	 * 		if the row index array is {@code null}
+	 */
+	public TableTask rows(int[] rows, boolean view) {
 		Objects.requireNonNull(rows, "Row index array must not be null");
-		return new TableTask(labels, rows.length, (ctx, sentinel) -> map(rows, false));
+		return new TableTask(labels, rows.length, (ctx, sentinel) -> {
+			int[] copy = Arrays.copyOf(rows, rows.length);
+			return map(copy, view);
+		});
 	}
 
 	/**
@@ -701,6 +850,30 @@ public final class Table {
 	}
 
 	/**
+	 * Creates a new table with names replace by those specified by the renaming map.
+	 *
+	 * @param renamingMap
+	 * 		a map from old name to new name
+	 * @return a new table with renamed columns
+	 * @throws NullPointerException
+	 * 		if the renaming map is {@code null} or contains {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if a new name is invalid or already in use
+	 */
+	public Table rename(Map<String, String> renamingMap) {
+		if (renamingMap == null) {
+			throw new NullPointerException("Renaming map must not be null");
+		}
+		if (width == 0 || renamingMap.isEmpty()) {
+			return this;
+		}
+		ColumnRenamer renamer = new ColumnRenamer(labels, labelMap, metaDataMap);
+		renamer.rename(renamingMap);
+		return new Table(columns, renamer.getLabels(), renamer.getLabelMap(), renamer.getMetaDataMap(), height);
+	}
+
+
+	/**
 	 * Creates a transformer for the given column as a starting point for different reduce and apply functions.
 	 *
 	 * @param column
@@ -747,12 +920,12 @@ public final class Table {
 	 * 		if the column index array is empty
 	 * @throws NullPointerException
 	 * 		if the column index array is {@code null}
-	 * @see TransformerMulti
+	 * @see RowTransformer
 	 */
-	public TransformerMulti transform(int[] columns) {
+	public RowTransformer transform(int[] columns) {
 		Objects.requireNonNull(columns, MESSAGE_COLUMN_INDICES_NULL);
 		requireValidColumnIndices(columns);
-		return new TransformerMulti(getColumns(columns));
+		return new RowTransformer(getColumns(columns));
 	}
 
 	/**
@@ -765,11 +938,11 @@ public final class Table {
 	 * 		if the column label list is empty or contains invalid labels
 	 * @throws NullPointerException
 	 * 		if the column label list is or contains {@code null}
-	 * @see TransformerMulti
+	 * @see RowTransformer
 	 */
-	public TransformerMulti transform(List<String> columns) {
+	public RowTransformer transform(List<String> columns) {
 		requireExistingLabels(columns);
-		return new TransformerMulti(getColumns(lookupLabels(columns)));
+		return new RowTransformer(getColumns(lookupLabels(columns)));
 	}
 
 	/**
@@ -782,22 +955,22 @@ public final class Table {
 	 * 		if the one column labels is invalid or there are no column labels
 	 * @throws NullPointerException
 	 * 		if the column labels are or contain {@code null}
-	 * @see TransformerMulti
+	 * @see RowTransformer
 	 */
-	public TransformerMulti transform(String... columns) {
+	public RowTransformer transform(String... columns) {
 		Objects.requireNonNull(columns, "Column labels must not be null.");
 		List<String> labelsList = Arrays.asList(columns);
 		requireExistingLabels(labelsList);
-		return new TransformerMulti(getColumns(lookupLabels(labelsList)));
+		return new RowTransformer(getColumns(lookupLabels(labelsList)));
 	}
 
 	/**
 	 * Creates a transformer for all columns in this table as a starting point for different reduce and apply functions.
 	 *
-	 * @see TransformerMulti
+	 * @see RowTransformer
 	 */
-	public TransformerMulti transform() {
-		return new TransformerMulti(columns);
+	public RowTransformer transform() {
+		return new RowTransformer(columns);
 	}
 
 	/**
@@ -820,12 +993,12 @@ public final class Table {
 	 * 		if the column index is invalid
 	 */
 	public Table filterNumeric(int column, DoublePredicate predicate, Workload workload, Context context) {
-		Objects.requireNonNull(predicate, "Filter function must not be null");
+		Objects.requireNonNull(predicate, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		if (column < 0 || column >= width) {
 			throw new IndexOutOfBoundsException(String.format(INVALID_COLUMN_MESSAGE, column, width));
 		}
-		int[] mapping = new ParallelExecutor<>(new ColumnFilterer(columns[column], predicate), workload)
+		int[] mapping = new ParallelExecutor<>(new ColumnFilterer(columns[column], predicate), workload, NOOP_CALLBACK)
 				.create().run(context);
 		return map(mapping, false);
 	}
@@ -848,11 +1021,11 @@ public final class Table {
 	 * @throws IndexOutOfBoundsException
 	 * 		if any of the column indices is invalid
 	 */
-	public Table filterNumeric(int[] columns, Predicate<Row> filter, Workload workload, Context context) {
-		Objects.requireNonNull(filter, "Filter function must not be null");
+	public Table filterNumeric(int[] columns, Predicate<NumericRow> filter, Workload workload, Context context) {
+		Objects.requireNonNull(filter, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Column[] filterColumns = getColumns(columns);
-		int[] mapping = new ParallelExecutor<>(new ColumnsFilterer(filterColumns, filter), workload)
+		int[] mapping = new ParallelExecutor<>(new ColumnsFilterer(filterColumns, filter), workload, NOOP_CALLBACK)
 				.create().run(context);
 		return map(mapping, false);
 	}
@@ -930,7 +1103,7 @@ public final class Table {
 	 * @throws IllegalArgumentException
 	 * 		if any of the column labels is invalid or the label list is empty
 	 */
-	public Table filterNumeric(List<String> columns, Predicate<Row> filter, Workload workload, Context context) {
+	public Table filterNumeric(List<String> columns, Predicate<NumericRow> filter, Workload workload, Context context) {
 		requireExistingLabels(columns);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		int[] indices = lookupLabels(columns);
@@ -956,13 +1129,13 @@ public final class Table {
 	 * 		if the column index is invalid
 	 */
 	public Table filterCategorical(int column, IntPredicate predicate, Workload workload, Context context) {
-		Objects.requireNonNull(predicate, "Filter function must not be null");
+		Objects.requireNonNull(predicate, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		if (column < 0 || column >= width) {
 			throw new IndexOutOfBoundsException(String.format(INVALID_COLUMN_MESSAGE, column, width));
 		}
-		int[] mapping = new ParallelExecutor<>(new CategoricalColumnFilterer(columns[column], predicate), workload)
-				.create().run(context);
+		int[] mapping = new ParallelExecutor<>(new CategoricalColumnFilterer(columns[column], predicate), workload,
+				NOOP_CALLBACK).create().run(context);
 		return map(mapping, false);
 	}
 
@@ -986,11 +1159,11 @@ public final class Table {
 	 */
 	public Table filterCategorical(int[] columns, Predicate<CategoricalRow> filter, Workload workload,
 								   Context context) {
-		Objects.requireNonNull(filter, "Filter function must not be null");
+		Objects.requireNonNull(filter, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Column[] filterColumns = getColumns(columns);
-		int[] mapping = new ParallelExecutor<>(new CategoricalColumnsFilterer(filterColumns, filter), workload)
-				.create().run(context);
+		int[] mapping = new ParallelExecutor<>(new CategoricalColumnsFilterer(filterColumns, filter), workload,
+				NOOP_CALLBACK).create().run(context);
 		return map(mapping, false);
 	}
 
@@ -1097,13 +1270,13 @@ public final class Table {
 	public <T> Table filterObjects(int column, Class<T> type, Predicate<T> predicate, Workload workload,
 								   Context context) {
 		Objects.requireNonNull(type, "Type must not be null");
-		Objects.requireNonNull(predicate, "Filter function must not be null");
+		Objects.requireNonNull(predicate, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		if (column < 0 || column >= width) {
 			throw new IndexOutOfBoundsException(String.format(INVALID_COLUMN_MESSAGE, column, width));
 		}
-		int[] mapping = new ParallelExecutor<>(new ObjectColumnFilterer<>(columns[column], type, predicate), workload)
-				.create().run(context);
+		int[] mapping = new ParallelExecutor<>(new ObjectColumnFilterer<>(columns[column], type, predicate), workload,
+				NOOP_CALLBACK).create().run(context);
 		return map(mapping, false);
 	}
 
@@ -1129,11 +1302,11 @@ public final class Table {
 	 */
 	public <T> Table filterObjects(int[] columns, Class<T> type, Predicate<ObjectRow<T>> filter, Workload workload,
 								   Context context) {
-		Objects.requireNonNull(filter, "Filter function must not be null");
+		Objects.requireNonNull(filter, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Column[] filterColumns = getColumns(columns);
-		int[] mapping = new ParallelExecutor<>(new ObjectColumnsFilterer<>(filterColumns, type, filter), workload)
-				.create().run(context);
+		int[] mapping = new ParallelExecutor<>(new ObjectColumnsFilterer<>(filterColumns, type, filter), workload,
+				NOOP_CALLBACK).create().run(context);
 		return map(mapping, false);
 	}
 
@@ -1243,12 +1416,12 @@ public final class Table {
 	 * @throws IndexOutOfBoundsException
 	 * 		if any of the column indices is invalid
 	 */
-	public Table filterGeneral(int[] columns, Predicate<GeneralRow> filter, Workload workload, Context context) {
-		Objects.requireNonNull(filter, "Filter function must not be null");
+	public Table filterMixed(int[] columns, Predicate<MixedRow> filter, Workload workload, Context context) {
+		Objects.requireNonNull(filter, MESSAGE_FILTER_FUNCTION_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Column[] filterColumns = getColumns(columns);
-		int[] mapping = new ParallelExecutor<>(new GeneralColumnsFilterer(filterColumns, filter), workload)
-				.create().run(context);
+		int[] mapping = new ParallelExecutor<>(new MixedColumnsFilterer(filterColumns, filter), workload,
+				NOOP_CALLBACK).create().run(context);
 		return map(mapping, false);
 	}
 
@@ -1270,15 +1443,11 @@ public final class Table {
 	 * @throws IllegalArgumentException
 	 * 		if any of the column labels is invalid or the label list is empty
 	 */
-	public Table filterGeneral(List<String> columns, Predicate<GeneralRow> filter, Workload workload, Context context) {
+	public Table filterMixed(List<String> columns, Predicate<MixedRow> filter, Workload workload, Context context) {
 		requireExistingLabels(columns);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		int[] indices = lookupLabels(columns);
-		return filterGeneral(indices, filter, workload, context);
-	}
-
-	Map<String, List<ColumnMetaData>> getMetaData() {
-		return metaDataMap;
+		return filterMixed(indices, filter, workload, context);
 	}
 
 	/**
@@ -1364,113 +1533,13 @@ public final class Table {
 	}
 
 	/**
-	 * Returns the labels of all columns that have meta data of the given type attached to them.
+	 * Creates a {@link ColumnSelector} for this table as a starting point for different column selection methods.
 	 *
-	 * @param type
-	 * 		the meta data type to look up
-	 * @return the labels of matching columns
-	 * @see #withMetaData(ColumnMetaData)
+	 * @return a column selector for this table
+	 * @see ColumnSelector
 	 */
-	public final <T extends ColumnMetaData> List<String> withMetaData(Class<T> type) {
-		List<String> matches = new ArrayList<>();
-		for (String label : labels) {
-			List<ColumnMetaData> list = metaDataMap.get(label);
-			if (list != null) {
-				for (ColumnMetaData data : list) {
-					if (type.isInstance(data)) {
-						matches.add(label);
-						break;
-					}
-				}
-			}
-		}
-		return matches;
-	}
-
-	/**
-	 * Returns the labels of all columns that have the given meta data instance attached to them.
-	 *
-	 * <p>A match is given if the {@link Object#equals(Object)} returns {@code true}. In particular, it is not
-	 * sufficient that the meta data type ids match.
-	 *
-	 * @param metaData
-	 * 		the meta data instance to look up
-	 * @return the labels of matching columns
-	 * @see #withMetaData(Class)
-	 */
-	public List<String> withMetaData(ColumnMetaData metaData) {
-		List<String> matches = new ArrayList<>();
-		for (String label : labels) {
-			List<ColumnMetaData> list = metaDataMap.get(label);
-			if (list != null) {
-				for (ColumnMetaData data : list) {
-					if (metaData.equals(data)) {
-						matches.add(label);
-						break;
-					}
-				}
-			}
-		}
-		return matches;
-	}
-
-	/**
-	 * Returns the labels of all columns that do not have meta data of the given types attached to them.
-	 *
-	 * @param type
-	 * 		the meta data types to look up
-	 * @return the labels of columns without a match
-	 * @see #withoutMetaData(ColumnMetaData)
-	 */
-	public <T extends ColumnMetaData> List<String> withoutMetaData(Class<T> type) {
-		List<String> matches = new ArrayList<>();
-		for (String label : labels) {
-			List<ColumnMetaData> list = metaDataMap.get(label);
-			boolean found = false;
-			if (list != null) {
-				for (ColumnMetaData data : list) {
-					if (type.isInstance(data)) {
-						found = true;
-						break;
-					}
-				}
-			}
-			if (!found) {
-				matches.add(label);
-			}
-		}
-		return matches;
-	}
-
-	/**
-	 * Returns the labels of all columns that do not have the given meta data instances attached to them.
-	 *
-	 * <p>A match is given if the {@link Object#equals(Object)} returns {@code true}. In particular, it is not
-	 * sufficient that the meta data type ids match.
-	 *
-	 * @param metaData
-	 * 		the meta data instances to look up
-	 * @return the labels of columns without a match
-	 * @see #withoutMetaData(Class)
-	 */
-	public List<String> withoutMetaData(ColumnMetaData metaData) {
-		List<String> matches = new ArrayList<>();
-		for (String label : labels) {
-			List<ColumnMetaData> list = metaDataMap.get(label);
-			boolean found = false;
-			if (list != null) {
-				for (ColumnMetaData data : list) {
-					if (metaData.equals(data)) {
-						found = true;
-						break;
-					}
-				}
-			}
-			if (!found) {
-				matches.add(label);
-			}
-		}
-		return matches;
+	public ColumnSelector select(){
+		return new ColumnSelector(this);
 	}
 
 	/**
@@ -1485,6 +1554,13 @@ public final class Table {
 	 */
 	String[] labelArray() {
 		return labels;
+	}
+
+	/**
+	 * @return the map from column label to meta data
+	 */
+	Map<String, List<ColumnMetaData>> getMetaData() {
+		return metaDataMap;
 	}
 
 	/**
@@ -1503,6 +1579,9 @@ public final class Table {
 	 * @return a mapped table
 	 */
 	Table map(int[] mapping, boolean preferView) {
+		if (width == 0) {
+			return new Table(mapping.length);
+		}
 		Column[] mappedColumns = new Column[columns.length];
 		int index = 0;
 
@@ -1520,8 +1599,7 @@ public final class Table {
 			}
 			index++;
 		}
-
-		return new Table(mappedColumns, labels, metaDataMap);
+		return new Table(mappedColumns, labels, labelMap, metaDataMap, mapping.length);
 	}
 
 	/**
@@ -1673,148 +1751,13 @@ public final class Table {
 		return desiredColumns;
 	}
 
-	/**
-	 * Creates a builder for a new {@link Table} with the given number of rows.
-	 *
-	 * @param rows
-	 * 		the number of rows
-	 * @return a table builder
-	 */
-	public static TableBuilder newTable(int rows) {
-		return new TableBuilder(rows);
+	@Override
+	public String toString() {
+		return PrettyPrinter.print(this);
 	}
 
 	/**
-	 * Creates a builder for a new {@link Table} derived from the given table.
-	 *
-	 * @param table
-	 * 		the source table
-	 * @return a table builder
-	 */
-	public static TableBuilder from(Table table) {
-		return new TableBuilder(table);
-	}
-
-	/**
-	 * Creates a builder for a new {@link Table} derived from the given task.
-	 *
-	 * @param task
-	 * 		the source task
-	 * @return a table builder
-	 */
-	public static TableBuilder from(TableTask task) {
-		return new TableBuilder(task);
-	}
-
-	/**
-	 * Writer for a new {@link Table} with the given column labels and an unknown number of rows. If the number of rows
-	 * can be estimated, use {@link #writeTable(List, int)} instead to prevent unnecessary resizing of the data
-	 * containers.
-	 *
-	 * @param columnLabels
-	 * 		the labels of the columns
-	 * @return a writer to write a new table row by row
-	 * @throws NullPointerException
-	 * 		if column label list is {@code null}
-	 * @throws IllegalArgumentException
-	 * 		if column label list is empty
-	 */
-	public static RowWriter writeTable(List<String> columnLabels) {
-		Objects.requireNonNull(columnLabels, "column labels must not be null");
-		if (columnLabels.isEmpty()) {
-			throw new IllegalArgumentException("column labels must not be empty");
-		}
-		return new RowWriter(columnLabels);
-	}
-
-	/**
-	 * Writer for a new {@link Table} with the given column labels and the given expected number of rows.
-	 *
-	 * @param columnLabels
-	 * 		the labels of the columns
-	 * @param expectedRows
-	 * 		an estimate for the number of rows in the final table. A good estimation prevents unnecessary resizing of the
-	 * 		data containers.
-	 * @return a writer to write a new table row by row
-	 * @throws NullPointerException
-	 * 		if columnLabels is {@code null}
-	 * @throws IllegalArgumentException
-	 * 		if column label list is empty or expected rows are negative
-	 */
-	public static RowWriter writeTable(List<String> columnLabels, int expectedRows) {
-		Objects.requireNonNull(columnLabels, "column labels must not be null");
-		if (columnLabels.isEmpty()) {
-			throw new IllegalArgumentException("column labels must not be empty");
-		}
-		if (expectedRows < 0) {
-			throw new IllegalArgumentException("expected rows must not be negative");
-		}
-		return new RowWriter(columnLabels, expectedRows);
-	}
-
-
-	/**
-	 * Writer for a new {@link Table} with the given column labels and types and an unknown number of rows. If the
-	 * number of rows can be estimated, use {@link #writeTable(List, List, int)} instead to prevent unnecessary resizing
-	 * of the data containers.
-	 *
-	 * @param columnLabels
-	 * 		the labels of the columns
-	 * @param types
-	 * 		the types of the columns
-	 * @return a writer to write a new table row by row
-	 * @throws NullPointerException
-	 * 		if column label or type list is {@code null}
-	 * @throws IllegalArgumentException
-	 * 		if column label list is empty or not the same size as types list
-	 */
-	public static RowWriter writeTable(List<String> columnLabels, List<TypeId> types) {
-		Objects.requireNonNull(columnLabels, "column labels must not be null");
-		Objects.requireNonNull(types, "column types must not be null");
-		if(columnLabels.isEmpty()){
-			throw new IllegalArgumentException("column labels must not be empty");
-		}
-		if (columnLabels.size() != types.size()) {
-			throw new IllegalArgumentException("column labels and types must be of the same length");
-		}
-		return new RowWriter(columnLabels, types);
-	}
-
-	/**
-	 * Writer for a new {@link Table} with the given column labels and the given expected number of rows.
-	 *
-	 * @param columnLabels
-	 * 		the labels of the columns
-	 * @param types
-	 * 		the types of the columns
-	 * @param expectedRows
-	 * 		an estimate for the number of rows in the final table. A good estimation prevents unnecessary resizing of the
-	 * 		data containers.
-	 * @return a writer to write a new table row by row
-	 * @throws NullPointerException
-	 * 		if columnLabels is {@code null}
-	 * @throws IllegalArgumentException
-	 * 		if column label list is empty or not the same size as types list or expected rows are negative
-	 */
-	public static RowWriter writeTable(List<String> columnLabels, List<TypeId> types, int expectedRows) {
-		Objects.requireNonNull(columnLabels, "column labels must not be null");
-		Objects.requireNonNull(types, "column types must not be null");
-		if(columnLabels.isEmpty()){
-			throw new IllegalArgumentException("column labels must not be empty");
-		}
-		if (columnLabels.size() != types.size()) {
-			throw new IllegalArgumentException("column labels and types must be of the same length");
-		}
-		if(expectedRows < 0){
-			throw new IllegalArgumentException("expected rows must not be negative");
-		}
-		return new RowWriter(columnLabels, types, expectedRows);
-	}
-
-
-	/**
-	 * Loads a {@link Table}the given path. This method is experimental and might change in the
-	 * future.
+	 * Loads a {@link Table}the given path. This method is experimental and might change in the future.
 	 *
 	 * @param path
 	 * 		path to the table file
@@ -1824,13 +1767,14 @@ public final class Table {
 	 * @throws IllegalArgumentException
 	 * 		if the file does not contain a table
 	 */
-	public static Table load(Path path) throws IOException {
+	static Table load(Path path) throws IOException {
 		Objects.requireNonNull(path, "path name must not be null");
 		return TableFiler.load(path);
 	}
 
 	/**
-	 * Stores the given table in a file with the given name. This method is experimental and might change in the future.
+	 * Stores the given table in a file with the given name. This method is experimental and might change in the
+	 * future.
 	 *
 	 * @param table
 	 * 		the table to store
@@ -1841,15 +1785,10 @@ public final class Table {
 	 * @throws IllegalArgumentException
 	 * 		if the table or the file name is {@code null}
 	 */
-	public static void store(Table table, Path path) throws IOException {
+	static void store(Table table, Path path) throws IOException {
 		Objects.requireNonNull(path, "path name must not be null");
 		Objects.requireNonNull(table, "table must not be null");
 		TableFiler.store(table, path);
-	}
-
-	@Override
-	public String toString() {
-		return PrettyPrinter.print(this);
 	}
 
 }

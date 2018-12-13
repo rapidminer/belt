@@ -22,14 +22,14 @@ import java.util.function.Function;
 
 
 /**
- * Maps a {@link Column.Capability#OBJECT_READABLE} {@link Column} to a {@link TimeColumnBuffer} using a given mapping
+ * Maps a {@link Column.Capability#OBJECT_READABLE} {@link Column} to a {@link TimeBuffer} using a given mapping
  * operator.
  *
  * @author Gisa Meier
  */
-final class ApplierObjectToTime<R> implements ParallelExecutor.Calculator<TimeColumnBuffer> {
+final class ApplierObjectToTime<R> implements ParallelExecutor.Calculator<TimeBuffer> {
 
-	private TimeColumnBuffer target;
+	private TimeBuffer target;
 	private final Column source;
 	private final Class<R> sourceType;
 	private final Function<R, LocalTime> operator;
@@ -43,7 +43,7 @@ final class ApplierObjectToTime<R> implements ParallelExecutor.Calculator<TimeCo
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = new TimeColumnBuffer(source.size());
+		target = new TimeBuffer(source.size(), false);
 	}
 
 	@Override
@@ -57,7 +57,7 @@ final class ApplierObjectToTime<R> implements ParallelExecutor.Calculator<TimeCo
 	}
 
 	@Override
-	public TimeColumnBuffer getResult() {
+	public TimeBuffer getResult() {
 		return target;
 	}
 
@@ -66,8 +66,8 @@ final class ApplierObjectToTime<R> implements ParallelExecutor.Calculator<TimeCo
 	 * the result in target.
 	 */
 	private static <R> void mapPart(Column source, Class<R> sourceType, Function<R, LocalTime> operator,
-									TimeColumnBuffer target, int from, int to) {
-		final ObjectColumnReader<R> reader = new ObjectColumnReader<>(source, sourceType, to);
+									TimeBuffer target, int from, int to) {
+		final ObjectReader<R> reader = new ObjectReader<>(source, sourceType, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			R value = reader.read();

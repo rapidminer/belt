@@ -48,7 +48,7 @@ public class ColumnReducerTests {
 	 * deadlocks!
 	 */
 	@SuppressWarnings("Convert2Lambda")
-	private static final Table table = Table.newTable(NUMBER_OF_ROWS)
+	private static final Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 			.addReal("a", new IntToDoubleFunction() {
 						@Override
 						public double applyAsDouble(int value) {
@@ -75,37 +75,29 @@ public class ColumnReducerTests {
 	public static class InputValidationOneColumn {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a").reduceNumeric(ArrayList::new, ArrayList::add, ArrayList::addAll, null, CTX);
-		}
-
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform("a").reduceNumeric(ArrayList::new, ArrayList::add, ArrayList::addAll, Workload.DEFAULT,
-					null);
+			table.transform("a").reduceNumeric(ArrayList::new, ArrayList::add, ArrayList::addAll, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullSupplier() {
-			table.transform("a").reduceNumeric((Supplier<ArrayList<Double>>) null, ArrayList::add, ArrayList::addAll,
-					Workload.DEFAULT, CTX);
+			table.transform("a").reduceNumeric((Supplier<ArrayList<Double>>) null, ArrayList::add, ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullReducer() {
-			table.transform("a").reduceNumeric(ArrayList::new, null, ArrayList::addAll, Workload.DEFAULT, CTX);
+			table.transform("a").reduceNumeric(ArrayList::new, null, ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullCombiner() {
-			table.transform("a").reduceNumeric(ArrayList::new, ArrayList::add, null, Workload.DEFAULT, CTX);
+			table.transform("a").reduceNumeric(ArrayList::new, ArrayList::add, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullProducingSupplier() {
 			table.transform("a").reduceNumeric((Supplier<ArrayList<Double>>) (() -> null), ArrayList::add,
-					ArrayList::addAll, Workload.DEFAULT, CTX);
+					ArrayList::addAll, CTX);
 		}
 
 	}
@@ -113,33 +105,28 @@ public class ColumnReducerTests {
 	public static class InputValidationOneColumnDouble {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a").reduceNumeric(0, Double::sum, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform("a").reduceNumeric(0, Double::sum, Workload.DEFAULT, null);
+			table.transform("a").reduceNumeric(0, Double::sum, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullReducer() {
-			table.transform("a").reduceNumeric(0, null, Workload.DEFAULT, CTX);
+			table.transform("a").reduceNumeric(0, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContextCombiner() {
-			table.transform("a").reduceNumeric(0, Double::sum, Double::sum, Workload.DEFAULT, null);
+			table.transform("a").reduceNumeric(0, Double::sum, Double::sum, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullReducerCombiner() {
-			table.transform("a").reduceNumeric(0, null, Double::sum, Workload.DEFAULT, CTX);
+			table.transform("a").reduceNumeric(0, null, Double::sum, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullCombiner() {
-			table.transform("a").reduceNumeric(0, Double::sum, null, Workload.DEFAULT, CTX);
+			table.transform("a").reduceNumeric(0, Double::sum, null, CTX);
 		}
 
 	}
@@ -147,38 +134,31 @@ public class ColumnReducerTests {
 	public static class InputValidationMoreColumns {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a", "b").reduceNumeric(ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
-					ArrayList::addAll, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
 			table.transform("a", "b").reduceNumeric(ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
-					ArrayList::addAll, Workload.DEFAULT, null);
+					ArrayList::addAll, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullSupplier() {
 			table.transform("a", "b").reduceNumeric((Supplier<ArrayList<Double>>) null, (t, r) -> t.add(r.get(0) + r
-					.get(1)), ArrayList::addAll, Workload.DEFAULT, CTX);
+					.get(1)), ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullReducer() {
-			table.transform("a", "b").reduceNumeric(ArrayList::new, null, ArrayList::addAll, Workload.DEFAULT, CTX);
+			table.transform("a", "b").reduceNumeric(ArrayList::new, null, ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullCombiner() {
-			table.transform("a", "b").reduceNumeric(ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)), null,
-					Workload.DEFAULT, CTX);
+			table.transform("a", "b").reduceNumeric(ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)), null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullProducingSupplier() {
 			table.transform("a", "b").reduceNumeric((Supplier<ArrayList<Double>>) (() -> null), (t, r) -> t.add(r.get
-					(0) + r.get(1)), ArrayList::addAll, Workload.DEFAULT, CTX);
+					(0) + r.get(1)), ArrayList::addAll, CTX);
 		}
 
 	}
@@ -344,7 +324,7 @@ public class ColumnReducerTests {
 
 			Transformer transformer = new Transformer(new DoubleArrayColumn(data));
 			MutableDouble result = transformer.reduceNumeric(MutableDouble::new,
-					(r, v) -> r.value += v, (l, r) -> l.value += r.value, Workload.DEFAULT, CTX);
+					(r, v) -> r.value += v, (l, r) -> l.value += r.value, CTX);
 
 			double expected = Arrays.stream(data).reduce(0, (x, y) -> x + y);
 
@@ -357,7 +337,7 @@ public class ColumnReducerTests {
 			double[] data = random(size);
 
 			Transformer transformer = new Transformer(new DoubleArrayColumn(data));
-			double result = transformer.reduceNumeric(0, (x, y) -> x + y, Workload.DEFAULT, CTX);
+			double result = transformer.reduceNumeric(0, (x, y) -> x + y, CTX);
 
 			double expected = Arrays.stream(data).reduce(0, (x, y) -> x + y);
 
@@ -371,7 +351,7 @@ public class ColumnReducerTests {
 
 			Transformer transformer = new Transformer(new DoubleArrayColumn(data));
 			double result = transformer.reduceNumeric(0, (count, d) -> d > 0.5 ? count + 1 : count,
-					(count1, count2) -> count1 + count2, Workload.DEFAULT, CTX);
+					(count1, count2) -> count1 + count2, CTX);
 
 			double expected = Arrays.stream(data).reduce(0, (count, d) -> d > 0.5 ? count + 1 : count);
 
@@ -386,11 +366,11 @@ public class ColumnReducerTests {
 			double[] data2 = random(size);
 			double[] data3 = random(size);
 
-			TransformerMulti transformer = new TransformerMulti(new Column[]{new DoubleArrayColumn(data), new
+			RowTransformer transformer = new RowTransformer(new Column[]{new DoubleArrayColumn(data), new
 					DoubleArrayColumn(data2), new DoubleArrayColumn(data3)});
 			MutableDouble result = transformer.reduceNumeric(MutableDouble::new,
 					(d, row) -> d.value += (row.get(0) + row.get(1) + row.get(2)),
-					(l, r) -> l.value += r.value, Workload.LARGE, CTX);
+					(l, r) -> l.value += r.value, CTX);
 
 			double[] sum = new double[data.length];
 			Arrays.setAll(sum, i -> data[i] + data2[i] + data3[i]);
@@ -398,7 +378,46 @@ public class ColumnReducerTests {
 			assertEquals(expected, result.value, EPSILON);
 		}
 
+		@Test
+		public void testOneColumnZeroHeight() {
+			double[] data = new double[0];
 
+			Transformer transformer = new Transformer(new DoubleArrayColumn(data));
+			MutableDouble result = transformer.reduceNumeric(() -> {
+						MutableDouble d = new MutableDouble();
+						d.value = 1;
+						return d;
+					},
+					(r, v) -> r.value *= v, (l, r) -> l.value *= r.value, CTX);
+
+			assertEquals(1, result.value, EPSILON);
+		}
+
+		@Test
+		public void testOneColumnDoubleZeroHeight() {
+			double[] data = new double[0];
+			Transformer transformer = new Transformer(new DoubleArrayColumn(data));
+			double result = transformer.reduceNumeric(1, (x, y) -> x * y, CTX);
+
+			assertEquals(1, result, EPSILON);
+		}
+
+		@Test
+		public void testThreeColumnsZeroHeight() {
+			double[] data = new double[0];
+
+			RowTransformer transformer = new RowTransformer(new Column[]{new DoubleArrayColumn(data), new
+					DoubleArrayColumn(data), new DoubleArrayColumn(data)});
+			MutableDouble result = transformer.reduceNumeric(() -> {
+						MutableDouble d = new MutableDouble();
+						d.value = 1;
+						return d;
+					},
+					(d, row) -> d.value *= (row.get(0) + row.get(1) + row.get(2)),
+					(l, r) -> l.value *= r.value, CTX);
+
+			assertEquals(1, result.value, EPSILON);
+		}
 	}
 
 }

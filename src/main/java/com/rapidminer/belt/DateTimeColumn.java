@@ -215,4 +215,8 @@ class DateTimeColumn extends Column {
 		return nanos;
 	}
 
+	boolean hasSubSecondPrecision() {
+		return highPrecision;
+	}
+
 }

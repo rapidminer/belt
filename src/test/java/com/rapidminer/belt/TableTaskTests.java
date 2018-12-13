@@ -53,7 +53,7 @@ public class TableTaskTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -110,7 +110,7 @@ public class TableTaskTests {
 		public static Iterable<ApiTest> tests() {
 			List<ApiTest> tests = new ArrayList<>(5);
 
-			Table input = Table.newTable(100)
+			Table input = Builders.newTableBuilder(100)
 					.addReal("a", i -> Math.random())
 					.addReal("b", i -> Math.random())
 					.addReal("c", i -> Math.random())
@@ -141,8 +141,8 @@ public class TableTaskTests {
 					67));
 
 			tests.add(new ApiTest("add_column",
-					Table.from(input).addReal("d", i -> i).build(),
-					Table.from(input).addReal("d", i -> i).build(CTX),
+					Builders.newTableBuilder(input).addReal("d", i -> i).build(),
+					Builders.newTableBuilder(input).addReal("d", i -> i).build(CTX),
 					4,
 					100));
 
@@ -215,7 +215,7 @@ public class TableTaskTests {
 			double[] secondColumn = random(100);
 			double[] thirdColumn = random(100);
 
-			TableTask input = Table.newTable(100)
+			TableTask input = Builders.newTableBuilder(100)
 					.addReal("a", i -> firstColumn[i])
 					.addReal("b", i -> secondColumn[i])
 					.addReal("c", i -> thirdColumn[i])
@@ -270,8 +270,8 @@ public class TableTaskTests {
 					67));
 
 			tests.add(new ApiComparison.ApiTest("add_column",
-					Table.from(input).addReal("d", i -> i).build(),
-					Table.from(input.run(CTX)).addReal("d", i -> i).build(CTX),
+					Builders.newTableBuilder(input).addReal("d", i -> i).build(),
+					Builders.newTableBuilder(input.run(CTX)).addReal("d", i -> i).build(CTX),
 					4,
 					100));
 
@@ -329,7 +329,7 @@ public class TableTaskTests {
 		public static Iterable<TaskContainer> tests() {
 			List<TaskContainer> tests = new ArrayList<>(4);
 
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("a", i -> Math.random())
 					.addReal("b", i -> Math.random())
 					.addReal("c", i -> Math.random())
@@ -392,7 +392,7 @@ public class TableTaskTests {
 	public static class InputValidation {
 
 		private TableTask task() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("a", i -> Math.random())
 					.addReal("b", i -> Math.random())
 					.addReal("c", i -> Math.random())
@@ -424,7 +424,7 @@ public class TableTaskTests {
 		@Test
 		public void testSimple() {
 			int numberOfRows = 100;
-			TableTask task = Table.newTable(numberOfRows)
+			TableTask task = Builders.newTableBuilder(numberOfRows)
 					.addReal("first", i -> Math.random())
 					.addReal("second", i -> Math.random())
 					.addReal("third", i -> Math.random())
@@ -436,7 +436,7 @@ public class TableTaskTests {
 		@Test
 		public void testEmpty() {
 			int numberOfRows = 100;
-			TableTask task = Table.newTable(numberOfRows)
+			TableTask task = Builders.newTableBuilder(numberOfRows)
 					.build();
 			String expected = "Table task (" + 0 + "x" + numberOfRows + ")\n";
 			assertEquals(expected, task.toString());
@@ -445,7 +445,7 @@ public class TableTaskTests {
 		@Test
 		public void testMoreColumns() {
 			int numberOfRows = 99;
-			TableBuilder builder = Table.newTable(numberOfRows);
+			TableBuilder builder = Builders.newTableBuilder(numberOfRows);
 			for (int i = 0; i < 9; i++) {
 				builder.addReal("attribute" + (i + 1), j -> j);
 			}
@@ -458,7 +458,7 @@ public class TableTaskTests {
 		@Test
 		public void testColumnsMaxFit() {
 			int numberOfRows = 99;
-			TableBuilder builder = Table.newTable(numberOfRows);
+			TableBuilder builder = Builders.newTableBuilder(numberOfRows);
 			for (int i = 0; i < 8; i++) {
 				builder.addReal("attribute" + (i + 1), j -> j);
 			}

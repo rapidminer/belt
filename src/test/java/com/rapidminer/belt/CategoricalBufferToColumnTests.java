@@ -35,8 +35,8 @@ public class CategoricalBufferToColumnTests {
 	private static final ColumnType<BigInteger> CATEGORICAL_BIGINT_COLUMN = ColumnTypes.categoricalType(
 			"com.rapidminer.belt.test.categoricalbigintcolumn", BigInteger.class, BigInteger::compareTo);
 
-	private static final ColumnType<String> FREE_STRING_COLUMN = ColumnTypes.freeType(
-			"com.rapidminer.belt.test.freestringcolumn", String.class, String::compareTo);
+	private static final ColumnType<String> STRING_COLUMN = ColumnTypes.freeType(
+			"com.rapidminer.belt.test.stringcolumn", String.class, String::compareTo);
 
 	private String[] identityStrings(int nValues, int nCategories) {
 		String[] data = new String[nValues];
@@ -69,6 +69,34 @@ public class CategoricalBufferToColumnTests {
 		int n = 100;
 		String[] data = identityStrings(n, Format.UNSIGNED_INT4.maxValue());
 		UInt4CategoricalBuffer<String> buffer = new UInt4CategoricalBuffer<>(n);
+		for (int i = 0; i < 100; i++) {
+			buffer.set(i, data[i]);
+		}
+		CategoricalColumn<String> column = buffer.toColumn(CATEGORICAL_STRING_COLUMN);
+		String[] result = new String[n];
+		column.fill(result, 0);
+		assertArrayEquals(data, result);
+	}
+
+	@Test
+	public void testUInt8To2StringBuffer() {
+		int n = 100;
+		String[] data = identityStrings(n, Format.UNSIGNED_INT2.maxValue());
+		UInt8CategoricalBuffer<String> buffer = new UInt8CategoricalBuffer<>(n, Format.UNSIGNED_INT2);
+		for (int i = 0; i < 100; i++) {
+			buffer.set(i, data[i]);
+		}
+		CategoricalColumn<String> column = buffer.toColumn(CATEGORICAL_STRING_COLUMN);
+		String[] result = new String[n];
+		column.fill(result, 0);
+		assertArrayEquals(data, result);
+	}
+
+	@Test
+	public void testUInt8To4StringBuffer() {
+		int n = 100;
+		String[] data = identityStrings(n, Format.UNSIGNED_INT4.maxValue());
+		UInt8CategoricalBuffer<String> buffer = new UInt8CategoricalBuffer<>(n, Format.UNSIGNED_INT4);
 		for (int i = 0; i < 100; i++) {
 			buffer.set(i, data[i]);
 		}
@@ -150,6 +178,34 @@ public class CategoricalBufferToColumnTests {
 	}
 
 	@Test
+	public void testUInt8To2BigIntBuffer() {
+		int n = 100;
+		BigInteger[] data = identityBigInts(n, Format.UNSIGNED_INT2.maxValue());
+		UInt8CategoricalBuffer<BigInteger> buffer = new UInt8CategoricalBuffer<>(n, Format.UNSIGNED_INT2);
+		for (int i = 0; i < 100; i++) {
+			buffer.set(i, data[i]);
+		}
+		CategoricalColumn<BigInteger> column = buffer.toColumn(CATEGORICAL_BIGINT_COLUMN);
+		BigInteger[] result = new BigInteger[n];
+		column.fill(result, 0);
+		assertArrayEquals(data, result);
+	}
+
+	@Test
+	public void testUInt8To4BigIntBuffer() {
+		int n = 100;
+		BigInteger[] data = identityBigInts(n, Format.UNSIGNED_INT4.maxValue());
+		UInt8CategoricalBuffer<BigInteger> buffer = new UInt8CategoricalBuffer<>(n, Format.UNSIGNED_INT4);
+		for (int i = 0; i < 100; i++) {
+			buffer.set(i, data[i]);
+		}
+		CategoricalColumn<BigInteger> column = buffer.toColumn(CATEGORICAL_BIGINT_COLUMN);
+		BigInteger[] result = new BigInteger[n];
+		column.fill(result, 0);
+		assertArrayEquals(data, result);
+	}
+
+	@Test
 	public void testUInt8BigIntBuffer() {
 		int n = 100;
 		BigInteger[] data = identityBigInts(n, Format.UNSIGNED_INT8.maxValue());
@@ -194,31 +250,31 @@ public class CategoricalBufferToColumnTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testUInt2MismatchingCategory() {
 		UInt2CategoricalBuffer<String> buffer = new UInt2CategoricalBuffer<>(100);
-		buffer.toColumn(FREE_STRING_COLUMN);
+		buffer.toColumn(STRING_COLUMN);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testUInt4MismatchingCategory() {
 		UInt4CategoricalBuffer<String> buffer = new UInt4CategoricalBuffer<>(100);
-		buffer.toColumn(FREE_STRING_COLUMN);
+		buffer.toColumn(STRING_COLUMN);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testUInt8MismatchingCategory() {
 		UInt8CategoricalBuffer<String> buffer = new UInt8CategoricalBuffer<>(100);
-		buffer.toColumn(FREE_STRING_COLUMN);
+		buffer.toColumn(STRING_COLUMN);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testUInt16MismatchingCategory() {
 		UInt16CategoricalBuffer<String> buffer = new UInt16CategoricalBuffer<>(100);
-		buffer.toColumn(FREE_STRING_COLUMN);
+		buffer.toColumn(STRING_COLUMN);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testInt32MismatchingCategory() {
 		Int32CategoricalBuffer<String> buffer = new Int32CategoricalBuffer<>(100);
-		buffer.toColumn(FREE_STRING_COLUMN);
+		buffer.toColumn(STRING_COLUMN);
 	}
 
 	@Test(expected = IllegalStateException.class)

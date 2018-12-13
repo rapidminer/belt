@@ -336,7 +336,7 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				objectData[i] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return new SimpleFreeColumn<>(ColumnTypes.categoricalType(
+			return new SimpleObjectColumn<>(ColumnTypes.categoricalType(
 					"com.rapidminer.belt.column.test.objectcolumn", Object.class, INTEGER_COMPARATOR),
 					objectData);
 		}
@@ -348,7 +348,7 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				mappedObjectData[mapping[i]] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return new MappedFreeColumn<>(ColumnTypes.categoricalType(
+			return new MappedObjectColumn<>(ColumnTypes.categoricalType(
 					"com.rapidminer.belt.column.test.objectcolumn", Object.class, INTEGER_COMPARATOR),
 					mappedObjectData, mapping);
 		}
@@ -583,7 +583,7 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				objectData[i] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return new SimpleFreeColumn<>(ColumnTypes.freeType(
+			return new SimpleObjectColumn<>(ColumnTypes.freeType(
 					"com.rapidminer.belt.column.test.objectcolumn", Object.class, null),
 					objectData);
 		}
@@ -595,7 +595,7 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				mappedObjectData[mapping[i]] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return new MappedFreeColumn<>(ColumnTypes.freeType(
+			return new MappedObjectColumn<>(ColumnTypes.freeType(
 					"com.rapidminer.belt.column.test.objectcolumn", Object.class, null),
 					mappedObjectData, mapping);
 		}

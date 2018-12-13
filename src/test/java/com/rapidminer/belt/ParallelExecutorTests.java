@@ -18,6 +18,7 @@ package com.rapidminer.belt;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -31,9 +32,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.DoubleConsumer;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -52,11 +55,15 @@ import com.rapidminer.belt.util.TaskAbortedException;
 @RunWith(Enclosed.class)
 public class ParallelExecutorTests {
 
+	private static final double EPSILON = 1e-10;
+
 	private static final Context CTX = Belt.defaultContext();
 
 	private static final String SEQUENTIAL = "sequential";
 	private static final String EQUAL_PARTS = "equal_parts";
 	private static final String IN_BATCHES = "in_batches";
+
+	private static final DoubleConsumer NOOP_CALLBACK = i -> {};
 
 	@RunWith(Parameterized.class)
 	public static class AllSizes {
@@ -121,7 +128,7 @@ public class ParallelExecutorTests {
 					return called.get();
 				}
 			};
-			int result = new ParallelExecutor<>(calculator, Workload.SMALL).create().run(CTX);
+			int result = new ParallelExecutor<>(calculator, Workload.SMALL, NOOP_CALLBACK).create().run(CTX);
 			assertEquals(expectedRuns(), result);
 		}
 
@@ -148,7 +155,7 @@ public class ParallelExecutorTests {
 					return 42;
 				}
 			};
-			new ParallelExecutor<>(calculator, Workload.SMALL).create().run(CTX);
+			new ParallelExecutor<>(calculator, Workload.SMALL, NOOP_CALLBACK).create().run(CTX);
 		}
 
 		private static class ExceptionInUserCode extends RuntimeException {
@@ -173,12 +180,12 @@ public class ParallelExecutorTests {
 					return ParallelExecutor.THRESHOLD_PARALLEL_HUGE;
 				case LARGE:
 					return ParallelExecutor.THRESHOLD_PARALLEL_LARGE;
-				case MEDIUM:
-					return ParallelExecutor.THRESHOLD_PARALLEL_MEDIUM;
 				case SMALL:
+					return ParallelExecutor.THRESHOLD_PARALLEL_SMALL;
+				case MEDIUM:
 				case DEFAULT:
 				default:
-					return ParallelExecutor.THRESHOLD_PARALLEL_SMALL;
+					return ParallelExecutor.THRESHOLD_PARALLEL_MEDIUM;
 			}
 		}
 
@@ -188,12 +195,12 @@ public class ParallelExecutorTests {
 					return ParallelExecutor.BATCH_SIZE_HUGE;
 				case LARGE:
 					return ParallelExecutor.BATCH_SIZE_LARGE;
-				case MEDIUM:
-					return ParallelExecutor.BATCH_SIZE_MEDIUM;
 				case SMALL:
+					return ParallelExecutor.BATCH_SIZE_SMALL;
+				case MEDIUM:
 				case DEFAULT:
 				default:
-					return ParallelExecutor.BATCH_SIZE_SMALL;
+					return ParallelExecutor.BATCH_SIZE_MEDIUM;
 			}
 		}
 
@@ -236,7 +243,8 @@ public class ParallelExecutorTests {
 				}
 			};
 
-			ScheduledTaskRunner<List<Integer>> partSizesCaller = new ParallelExecutor<>(calculator, workload).create();
+			ScheduledTaskRunner<List<Integer>> partSizesCaller = new ParallelExecutor<>(calculator, workload,
+					NOOP_CALLBACK).create();
 			List<Integer> partSizes = partSizesCaller.run(CTX);
 
 			//test number of parts
@@ -307,7 +315,8 @@ public class ParallelExecutorTests {
 				}
 			};
 
-			ScheduledTaskRunner<Void> partSizesCaller = new ParallelExecutor<>(calculator, workload).create();
+			ScheduledTaskRunner<Void> partSizesCaller = new ParallelExecutor<>(calculator, workload, NOOP_CALLBACK)
+					.create();
 			partSizesCaller.run(context);
 
 			//test number of parts matches initialized
@@ -351,7 +360,7 @@ public class ParallelExecutorTests {
 				}
 
 			};
-			int counts = new ParallelExecutor<>(calculator, workload).create().run(CTX);
+			int counts = new ParallelExecutor<>(calculator, workload, NOOP_CALLBACK).create().run(CTX);
 
 			// test every index was done
 			boolean[] expectedDone = new boolean[size];
@@ -375,87 +384,94 @@ public class ParallelExecutorTests {
 
 	public static class Cancellation {
 
+		private static class OneShotContext implements Context {
+
+			private AtomicBoolean active = new AtomicBoolean(true);
+
+			@Override
+			public boolean isActive() {
+				return active.get();
+			}
+
+			@Override
+			public int getParallelism() {
+				return CTX.getParallelism();
+			}
+
+			@Override
+			public <T> Future<T> submit(Callable<T> job) {
+				if (active.get()) {
+					active.set(false);
+					return CTX.submit(job);
+				} else {
+					throw new RejectedExecutionException("You had your one shot");
+				}
+			}
+
+		}
+
+		ParallelExecutor.Calculator<Integer> unsupportedCalculator = new ParallelExecutor.Calculator<Integer>() {
+
+			@Override
+			public void init(int numberOfBatches) {
+				// do nothing
+			}
+
+			@Override
+			public int getNumberOfOperations() {
+				return 1000;
+			}
+
+			@Override
+			public void doPart(int from, int to, int batchIndex) {
+				throw new UnsupportedOperationException();
+			}
+
+			@Override
+			public Integer getResult() {
+				throw new UnsupportedOperationException();
+			}
+
+		};
+
 		@Test(expected = TaskAbortedException.class)
 		public void testInactiveContext() throws Exception {
 			Context ctx = spy(CTX);
 			when(ctx.isActive()).thenReturn(false);
-			ParallelExecutor.Calculator<Integer> calculator = new ParallelExecutor.Calculator<Integer>() {
+			new ParallelExecutor<>(unsupportedCalculator, Workload.SMALL, NOOP_CALLBACK).create().run(ctx);
+		}
 
-				@Override
-				public void init(int numberOfBatches) {
-					throw new RuntimeException("I am not called");
-				}
-
-				@Override
-				public int getNumberOfOperations() {
-					throw new RuntimeException("I am not called");
-				}
-
-				@Override
-				public void doPart(int from, int to, int batchIndex) {
-					throw new RuntimeException("I am not called");
-				}
-
-				@Override
-				public Integer getResult() {
-					throw new RuntimeException("I am not called");
-				}
-
-			};
-			new ParallelExecutor<>(calculator, Workload.SMALL).create().run(ctx);
+		@Test
+		public void testProgressWithInactiveContext() throws Exception {
+			Context ctx = spy(CTX);
+			when(ctx.isActive()).thenReturn(false);
+			double[] result = new double[]{-1.0};
+			try {
+				new ParallelExecutor<>(unsupportedCalculator, Workload.SMALL, p -> result[0] = p).create().run(ctx);
+			} catch (TaskAbortedException e) {
+				// ignore exception
+			}
+			assertEquals(-1.0, result[0], EPSILON);
 		}
 
 		@Test(expected = TaskAbortedException.class)
 		public void testAbortionBeforeParts() {
-			Context oneShotContext = new Context() {
+			new ParallelExecutor<>(unsupportedCalculator, Workload.SMALL, NOOP_CALLBACK)
+					.create()
+					.run(new OneShotContext());
+		}
 
-				private AtomicBoolean active = new AtomicBoolean(true);
-
-				@Override
-				public boolean isActive() {
-					return active.get();
-				}
-
-				@Override
-				public int getParallelism() {
-					return CTX.getParallelism();
-				}
-
-				@Override
-				public <T> Future<T> submit(Callable<T> job) {
-					if (active.get()) {
-						active.set(false);
-						return CTX.submit(job);
-					} else {
-						throw new RejectedExecutionException("You had your one shot");
-					}
-				}
-			};
-
-
-			ParallelExecutor.Calculator<Integer> calculator = new ParallelExecutor.Calculator<Integer>() {
-
-				@Override
-				public void init(int numberOfBatches) {
-				}
-
-				@Override
-				public int getNumberOfOperations() {
-					return 1000;
-				}
-
-				@Override
-				public void doPart(int from, int to, int batchIndex) {
-					throw new RuntimeException("I am not called");
-				}
-
-				@Override
-				public Integer getResult() {
-					throw new RuntimeException("I am not called");
-				}
-			};
-			new ParallelExecutor<>(calculator, Workload.SMALL).create().run(oneShotContext);
-
+		@Test
+		public void testProgressWithAbortionBeforeParts() {
+			double[] result = new double[]{-1.0};
+			try {
+				new ParallelExecutor<>(unsupportedCalculator, Workload.SMALL, p -> result[0] = p)
+						.create()
+						.run(new OneShotContext());
+			} catch (TaskAbortedException e) {
+				// ignore exception
+			}
+			assertNotEquals(1.0, result[0], EPSILON);
 		}
 
 	}
@@ -490,11 +506,16 @@ public class ParallelExecutorTests {
 			};
 
 			Map<Workload, Integer> batchCount = new HashMap<>();
-			batchCount.put(Workload.DEFAULT, new ParallelExecutor<>(calculator, Workload.DEFAULT).create().run(CTX));
-			batchCount.put(Workload.SMALL, new ParallelExecutor<>(calculator, Workload.SMALL).create().run(CTX));
-			batchCount.put(Workload.MEDIUM, new ParallelExecutor<>(calculator, Workload.MEDIUM).create().run(CTX));
-			batchCount.put(Workload.LARGE, new ParallelExecutor<>(calculator, Workload.LARGE).create().run(CTX));
-			batchCount.put(Workload.HUGE, new ParallelExecutor<>(calculator, Workload.HUGE).create().run(CTX));
+			batchCount.put(Workload.DEFAULT, new ParallelExecutor<>(calculator, Workload.DEFAULT, NOOP_CALLBACK)
+					.create().run(CTX));
+			batchCount.put(Workload.SMALL, new ParallelExecutor<>(calculator, Workload.SMALL, NOOP_CALLBACK)
+					.create().run(CTX));
+			batchCount.put(Workload.MEDIUM, new ParallelExecutor<>(calculator, Workload.MEDIUM, NOOP_CALLBACK)
+					.create().run(CTX));
+			batchCount.put(Workload.LARGE, new ParallelExecutor<>(calculator, Workload.LARGE, NOOP_CALLBACK)
+					.create().run(CTX));
+			batchCount.put(Workload.HUGE, new ParallelExecutor<>(calculator, Workload.HUGE, NOOP_CALLBACK)
+					.create().run(CTX));
 
 			assertTrue("Fewer batches for default workloads than for huge ones",
 					batchCount.get(Workload.DEFAULT) < batchCount.get(Workload.HUGE));
@@ -504,6 +525,76 @@ public class ParallelExecutorTests {
 					batchCount.get(Workload.MEDIUM) < batchCount.get(Workload.LARGE));
 			assertTrue("Fewer batches for large workloads than for huge ones",
 					batchCount.get(Workload.LARGE) < batchCount.get(Workload.HUGE));
+		}
+
+	}
+
+	@RunWith(Parameterized.class)
+	public static class Callbacks {
+
+		@Parameter
+		public Workload workload;
+
+		@Parameters(name = "{0}")
+		public static Iterable<Workload> workloadConfiguration() {
+			return Arrays.asList(Workload.values());
+		}
+
+		private static Context NO_POOL = new Context() {
+
+			@Override
+			public boolean isActive() {
+				return true;
+			}
+
+			@Override
+			public int getParallelism() {
+				return 4;
+			}
+
+			@Override
+			public <T> Future<T> submit(Callable<T> job) {
+				// Spawn a new thread for each job to ensure that ThreadLocal data is also job local (see test below).
+				FutureTask<T> future = new FutureTask<>(job);
+				new Thread(future).start();
+				return future;
+			}
+
+		};
+
+		@Test
+		public void testLocalMonotonicity() {
+			ParallelExecutor.Calculator<Integer> calculator = new ParallelExecutor.Calculator<Integer>() {
+
+				@Override
+				public void init(int numberOfBatches) {
+				}
+
+				@Override
+				public int getNumberOfOperations() {
+					return ParallelExecutor.BATCH_SIZE_SMALL * 10;
+				}
+
+				@Override
+				public void doPart(int from, int to, int batchIndex) {
+					// noop
+				}
+
+				@Override
+				public Integer getResult() {
+					return 0;
+				}
+
+			};
+
+			// The NO_POOL context runs each job in a new thread. Thus, we know that this thread local field will only
+			// see updates from a single worker.
+			ThreadLocal<Double> progress = ThreadLocal.withInitial(() -> Double.NaN);
+			new ParallelExecutor<>(calculator, Workload.SMALL, p -> {
+				double current = progress.get();
+				assertTrue(Double.isNaN(current) || Double.isNaN(p) || current <= p);
+				progress.set(p);
+			}).create().run(NO_POOL);
 		}
 
 	}
@@ -605,7 +696,7 @@ public class ParallelExecutorTests {
 				}
 
 			};
-			new ParallelExecutor<>(calculator, workload).create().run(getContext());
+			new ParallelExecutor<>(calculator, workload, NOOP_CALLBACK).create().run(getContext());
 		}
 
 		@Test
@@ -644,8 +735,42 @@ public class ParallelExecutorTests {
 				}
 
 			};
-			 new ParallelExecutor<>(calculator, workload).create().run(context);
+			 new ParallelExecutor<>(calculator, workload, NOOP_CALLBACK).create().run(context);
 		}
+
+		@Test
+		public void testZeroHeight() {
+
+			final Context context = getContext();
+			ParallelExecutor.Calculator<Integer> calculator = new ParallelExecutor.Calculator<Integer>() {
+
+				Integer result = null;
+
+				@Override
+				public void init(int numberOfBatches) {
+					result = numberOfBatches;
+				}
+
+				@Override
+				public int getNumberOfOperations() {
+					return 0;
+				}
+
+				@Override
+				public void doPart(int from, int to, int batchIndex) {
+					assertEquals(0, batchIndex);
+				}
+
+				@Override
+				public Integer getResult() {
+					return result;
+				}
+
+			};
+			new ParallelExecutor<>(calculator, workload, NOOP_CALLBACK).create().run(context);
+			assertEquals(1, calculator.getResult().intValue());
+		}
+
 
 	}
 

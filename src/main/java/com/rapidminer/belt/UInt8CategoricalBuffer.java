@@ -24,20 +24,23 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.rapidminer.belt.Column.Category;
+import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.IntegerFormats.Format;
 import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 
 /**
- * Implementation of a {@link CategoricalColumnBuffer} with category index format {@link Format#UNSIGNED_INT8} that can
+ * Implementation of a {@link CategoricalBuffer} with category index format {@link Format#UNSIGNED_INT8} that can
  * hold {@code 255} different categories. The category indices are stored as {@code byte}.
  *
  * @author Gisa Meier
  */
-public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T> {
+public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 
 
 	private final byte[] data;
+	private final Format targetFormat;
+	private final int maxCategories;
 	private boolean frozen = false;
 	private final Map<T, Byte> indexLookup = new ConcurrentHashMap<>();
 	private final List<T> valueLookup = new ArrayList<>();
@@ -47,15 +50,9 @@ public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	 *
 	 * @param length
 	 * 		the length of the buffer
-	 * @throws IllegalArgumentException
-	 * 		if the given length is negative
 	 */
-	public UInt8CategoricalBuffer(int length) {
-		if (length < 0) {
-			throw new IllegalArgumentException("Illegal Capacity: " + length);
-		}
-		data = new byte[length];
-		valueLookup.add(null); //position 0 stands for missing value, i.e. null
+	UInt8CategoricalBuffer(int length) {
+		this(length, Format.UNSIGNED_INT8);
 	}
 
 	/**
@@ -68,36 +65,71 @@ public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	 * @param elementType
 	 * 		the desired type of the buffer, must be a super type of the column type
 	 */
-	public UInt8CategoricalBuffer(Column column, Class<T> elementType) {
+	UInt8CategoricalBuffer(Column column, Class<T> elementType) {
+		this(column, elementType, Format.UNSIGNED_INT8);
+	}
+
+	/**
+	 * Creates a buffer of the given length.
+	 *
+	 * @param length
+	 * 		the length of the buffer
+	 * @param targetFormat
+	 * 		the format of the final column
+	 */
+	UInt8CategoricalBuffer(int length, Format targetFormat) {
+		this.data = new byte[length];
+		this.targetFormat = targetFormat;
+		this.maxCategories = Integer.min(targetFormat.maxValue(), Format.UNSIGNED_INT8.maxValue());
+		this.valueLookup.add(null); //position 0 stands for missing value, i.e. null
+	}
+
+	/**
+	 * Copies the data of the given column into a buffer. Throws an {@link UnsupportedOperationException} if the column
+	 * category is not {@link Column.Category#CATEGORICAL} or if the compression format of the column has more values
+	 * than supported by this buffer.
+	 *
+	 * @param column
+	 * 		the column to convert to a buffer
+	 * @param elementType
+	 * 		the desired type of the buffer, must be a super type of the column type
+	 * @param targetFormat
+	 * 		the format of the final column
+	 */
+	UInt8CategoricalBuffer(Column column, Class<T> elementType, Format targetFormat) {
 		if (column instanceof CategoricalColumn) {
+			this.targetFormat = targetFormat;
+			this.maxCategories = Integer.min(targetFormat.maxValue(), Format.UNSIGNED_INT8.maxValue());
 			CategoricalColumn<?> categoricalColumn = (CategoricalColumn) column;
-			if (categoricalColumn.getFormat() == indexFormat()) {
-				//same format: directly copy the data
-				byte[] originalData = categoricalColumn.getByteData().data();
-				data = Arrays.copyOf(originalData, originalData.length);
-			} else if (categoricalColumn.getFormat().maxValue() < indexFormat().maxValue()) {
-				//smaller format: go via column reader
-				data = new byte[column.size()];
-				CategoricalColumnReader reader = new CategoricalColumnReader(column);
-				for (int i = 0; i < data.length; i++) {
-					data[i] = (byte) reader.read();
+			List<T> dictionary = categoricalColumn.getDictionary(elementType);
+			if (dictionary.size() <= maxCategories) {
+				if (categoricalColumn.getFormat() == Format.UNSIGNED_INT8) {
+					// Same format: directly copy the data
+					byte[] originalData = categoricalColumn.getByteData().data();
+					data = Arrays.copyOf(originalData, originalData.length);
+				} else {
+					// Different format: go via column reader
+					data = new byte[column.size()];
+					CategoricalReader reader = Readers.categoricalReader(column);
+					for (int i = 0; i < data.length; i++) {
+						data[i] = (byte) reader.read();
+					}
 				}
 			} else {
-				//bigger format
-				throw new UnsupportedOperationException("Column format incompatible with buffer format");
+				throw new UnsupportedOperationException("Column contains to many categories for this buffer format");
 			}
+			fillStructures(dictionary);
 		} else {
 			throw new UnsupportedOperationException("Column is not categorical");
 		}
-		fillStructures(column.getDictionary(elementType));
 	}
 
 	private void fillStructures(List<T> values) {
 		valueLookup.add(null);
-		for (byte i = 1; i < values.size(); i++) {
+		for (int i = 1; i < values.size(); i++) {
 			T value = values.get(i);
 			valueLookup.add(value);
-			indexLookup.put(value, i);
+			indexLookup.put(value, (byte) i);
 		}
 	}
 
@@ -115,7 +147,7 @@ public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	@Override
 	public void set(int index, T value) {
 		if (!setSave(index, value)) {
-			throw new IllegalArgumentException("More than " + indexFormat().maxValue() + " different values.");
+			throw new IllegalArgumentException("More than " + maxCategories + " different values.");
 		}
 	}
 
@@ -125,7 +157,7 @@ public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	@Override
 	public boolean setSave(int index, T value) {
 		if (frozen) {
-			throw new IllegalStateException(BUFFER_FROZEN_MESSAGE);
+			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
 		if (value == null) {
 			//set NaN
@@ -141,7 +173,7 @@ public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 					Byte mappingIndexAgain = indexLookup.get(value);
 					if (mappingIndexAgain == null) {
 						int newMappingIndex = valueLookup.size();
-						if (newMappingIndex > indexFormat().maxValue()) {
+						if (newMappingIndex > maxCategories) {
 							return false;
 						}
 						valueLookup.add(value);
@@ -195,12 +227,73 @@ public class UInt8CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 
 	@Override
 	public CategoricalColumn<T> toColumn(ColumnType<T> type) {
+		freeze();
 		Objects.requireNonNull(type, "Column type must not be null");
 		if (type.category() != Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column type must be categorical");
 		}
-		freeze();
-		PackedIntegers bytes = new PackedIntegers(data, indexFormat(), data.length);
-		return new SimpleCategoricalColumn<>(type, bytes, valueLookup);
+		PackedIntegers packed;
+		switch (targetFormat) {
+			case UNSIGNED_INT2:
+				packed = packAsUInt2();
+				break;
+			case UNSIGNED_INT4:
+				packed = packAsUInt4();
+				break;
+			case UNSIGNED_INT16:
+			default:
+				packed = new PackedIntegers(data, Format.UNSIGNED_INT8, data.length);
+				break;
+		}
+		return new SimpleCategoricalColumn<>(type, packed, valueLookup);
 	}
+
+	@Override
+	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
+		freeze();
+		Objects.requireNonNull(type, "Column type must not be null");
+		if (type.category() != Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Column type must be categorical");
+		}
+		int positiveIndex = CategoricalColumn.NO_POSITIVE_ENTRY;
+		if (positiveValue != null) {
+			Byte index = indexLookup.get(positiveValue);
+			if (index == null) {
+				throw new IllegalArgumentException("Positive value \"" + Objects.toString(positiveValue)
+						+ "\" not in dictionary.");
+			}
+			positiveIndex = Byte.toUnsignedInt(index);
+		}
+		PackedIntegers packed;
+		switch (targetFormat) {
+			case UNSIGNED_INT2:
+				packed = packAsUInt2();
+				break;
+			case UNSIGNED_INT4:
+				packed = packAsUInt4();
+				break;
+			case UNSIGNED_INT16:
+			default:
+				packed = new PackedIntegers(data, Format.UNSIGNED_INT8, data.length);
+				break;
+		}
+		return new SimpleCategoricalColumn<>(type, packed, valueLookup, positiveIndex);
+	}
+
+	private PackedIntegers packAsUInt2() {
+		byte[] uInt2Data = new byte[data.length / 4 + data.length % 4];
+		for (int i = 0; i < data.length; i++) {
+			IntegerFormats.writeUInt2(uInt2Data, i, data[i]);
+		}
+		return new PackedIntegers(uInt2Data, Format.UNSIGNED_INT2, data.length);
+	}
+
+	private PackedIntegers packAsUInt4() {
+		byte[] uInt4Data = new byte[data.length / 2 + data.length % 2];
+		for (int i = 0; i < data.length; i++) {
+			IntegerFormats.writeUInt4(uInt4Data, i, data[i]);
+		}
+		return new PackedIntegers(uInt4Data, Format.UNSIGNED_INT4, data.length);
+	}
+
 }

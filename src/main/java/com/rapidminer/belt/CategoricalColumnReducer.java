@@ -72,7 +72,7 @@ final class CategoricalColumnReducer<T> implements ParallelExecutor.Calculator<T
 	 * Calls the reducer for every column value between from (inclusive) and to (exclusive).
 	 */
 	private static <T> void reducePart(Column source, T container, ObjIntConsumer<T> reducer, int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reducer.accept(container, reader.read());

@@ -28,9 +28,9 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 
 /**
- * Column with data associated to integer categories. Data can be accessed via a {@link CategoricalColumnReader}
- * or a {@link ColumnReader} together with access to the mapping by {@link #getDictionary(Class)} or via a
- * {@link ObjectColumnReader}.
+ * Column with data associated to integer categories. Data can be accessed via a {@link CategoricalReader}
+ * or a {@link NumericReader} together with access to the mapping by {@link #getDictionary(Class)} or via a
+ * {@link ObjectReader}.
  *
  * @author Gisa Meier, Michael Knopf
  */
@@ -49,6 +49,8 @@ abstract class CategoricalColumn<R> extends Column {
 			Capability.OBJECT_READABLE, Capability.BOOLEAN);
 
 	static final int NOT_BOOLEAN = -1;
+
+	static final int NO_POSITIVE_ENTRY = -2;
 
 	private final ColumnType<R> columnType;
 	private final int positiveIndex;
@@ -354,6 +356,8 @@ abstract class CategoricalColumn<R> extends Column {
 	public boolean toBoolean(Object value) {
 		if (positiveIndex == NOT_BOOLEAN) {
 			throw new UnsupportedOperationException();
+		} else if (positiveIndex == NO_POSITIVE_ENTRY) {
+			return false;
 		}
 		return getDictionary().get(positiveIndex).equals(value);
 	}

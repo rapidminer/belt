@@ -36,7 +36,7 @@ import java.util.Objects;
  * }</pre>
  *
  * <p>Given the column-oriented design of Belt, {@link ObjectRowReader}s do not perform as well as {@link
- * ObjectColumnReader}s. Thus, whenever possible the use of {@link ObjectColumnReader}s is preferred.
+ * ObjectReader}s. Thus, whenever possible the use of {@link ObjectReader}s is preferred.
  *
  * @author Michael Knopf, Gisa Meier
  */
@@ -50,12 +50,12 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	/**
 	 * Maximal number of rows in a buffer
 	 */
-	private static final int MAX_BUFFER_ROWS = ColumnReader.SMALL_BUFFER_SIZE;
+	private static final int MAX_BUFFER_ROWS = NumericReader.SMALL_BUFFER_SIZE;
 
 	/**
 	 * Minimal number of rows in a buffer
 	 */
-	private static final int MIN_BUFFER_ROWS = ColumnReader.MIN_BUFFER_SIZE;
+	private static final int MIN_BUFFER_ROWS = NumericReader.MIN_BUFFER_SIZE;
 
 	/**
 	 * Placeholder buffer used before initialization.
@@ -77,7 +77,7 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	 * capability {@link Column.Capability#OBJECT_READABLE}.
 	 *
 	 * <p>Given the column-oriented design of Belt, {@link ObjectRowReader}s do not perform as well as {@link
-	 * ObjectColumnReader}s. Thus, whenever possible the use of {@link ObjectColumnReader}s is preferred.
+	 * ObjectReader}s. Thus, whenever possible the use of {@link ObjectReader}s is preferred.
 	 *
 	 * @param table
 	 * 		the table to read
@@ -86,7 +86,7 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	 * @throws NullPointerException
 	 * 		if the table is {@code null}
 	 */
-	public ObjectRowReader(Table table, Class<T> type) {
+	ObjectRowReader(Table table, Class<T> type) {
 		this(Objects.requireNonNull(table, "Table must not be null").getColumns(), type,BUFFER_ELEMENTS);
 	}
 
@@ -96,7 +96,7 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	 * Column.Capability#OBJECT_READABLE}.
 	 *
 	 * <p>Given the column-oriented design of Belt, {@link ObjectRowReader}s do not perform as well as {@link
-	 * ObjectColumnReader}s. Thus, whenever possible the use of {@link ObjectColumnReader}s is preferred.
+	 * ObjectReader}s. Thus, whenever possible the use of {@link ObjectReader}s is preferred.
 	 *
 	 * @param type
 	 * 		the common superclass of all the element types of the columns
@@ -109,7 +109,7 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	 * @throws NullPointerException
 	 * 		if the first or the second column are {@code null}
 	 */
-	public ObjectRowReader(Class<T> type, Column first, Column second, Column... columns) {
+	ObjectRowReader(Class<T> type, Column first, Column second, Column... columns) {
 		this(getColumnArray(first, second, columns), type, BUFFER_ELEMENTS);
 	}
 
@@ -118,7 +118,7 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	 * Column.Category#CATEGORICAL}.
 	 *
 	 * <p>Given the column-oriented design of Belt, {@link ObjectRowReader}s do not perform as well as {@link
-	 * CategoricalColumnReader}s. Thus, whenever possible the use of {@link CategoricalColumnReader}s is preferred.
+	 * CategoricalReader}s. Thus, whenever possible the use of {@link CategoricalReader}s is preferred.
 	 *
 	 * @param src
 	 * 		the columns to read
@@ -127,7 +127,7 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	 * @throws NullPointerException
 	 * 		if the source columns array is {@code null}
 	 */
-	public ObjectRowReader(Column[] src, Class<T> type) {
+	ObjectRowReader(Column[] src, Class<T> type) {
 		this(src, type, BUFFER_ELEMENTS);
 	}
 
@@ -227,8 +227,8 @@ public final class ObjectRowReader<T> implements ObjectRow<T>{
 	}
 
 	/**
-	 * Returns the position of the row in the table (0-based). Returns {@link Row#BEFORE_FIRST} if the reader is before
-	 * the first position, i.e., {@link #move()} has not been called.
+	 * Returns the position of the row in the table (0-based). Returns {@link Readers#BEFORE_FIRST_ROW} if the reader
+	 * is before the first position, i.e., {@link #move()} has not been called.
 	 *
 	 * @return the row position
 	 */

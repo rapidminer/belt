@@ -81,7 +81,7 @@ final class ColumnReducerDouble implements ParallelExecutor.Calculator<Double> {
 	 */
 	private static double reducePart(Column source, double identity, DoubleBinaryOperator reducer, int from, int to) {
 		double container = identity;
-		final ColumnReader reader = new ColumnReader(source, to);
+		final NumericReader reader = new NumericReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			container = reducer.applyAsDouble(container, reader.read());

@@ -28,12 +28,12 @@ import com.rapidminer.belt.util.IntegerFormats.Format;
 
 
 /**
- * Implementation of a {@link CategoricalColumnBuffer} with category index forma {@link Format#SIGNED_INT32} that can
+ * Implementation of a {@link CategoricalBuffer} with category index format {@link Format#SIGNED_INT32} that can
  * hold {@link Integer#MAX_VALUE} many different categories. The category indices are stored as {@code int}.
  *
  * @author Gisa Meier
  */
-public class Int32CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T> {
+public class Int32CategoricalBuffer<T> extends CategoricalBuffer<T> {
 
 
 	private final int[] data;
@@ -46,13 +46,8 @@ public class Int32CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	 *
 	 * @param length
 	 * 		the length of the buffer
-	 * @throws IllegalArgumentException
-	 * 		if the given length is negative
 	 */
-	public Int32CategoricalBuffer(int length) {
-		if (length < 0) {
-			throw new IllegalArgumentException("Illegal Capacity: " + length);
-		}
+	Int32CategoricalBuffer(int length) {
 		data = new int[length];
 		valueLookup.add(null); //position 0 stands for missing value, i.e. null
 	}
@@ -66,7 +61,7 @@ public class Int32CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	 * @param elementType
 	 * 		the desired type of the buffer, must be a super type of the column type
 	 */
-	public Int32CategoricalBuffer(Column column, Class<T> elementType) {
+	Int32CategoricalBuffer(Column column, Class<T> elementType) {
 		data = new int[column.size()];
 		column.fill(data, 0);
 		fillStructures(column.getDictionary(elementType));
@@ -95,7 +90,7 @@ public class Int32CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	@Override
 	public void set(int index, T value) {
 		if (frozen) {
-			throw new IllegalStateException(BUFFER_FROZEN_MESSAGE);
+			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
 		if (value == null) {
 			//set NaN
@@ -177,4 +172,24 @@ public class Int32CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 		freeze();
 		return new SimpleCategoricalColumn<>(type, data, valueLookup);
 	}
+
+	@Override
+	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
+		freeze();
+		Objects.requireNonNull(type, "Column type must not be null");
+		if (type.category() != Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Column type must be categorical");
+		}
+		int positiveIndex = CategoricalColumn.NO_POSITIVE_ENTRY;
+		if (positiveValue != null) {
+			Integer index = indexLookup.get(positiveValue);
+			if (index == null) {
+				throw new IllegalArgumentException("Positive value \"" + Objects.toString(positiveValue)
+						+ "\" not in dictionary.");
+			}
+			positiveIndex = index;
+		}
+		return new SimpleCategoricalColumn<>(type, data, valueLookup, positiveIndex);
+	}
+
 }

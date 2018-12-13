@@ -44,7 +44,7 @@ public class ColumnTaskTests {
 
 	private static Context CTX = Belt.defaultContext();
 
-	private static double[] readBufferToArray(ColumnBuffer buffer) {
+	private static double[] readBufferToArray(NumericBuffer buffer) {
 		double[] data = new double[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = buffer.get(j);
@@ -60,27 +60,25 @@ public class ColumnTaskTests {
 	public static Iterable<ApiTest> tests() {
 		List<ApiTest> tests = new ArrayList<>(3);
 
-		Table input = Table.newTable(100)
+		Table input = Builders.newTableBuilder(100)
 				.addReal("a", i -> Math.random())
 				.addReal("b", i -> Math.random())
 				.addReal("c", i -> Math.random())
 				.build(CTX);
 
 		tests.add(new ApiTest("map_one",
-				input.transform("a").applyNumericToReal(x -> x * 3 - 1, Workload.DEFAULT),
-				input.transform("a").applyNumericToReal(x -> x * 3 - 1, Workload.DEFAULT, CTX),
+				input.transform("a").applyNumericToReal(x -> x * 3 - 1),
+				input.transform("a").applyNumericToReal(x -> x * 3 - 1, CTX),
 				100));
 
 		tests.add(new ApiTest("map_two",
-				input.transform("a", "b").applyNumericToReal((a, b) -> a * 3 + b, Workload.DEFAULT),
-				input.transform("a", "b").applyNumericToReal((a, b) -> a * 3 + b, Workload.DEFAULT, CTX),
+				input.transform("a", "b").applyNumericToReal((a, b) -> a * 3 + b),
+				input.transform("a", "b").applyNumericToReal((a, b) -> a * 3 + b, CTX),
 				100));
 
 		tests.add(new ApiTest("map_three",
-				input.transform("a", "b", "c").applyNumericToReal(row -> row.get(0) * 3 - row.get(1) + 2 * row.get(2),
-						Workload.DEFAULT),
-				input.transform("a", "b", "c").applyNumericToReal(row -> row.get(0) * 3 - row.get(1) + 2 * row.get(2),
-						Workload.DEFAULT, CTX),
+				input.transform("a", "b", "c").applyNumericToReal(row -> row.get(0) * 3 - row.get(1) + 2 * row.get(2)),
+				input.transform("a", "b", "c").applyNumericToReal(row -> row.get(0) * 3 - row.get(1) + 2 * row.get(2), CTX),
 				100));
 
 		return tests;
@@ -93,7 +91,7 @@ public class ColumnTaskTests {
 
 	@Test
 	public void testTableTaskResult() {
-		ColumnBuffer buffer = test.task.run(CTX);
+		NumericBuffer buffer = test.task.run(CTX);
 		assertEquals(test.size, buffer.size());
 		assertArrayEquals(readBufferToArray(test.buffer), readBufferToArray(buffer), EPSILON);
 	}
@@ -114,10 +112,10 @@ public class ColumnTaskTests {
 	public static class ApiTest {
 		final String name;
 		final ColumnTask task;
-		final ColumnBuffer buffer;
+		final NumericBuffer buffer;
 		final int size;
 
-		private ApiTest(String name, ColumnTask task, ColumnBuffer buffer, int size) {
+		private ApiTest(String name, ColumnTask task, NumericBuffer buffer, int size) {
 			this.name = name;
 			this.task = task;
 			this.buffer = buffer;

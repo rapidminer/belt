@@ -17,6 +17,7 @@
 package com.rapidminer.belt;
 
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 
 import java.time.Instant;
@@ -25,8 +26,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
@@ -43,6 +42,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.rapidminer.belt.util.ColumnAnnotation;
 import com.rapidminer.belt.util.ColumnMetaData;
+import com.rapidminer.belt.util.ColumnReference;
 import com.rapidminer.belt.util.ColumnRole;
 import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.TaskAbortedException;
@@ -79,7 +79,7 @@ public class TableBuilderTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -88,7 +88,7 @@ public class TableBuilderTests {
 
 	private static Object[] readColumnToObjectArray(Table table, int column) {
 		Object[] data = new Object[table.height()];
-		ObjectColumnReader<Object> reader = new ObjectColumnReader<>(table.column(column), Object.class);
+		ObjectReader<Object> reader = Readers.objectReader(table.column(column), Object.class);
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -154,18 +154,18 @@ public class TableBuilderTests {
 		private TableBuilder builder() {
 			switch (builderInitialization) {
 				case INIT_NEW_TABLE:
-					return Table.newTable(NUMBER_OF_ROWS)
+					return Builders.newTableBuilder(NUMBER_OF_ROWS)
 							.addReal("a", i -> FIRST_COLUMN[i]);
 				case INIT_EXISTING_TABLE:
-					Table source = Table.newTable(NUMBER_OF_ROWS)
+					Table source = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> FIRST_COLUMN[i])
 					.build(CTX);
-					return Table.from(source);
+					return Builders.newTableBuilder(source);
 				case INIT_SINGLE_TABLE_TASK:
-					TableTask task = Table.newTable(NUMBER_OF_ROWS)
+					TableTask task = Builders.newTableBuilder(NUMBER_OF_ROWS)
 							.addReal("a", i -> FIRST_COLUMN[i])
 							.build();
-					return Table.from(task);
+					return Builders.newTableBuilder(task);
 				default:
 					throw new IllegalStateException("Unknown table initialization");
 			}
@@ -177,7 +177,7 @@ public class TableBuilderTests {
 			double[] third = random(NUMBER_OF_ROWS);
 			double[] fourth = random(NUMBER_OF_ROWS);
 
-			ColumnBuffer buffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+			NumericBuffer buffer = Buffers.realBuffer(NUMBER_OF_ROWS);
 			for (int i = 0; i < NUMBER_OF_ROWS; i++) {
 				buffer.set(i, third[i]);
 			}
@@ -197,8 +197,8 @@ public class TableBuilderTests {
 			double[] third = random(NUMBER_OF_ROWS);
 			double[] fourth = random(NUMBER_OF_ROWS);
 
-			ColumnBuffer secondAsBuffer = new FixedRealBuffer(NUMBER_OF_ROWS);
-			ColumnBuffer fourthAsBuffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+			NumericBuffer secondAsBuffer = Buffers.realBuffer(NUMBER_OF_ROWS);
+			NumericBuffer fourthAsBuffer = Buffers.realBuffer(NUMBER_OF_ROWS);
 			for (int i = 0; i < NUMBER_OF_ROWS; i++) {
 				secondAsBuffer.set(i, second[i]);
 				fourthAsBuffer.set(i, fourth[i]);
@@ -219,13 +219,13 @@ public class TableBuilderTests {
 			double[] third = random(NUMBER_OF_ROWS);
 			double[] fourth = random(NUMBER_OF_ROWS);
 
-			ColumnBuffer secondAsBuffer = new FixedRealBuffer(NUMBER_OF_ROWS);
-			ColumnBuffer fourthAsBuffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+			NumericBuffer secondAsBuffer = Buffers.realBuffer(NUMBER_OF_ROWS);
+			NumericBuffer fourthAsBuffer = Buffers.realBuffer(NUMBER_OF_ROWS);
 			for (int i = 0; i < NUMBER_OF_ROWS; i++) {
 				secondAsBuffer.set(i, second[i]);
 				fourthAsBuffer.set(i, fourth[i]);
 			}
-			Table fourthAsTable = Table.newTable(NUMBER_OF_ROWS).add("a", fourthAsBuffer.toColumn()).build(CTX);
+			Table fourthAsTable = Builders.newTableBuilder(NUMBER_OF_ROWS).add("a", fourthAsBuffer.toColumn()).build(CTX);
 
 			Table table = builder().add("b", secondAsBuffer.toColumn())
 					.addReal("c", i -> third[i])
@@ -242,12 +242,12 @@ public class TableBuilderTests {
 			double[] third = random(NUMBER_OF_ROWS);
 			double[] fourth = random(NUMBER_OF_ROWS);
 
-			ColumnBuffer buffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+			NumericBuffer buffer = Buffers.realBuffer(NUMBER_OF_ROWS);
 			for (int i = 0; i < NUMBER_OF_ROWS; i++) {
 				buffer.set(i, fourth[i]);
 			}
 
-			Table thirdAsTable = Table.newTable(NUMBER_OF_ROWS)
+			Table thirdAsTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> 0)
 					.addReal("b", i -> third[i])
 					.addReal("c", i -> 2)
@@ -288,7 +288,7 @@ public class TableBuilderTests {
 		@Test
 		public void testReplaceColumnFrom() {
 			double[] replacement = random(NUMBER_OF_ROWS);
-			Table replacementTable = Table.newTable(NUMBER_OF_ROWS).addReal("a", i -> replacement[i]).build(CTX);
+			Table replacementTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("a", i -> replacement[i]).build(CTX);
 			Table table = builder().replace("a", replacementTable.column(0)).build(CTX);
 			assertArrayEquals(new double[][] { replacement }, readTableToArray(table));
 			assertArrayEquals(new String[]{"a"}, table.labelArray());
@@ -331,7 +331,7 @@ public class TableBuilderTests {
 		@Test
 		public void testAddFromRenameColumn() {
 			double[] firstAddition = random(NUMBER_OF_ROWS);
-			Table firstTable = Table.newTable(NUMBER_OF_ROWS).addReal("a", i -> firstAddition[i]).build(CTX);
+			Table firstTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("a", i -> firstAddition[i]).build(CTX);
 
 			Table table = builder().add("b", firstTable.column( "a"))
 					.rename("b", "c")
@@ -344,7 +344,7 @@ public class TableBuilderTests {
 		@Test
 		public void testRenameReplaceFrom() {
 			double[] firstAddition = random(NUMBER_OF_ROWS);
-			Table firstTable = Table.newTable(NUMBER_OF_ROWS).addReal("a", i -> firstAddition[i]).build(CTX);
+			Table firstTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("a", i -> firstAddition[i]).build(CTX);
 
 			Table table = builder().rename("a", "1")
 					.replace("1", firstTable.column("a"))
@@ -402,7 +402,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalStateException.class)
 		public void testAddWrongSizeColumn() {
-			builder().add("b", new FixedRealBuffer(5).toColumn());
+			builder().add("b", Buffers.realBuffer(5).toColumn());
 		}
 
 
@@ -418,23 +418,23 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalStateException.class)
 		public void testReplaceWrongSizeColumn() {
-			builder().replace("a", new FixedRealBuffer(5).toColumn());
+			builder().replace("a", Buffers.realBuffer(5).toColumn());
 		}
 
 		@Test(expected = IllegalStateException.class)
 		public void testReplaceWrongSizeTable() {
-			Table table = Table.newTable(5).addReal("b", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(5).addReal("b", i -> i).build(CTX);
 			builder().replace("a", table.column("b"));
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceWrongLabelColumn() {
-			builder().replace("x", new FixedRealBuffer(NUMBER_OF_ROWS).toColumn());
+			builder().replace("x", Buffers.realBuffer(NUMBER_OF_ROWS).toColumn());
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testReplaceNullLabelColumn() {
-			builder().replace(null, new FixedRealBuffer(NUMBER_OF_ROWS).toColumn());
+			builder().replace(null, Buffers.realBuffer(NUMBER_OF_ROWS).toColumn());
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -483,21 +483,21 @@ public class TableBuilderTests {
 		private TableBuilder builder() {
 			switch (builderInitialization) {
 				case INIT_NEW_TABLE:
-					return Table.newTable(NUMBER_OF_ROWS)
+					return Builders.newTableBuilder(NUMBER_OF_ROWS)
 							.addReal("a", i -> FIRST_COLUMN[i])
 							.addReal("b", i -> SECOND_COLUMN[i])
 							.addReal("c", i -> THIRD_COLUMN[i])
 							.addReal("d", i -> FOURTH_COLUMN[i]);
 				case INIT_EXISTING_TABLE:
-					Table source = Table.newTable(NUMBER_OF_ROWS)
+					Table source = Builders.newTableBuilder(NUMBER_OF_ROWS)
 							.addReal("a", i -> FIRST_COLUMN[i])
 							.addReal("b", i -> SECOND_COLUMN[i])
 							.addReal("c", i -> THIRD_COLUMN[i])
 							.addReal("d", i -> FOURTH_COLUMN[i])
 							.build(CTX);
-					return Table.from(source);
+					return Builders.newTableBuilder(source);
 				case INIT_SINGLE_TABLE_TASK:
-					TableTask task = Table.newTable(NUMBER_OF_ROWS)
+					TableTask task = Builders.newTableBuilder(NUMBER_OF_ROWS)
 							.addReal("a", i -> FIRST_COLUMN[i])
 							.addReal("b", i -> SECOND_COLUMN[i])
 							.addReal("c", i -> THIRD_COLUMN[i])
@@ -505,7 +505,7 @@ public class TableBuilderTests {
 							.build();
 					return new TableBuilder(task);
 				case INIT_CHAINED_TABLE_TASKS:
-					TableTask chained = Table.newTable(NUMBER_OF_ROWS)
+					TableTask chained = Builders.newTableBuilder(NUMBER_OF_ROWS)
 							.addReal("a", i -> FIRST_COLUMN[i])
 							.addReal("b", i -> SECOND_COLUMN[i])
 							.build();
@@ -551,45 +551,60 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalStateException.class)
 		public void testAddColumnDifferentLength() {
-			Table.newTable(10)
-					.add("a", new FixedRealBuffer(10).toColumn())
-					.add("b", new FixedRealBuffer(42).toColumn());
+			Builders.newTableBuilder(10)
+					.add("a", Buffers.realBuffer(10).toColumn())
+					.add("b", Buffers.realBuffer(42, false).toColumn());
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeNumberOfRows() {
-			Table.newTable(-11);
+			Builders.newTableBuilder(-11);
 		}
 
 		@Test
 		public void testZeroColumnsAndRows() {
-			Table table = Table.newTable(0).build(CTX);
+			Table table = Builders.newTableBuilder(0).build(CTX);
 			assertEquals(0, table.width());
 			assertEquals(0, table.height());
 		}
 
 		@Test
 		public void testZeroRowsOneColumn() {
-			Table table = Table.newTable(0)
-					.add("a", new FixedRealBuffer(0).toColumn())
+			Table table = Builders.newTableBuilder(0)
+					.add("a", Buffers.realBuffer(0, true).toColumn())
 					.build(CTX);
 			assertEquals(1, table.width());
 			assertEquals(0, table.height());
 		}
 
 		@Test
-		public void testNoColumnsIsEmpty() {
-			Table table = Table.newTable(NUMBER_OF_ROWS).build(CTX);
+		public void testEmtpy() {
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS).build(CTX);
 			assertEquals(0, table.width());
-			assertEquals(0, table.height());
+			assertEquals(NUMBER_OF_ROWS, table.height());
 		}
 
+		@Test
+		public void testEmtpyAgain() {
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS).build(CTX);
+			Table table2 = Builders.newTableBuilder(table).build(CTX);
+			assertEquals(0, table2.width());
+			assertEquals(NUMBER_OF_ROWS, table2.height());
+		}
+
+		@Test
+		public void testFromEmpty() {
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS).build(CTX);
+			Table table2 = Builders.newTableBuilder(table).addInt("new", i->i).build(CTX);
+			assertEquals(1, table2.width());
+			assertEquals(NUMBER_OF_ROWS, table2.height());
+		}
 
 		@Test
 		public void testOneColumnFiller() {
 			double[] single = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> single[i])
 					.build(CTX);
 
@@ -601,12 +616,12 @@ public class TableBuilderTests {
 		public void testOneColumnBuffer() {
 			double[] single = random(NUMBER_OF_ROWS);
 
-			ColumnBuffer buffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+			NumericBuffer buffer = Buffers.realBuffer(NUMBER_OF_ROWS, false);
 			for (int i = 0; i < NUMBER_OF_ROWS; i++) {
 				buffer.set(i, single[i]);
 			}
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("a", buffer.toColumn())
 					.build(CTX);
 
@@ -614,36 +629,23 @@ public class TableBuilderTests {
 			assertArrayEquals(new String[]{"a"}, table.labelArray());
 		}
 
-		@Test
-		public void testOneFromTable() { //TODO: not needed
-			double[] single = random(NUMBER_OF_ROWS);
-
-			Table fromTable = Table.newTable(NUMBER_OF_ROWS).addReal("a", i -> single[i]).build(CTX);
-
-			Table table = Table.newTable(NUMBER_OF_ROWS).add("a", fromTable.column( 0)).build(CTX);
-
-			assertArrayEquals(new double[][] { single }, readTableToArray(table));
-			assertArrayEquals(new String[]{"a"}, table.labelArray());
-		}
-
-
 		@Test(expected = IllegalStateException.class)
 		public void testOneColumnBufferChangedAfterwards() {
-			ColumnBuffer buffer = new FixedRealBuffer(10);
+			NumericBuffer buffer =Buffers.realBuffer(10);
 			for (int i = 0; i < 10; i++) {
 				buffer.set(i, i);
 			}
-			Table.newTable(buffer.size()).add("a", buffer.toColumn());
+			Builders.newTableBuilder(buffer.size()).add("a", buffer.toColumn());
 			buffer.set(5, 7);
 		}
 
 		@Test(expected = IllegalStateException.class)
 		public void testReplaceColumnBufferChangedAfterwards() {
-			ColumnBuffer buffer = new FixedRealBuffer(10);
+			NumericBuffer buffer = Buffers.realBuffer(10, false);
 			for (int i = 0; i < 10; i++) {
 				buffer.set(i, i);
 			}
-			Table.newTable(10)
+			Builders.newTableBuilder(10)
 					.addReal("a", i -> i)
 					.replace("a", buffer.toColumn());
 			buffer.set(5, 7);
@@ -675,7 +677,7 @@ public class TableBuilderTests {
 				}
 			};
 
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("a", i -> i)
 					.addReal("b", i -> i)
 					.addReal("c", i -> i)
@@ -687,7 +689,7 @@ public class TableBuilderTests {
 			AtomicBoolean flag = new AtomicBoolean(true);
 			Context flagContext = new BooleanContext(flag);
 
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			TableTask wrappedTask = new TableTask(new String[]{"a"}, 10, (ctx, sentinel) -> {
 				flag.set(false);
 				return table;
@@ -704,7 +706,7 @@ public class TableBuilderTests {
 		@Test
 		public void testAddInteger() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addInt("one", i -> single[i]).build(CTX);
 			double[] expected = new double[single.length];
 			Arrays.setAll(expected, i -> Math.round(single[i]));
@@ -715,13 +717,13 @@ public class TableBuilderTests {
 		@Test
 		public void testAddIntBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addInt("one", i -> single[i]).build(CTX);
-			ColumnBuffer buffer = new FixedIntegerBuffer(NUMBER_OF_ROWS);
+			NumericBuffer buffer = Buffers.integerBuffer(NUMBER_OF_ROWS, false);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, single[i]);
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToArray(table), readTableToArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -730,7 +732,7 @@ public class TableBuilderTests {
 		@Test
 		public void testAddReal() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addInt("one", i -> single[i]).build(CTX);
 			assertEquals(Column.TypeId.INTEGER, table.column(0).type().id());
 		}
@@ -738,13 +740,13 @@ public class TableBuilderTests {
 		@Test
 		public void testAddRealBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("one", i -> single[i]).build(CTX);
-			ColumnBuffer buffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+			NumericBuffer buffer = Buffers.realBuffer(NUMBER_OF_ROWS, false);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, single[i]);
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToArray(table), readTableToArray(bufferTable));
 			assertEquals(table.column(0).type().id(), bufferTable.column(0).type().id());
@@ -756,25 +758,25 @@ public class TableBuilderTests {
 
 		@Test
 		public void testEmpty() {
-			TableBuilder empty = Table.newTable(0);
+			TableBuilder empty = Builders.newTableBuilder(0);
 			assertEquals("Table builder (0x0)\n", empty.toString());
 		}
 
 		@Test
 		public void testEmptyWithRows() {
-			TableBuilder empty = Table.newTable(5);
+			TableBuilder empty = Builders.newTableBuilder(5);
 			assertEquals("Table builder (0x5)\n", empty.toString());
 		}
 
 		@Test
 		public void testAddedColumnsWithRows() {
-			TableBuilder builder = Table.newTable(5).addReal("a", i -> i).addReal("b", i -> 0);
+			TableBuilder builder = Builders.newTableBuilder(5).addReal("a", i -> i).addReal("b", i -> 0);
 			assertEquals("Table builder (2x5)\na | b", builder.toString());
 		}
 
 		@Test
 		public void testMoreColumns() {
-			TableBuilder builder = Table.newTable(3);
+			TableBuilder builder = Builders.newTableBuilder(3);
 			for (int i = 0; i < 9; i++) {
 				builder.addReal("c" + i, j -> j);
 			}
@@ -783,7 +785,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testMaxColumns() {
-			TableBuilder builder = Table.newTable(0);
+			TableBuilder builder = Builders.newTableBuilder(0);
 			for (int i = 0; i < 8; i++) {
 				builder.addReal("att" + i, j -> j);
 			}
@@ -795,9 +797,9 @@ public class TableBuilderTests {
 
 	public static class ObjectsExceptions {
 
-		private static final ColumnType<String> FREE = ColumnTypes.freeType("com.rapidminer.test", String.class, null);
+		private static final ColumnType<String> OBJECT = ColumnTypes.freeType("com.rapidminer.test", String.class, null);
 
-		private final TableBuilder builder = Table.newTable(123).addReal("a", i -> i);
+		private final TableBuilder builder = Builders.newTableBuilder(123).addReal("a", i -> i);
 
 		@Test(expected = NullPointerException.class)
 		public void testNominalNullLabel() {
@@ -871,7 +873,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testCategoricalWrongType() {
-			builder.addCategorical("b", i -> "" + i, FREE);
+			builder.addCategorical("b", i -> "" + i, OBJECT);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -901,7 +903,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testCategoricalMaxWrongType() {
-			builder.addCategorical("b", i -> "" + i, 1, FREE);
+			builder.addCategorical("b", i -> "" + i, 1, OBJECT);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -911,22 +913,22 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testFreeNullLabel() {
-			builder.addFree(null, i -> "" + i, FREE);
+			builder.addFree(null, i -> "" + i, OBJECT);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFreeUsedLabel() {
-			builder.addFree("a", i -> "" + i, FREE);
+			builder.addFree("a", i -> "" + i, OBJECT);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFreeInvalidLabel() {
-			builder.addFree("", i -> "" + i, FREE);
+			builder.addFree("", i -> "" + i, OBJECT);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testFreeNullGenerator() {
-			builder.addFree("b", null, FREE);
+			builder.addFree("b", null, OBJECT);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -1047,7 +1049,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceCategoricalWrongType() {
-			builder.replaceCategorical("a", i -> "" + i, FREE);
+			builder.replaceCategorical("a", i -> "" + i, OBJECT);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -1082,7 +1084,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceCategoricalMaxWrongType() {
-			builder.replaceCategorical("a", i -> "" + i, 1, FREE);
+			builder.replaceCategorical("a", i -> "" + i, 1, OBJECT);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -1092,12 +1094,12 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceFreeUnusedLabel() {
-			builder.replaceFree("b", i -> "" + i, FREE);
+			builder.replaceFree("b", i -> "" + i, OBJECT);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testReplaceFreeNullGenerator() {
-			builder.replaceFree("a", null, FREE);
+			builder.replaceFree("a", null, OBJECT);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -1173,7 +1175,7 @@ public class TableBuilderTests {
 		@Test
 		public void testAddNominal() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addNominal("one", i -> "" + Math.round(single[i])).build(CTX);
 			Object[] expected = new Object[single.length];
 			Arrays.setAll(expected, i -> "" + Math.round(single[i]));
@@ -1184,13 +1186,13 @@ public class TableBuilderTests {
 		@Test
 		public void testAddNominalVsBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addNominal("one", i -> "" + Math.round(single[i])).build(CTX);
 			Int32CategoricalBuffer<String> buffer = new Int32CategoricalBuffer<>(NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, "" + Math.round(single[i]));
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn(ColumnTypes.NOMINAL)).build(CTX);
 			assertArrayEquals(readTableToArray(bufferTable), readTableToArray(table));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -1199,7 +1201,7 @@ public class TableBuilderTests {
 		@Test
 		public void testAddCategorical() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addCategorical("one", i -> single[i],
 							ColumnTypes.categoricalType("test", Double.class, null)).build(CTX);
 			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
@@ -1213,13 +1215,13 @@ public class TableBuilderTests {
 		public void testAddCategoricalVsBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			ColumnType<Double> testType = ColumnTypes.categoricalType("test", Double.class, null);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addCategorical("one", i -> Math.rint(single[i]), testType).build(CTX);
 			Int32CategoricalBuffer<Double> buffer = new Int32CategoricalBuffer<>(NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, Math.rint(single[i]));
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn(testType)).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -1229,11 +1231,11 @@ public class TableBuilderTests {
 		@Test
 		public void testAddFree() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addFree("one", i -> single[i],
 							ColumnTypes.freeType("test", Double.class, null)).build(CTX);
 			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
-			assertEquals(Column.Category.FREE, table.column(0).type().category());
+			assertEquals(Column.Category.OBJECT, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
 			Arrays.setAll(expected, i -> single[i]);
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
@@ -1243,13 +1245,13 @@ public class TableBuilderTests {
 		public void testAddFreeVsBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			ColumnType<Double> testType = ColumnTypes.freeType("test", Double.class, null);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addFree("one", i -> single[i], testType).build(CTX);
-			FreeColumnBuffer<Double> buffer = new FreeColumnBuffer<>(NUMBER_OF_ROWS);
+			ObjectBuffer<Double> buffer = new ObjectBuffer<>(NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, single[i]);
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn(testType)).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -1258,7 +1260,7 @@ public class TableBuilderTests {
 		@Test
 		public void testAddBoolean() {
 			double[] single = random(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addBoolean("one", i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE, Boolean.TRUE,
 							ColumnTypes.categoricalType("test", Boolean.class, null)).build(CTX);
 			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
@@ -1273,13 +1275,13 @@ public class TableBuilderTests {
 			double[] single = random(NUMBER_OF_ROWS);
 			ColumnType<Boolean> testType = ColumnTypes.categoricalType("test", Boolean.class, null);
 			IntFunction<Boolean> lambda = i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE;
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addBoolean("one", lambda, Boolean.TRUE, testType).build(CTX);
 			UInt2CategoricalBuffer<Boolean> buffer = new UInt2CategoricalBuffer<>(NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, lambda.apply(i));
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn(testType)).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -1289,9 +1291,9 @@ public class TableBuilderTests {
 		@Test
 		public void testAddNominalVsReplace() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addNominal("one", i -> "" + Math.round(single[i])).build(CTX);
-			Table replaceTable = Table.newTable(NUMBER_OF_ROWS).addInt("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i -> i)
 					.replaceNominal("one", i -> "" + Math.round(single[i])).build(CTX);
 			assertArrayEquals(readTableToArray(replaceTable), readTableToArray(table));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1301,9 +1303,9 @@ public class TableBuilderTests {
 		public void testAddCategoricalVsReplace() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			ColumnType<Double> testType = ColumnTypes.categoricalType("test", Double.class, null);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addCategorical("one", i -> Math.rint(single[i]), testType).build(CTX);
-			Table replaceTable = Table.newTable(NUMBER_OF_ROWS).addReal("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("one", i -> i)
 					.replaceCategorical("one", i -> Math.rint(single[i]), testType).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1314,9 +1316,9 @@ public class TableBuilderTests {
 		public void testAddFreeVsReplace() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			ColumnType<Double> testType = ColumnTypes.freeType("test", Double.class, null);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addFree("one", i -> single[i], testType).build(CTX);
-			Table replaceTable = Table.newTable(NUMBER_OF_ROWS).addReal("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("one", i -> i)
 					.replaceFree("one", i -> single[i], testType).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1327,9 +1329,9 @@ public class TableBuilderTests {
 			double[] single = random(NUMBER_OF_ROWS);
 			ColumnType<Boolean> testType = ColumnTypes.categoricalType("test", Boolean.class, null);
 			IntFunction<Boolean> lambda = i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE;
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addBoolean("one", lambda, Boolean.TRUE, testType).build(CTX);
-			Table replaceTable = Table.newTable(NUMBER_OF_ROWS).addInt("one", i->i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i->i)
 					.replaceBoolean("one", lambda, Boolean.TRUE, testType).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1338,10 +1340,10 @@ public class TableBuilderTests {
 		@Test
 		public void testAddTime() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addTime("one", i -> LocalTime.ofNanoOfDay(Math.round(single[i] * 1727999999999L))).build(CTX);
 			assertEquals(Column.TypeId.TIME, table.column(0).type().id());
-			assertEquals(Column.Category.FREE, table.column(0).type().category());
+			assertEquals(Column.Category.OBJECT, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
 			Arrays.setAll(expected, i -> LocalTime.ofNanoOfDay(Math.round(single[i] * 1727999999999L)));
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
@@ -1351,12 +1353,12 @@ public class TableBuilderTests {
 		public void testAddTimeVsBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			IntFunction<LocalTime> lambda = i -> LocalTime.ofNanoOfDay(Math.round(single[i] * 1727999999999L));
-			Table table = Table.newTable(NUMBER_OF_ROWS).addTime("one", lambda).build(CTX);
-			TimeColumnBuffer buffer = new TimeColumnBuffer(NUMBER_OF_ROWS);
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS).addTime("one", lambda).build(CTX);
+			TimeBuffer buffer = Buffers.timeBuffer(NUMBER_OF_ROWS, false);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, lambda.apply(i));
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -1366,9 +1368,9 @@ public class TableBuilderTests {
 		public void testAddTimeVsReplace() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			IntFunction<LocalTime> lambda = i -> LocalTime.ofNanoOfDay(Math.round(single[i] * 1727999999999L));
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addTime("one", lambda).build(CTX);
-			Table replaceTable = Table.newTable(NUMBER_OF_ROWS).addInt("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i -> i)
 					.replaceTime("one", lambda).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1379,10 +1381,10 @@ public class TableBuilderTests {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			IntFunction<Instant> lambda =
 					i -> Instant.ofEpochSecond(Math.round(single[i] * 631137797288063L), 123456789);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addDateTime("one", lambda).build(CTX);
 			assertEquals(Column.TypeId.DATE_TIME, table.column(0).type().id());
-			assertEquals(Column.Category.FREE, table.column(0).type().category());
+			assertEquals(Column.Category.OBJECT, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
 			Arrays.setAll(expected, lambda);
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
@@ -1393,12 +1395,12 @@ public class TableBuilderTests {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			IntFunction<Instant> lambda =
 					i -> Instant.ofEpochSecond(Math.round(single[i] * 631137797288063L), 123456789);
-			Table table = Table.newTable(NUMBER_OF_ROWS).addDateTime("one", lambda).build(CTX);
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(NUMBER_OF_ROWS);
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS).addDateTime("one", lambda).build(CTX);
+			NanosecondDateTimeBuffer buffer = new NanosecondDateTimeBuffer(NUMBER_OF_ROWS, false);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, lambda.apply(i));
 			}
-			Table bufferTable = Table.newTable(NUMBER_OF_ROWS)
+			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
@@ -1409,9 +1411,9 @@ public class TableBuilderTests {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			IntFunction<Instant> lambda =
 					i -> Instant.ofEpochSecond(Math.round(single[i] * 631137797288063L), 123456789);
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addDateTime("one", lambda).build(CTX);
-			Table replaceTable = Table.newTable(NUMBER_OF_ROWS).addInt("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i -> i)
 					.replaceDateTime("one", lambda).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1440,7 +1442,7 @@ public class TableBuilderTests {
 		public void testAddCategoricalMax() {
 			int numberOfRows = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			double[] single = randomStretched(numberOfRows);
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addCategorical("one", i -> single[i], format.maxValue(),
 							ColumnTypes.categoricalType("test", Double.class, null)).build(CTX);
 			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
@@ -1455,9 +1457,9 @@ public class TableBuilderTests {
 			int numberOfRows = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			double[] single = randomStretched(numberOfRows);
 			ColumnType<Double> testType = ColumnTypes.categoricalType("test", Double.class, null);
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addCategorical("one", i -> Math.rint(single[i]), format.maxValue(), testType).build(CTX);
-			Table replaceTable = Table.newTable(numberOfRows).addReal("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(numberOfRows).addReal("one", i -> i)
 					.replaceCategorical("one", i -> Math.rint(single[i]), format.maxValue(), testType).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1480,9 +1482,13 @@ public class TableBuilderTests {
 
 		}
 
+		static class TableUniqueSubclass extends TableUnique {
+
+		}
+
 		@Test(expected = NullPointerException.class)
 		public void testAddWithNullLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.addMetaData(null, ColumnRole.METADATA)
 					.build(CTX);
@@ -1490,7 +1496,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testAddWithMissingLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.addMetaData("does not exist", ColumnRole.METADATA)
 					.build(CTX);
@@ -1498,7 +1504,7 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testAddWithNullMetaData() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", (ColumnMetaData) null)
 					.build(CTX);
@@ -1506,7 +1512,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalStateException.class)
 		public void testAddColumnUniqueDataTwice() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", ColumnRole.ID)
 					.addMetaData("label", ColumnRole.LABEL)
@@ -1515,7 +1521,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalStateException.class)
 		public void testAddTableUniqueDataTwice() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("one", i -> i)
 					.addReal("two", i -> i)
 					.addMetaData("one", new TableUnique())
@@ -1523,9 +1529,31 @@ public class TableBuilderTests {
 					.build(CTX);
 		}
 
+		@Test(expected = IllegalStateException.class)
+		public void testAddSubclassOfTableUniqueData() {
+			// Test whether uniqueness constraint checks are independent of class hierarchy
+			Builders.newTableBuilder(100)
+					.addReal("one", i -> i)
+					.addReal("two", i -> i)
+					.addMetaData("one", new TableUnique())
+					.addMetaData("two", new TableUniqueSubclass())
+					.build(CTX);
+		}
+
+		@Test(expected = IllegalStateException.class)
+		public void testAddParentOfTableUniqueData() {
+			// Test whether uniqueness constraint checks are independent of class hierarchy
+			Builders.newTableBuilder(100)
+					.addReal("one", i -> i)
+					.addReal("two", i -> i)
+					.addMetaData("one", new TableUniqueSubclass())
+					.addMetaData("two", new TableUnique())
+					.build(CTX);
+		}
+
 		@Test
 		public void testAddTwoInstances() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", new ColumnAnnotation("Test #1"))
 					.addMetaData("label", new ColumnAnnotation("Test #2"))
@@ -1538,7 +1566,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testAddDuplicate() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", new ColumnAnnotation("Test"))
 					.addMetaData("label", new ColumnAnnotation("Test"))
@@ -1549,7 +1577,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testAddingVariousData() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addInt("id", i -> i)
 					.addInt("age", i -> 25)
 					.addReal("weight", i -> 73.5)
@@ -1571,7 +1599,7 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testAddListWithNullLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData(null, Collections.emptyList())
 					.build(CTX);
@@ -1579,7 +1607,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testAddListWithMissingLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("does not exist", Collections.emptyList())
 					.build(CTX);
@@ -1587,7 +1615,7 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testAddListWithNullMetaDataList() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", (List<ColumnMetaData>) null)
 					.build(CTX);
@@ -1595,7 +1623,7 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testAddListWithNullItem() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", Arrays.asList(ColumnRole.ID, null, new ColumnAnnotation("Annotation")))
 					.build(CTX);
@@ -1603,7 +1631,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalStateException.class)
 		public void testAddListWithUniquenessViolation() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
 					.addMetaData("label", Arrays.asList(ColumnRole.ID, new ColumnAnnotation("Annotation"),
 							ColumnRole.LABEL))
@@ -1612,7 +1640,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testAddingVariousDataViaList() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addInt("id", i -> i)
 					.addReal("mystery", i -> 0f)
 					.addMetaData("mystery", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("unit?"),
@@ -1626,28 +1654,28 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testRemoveTypeWithNullLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.removeMetaData(null, ColumnRole.class);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testRemoveTypeWithMissingLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.removeMetaData("does not exist", ColumnRole.class);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testRemoveTypeWithNullType() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.removeMetaData("dummy", (Class<ColumnMetaData>) null);
 		}
 
 		@Test
 		public void testRemoveTypeWithoutRemainder() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", new ColumnAnnotation("Annotation #1"))
@@ -1661,7 +1689,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testRemoveTypeWithRemainder() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
@@ -1676,28 +1704,28 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testRemoveInstanceWithNullLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.removeMetaData(null, ColumnRole.ID);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testRemoveInstanceWithMissingLabel() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.removeMetaData("does not exist", ColumnRole.ID);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testRemoveInstanceWithNullType() {
-			Table.newTable(100)
+			Builders.newTableBuilder(100)
 					.addReal("dummy", i -> i)
 					.removeMetaData("dummy", (ColumnMetaData) null);
 		}
 
 		@Test
 		public void testRemoveInstanceWithoutRemainder() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.BATCH)
@@ -1710,7 +1738,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testRemoveInstanceWithRemainder() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
@@ -1724,7 +1752,7 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testClearNullLabel() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("dummy", i -> 1)
 					.clearMetaData(null)
 					.build(CTX);
@@ -1732,7 +1760,7 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testClearMissingLabel() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("dummy", i -> 1)
 					.clearMetaData("does nto exist")
 					.build(CTX);
@@ -1740,7 +1768,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testRemoveEntireColumn() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
@@ -1758,7 +1786,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testClear() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
@@ -1775,7 +1803,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testRenameColumn() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
@@ -1790,7 +1818,7 @@ public class TableBuilderTests {
 
 		@Test
 		public void testMetaDataInheritance() {
-			Table a = Table.newTable(100)
+			Table a = Builders.newTableBuilder(100)
 					.addInt("id", i -> i)
 					.addInt("age", i -> 25)
 					.addReal("weight", i -> 73.5)
@@ -1802,7 +1830,7 @@ public class TableBuilderTests {
 					.addMetaData("mystery", new ColumnAnnotation("name?"))
 					.build(CTX);
 
-			Table b = Table.from(a)
+			Table b = Builders.newTableBuilder(a)
 					.addMetaData("id", new ColumnAnnotation("id"))
 					.removeMetaData("mystery", ColumnAnnotation.class)
 					.build(CTX);
@@ -1815,6 +1843,38 @@ public class TableBuilderTests {
 			expected = Arrays.asList(ColumnRole.ID, new ColumnAnnotation("id"));
 			assertEquals(new HashSet<>(expected), new HashSet<>(b.getMetaData("id")));
 			assertEquals(Collections.singletonList(ColumnRole.LABEL), b.getMetaData("mystery"));
+		}
+
+		@Test(expected = IllegalStateException.class)
+		public void testAddInvalidReference() {
+			Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addMetaData("two", new ColumnReference("does not exist"))
+					.build(CTX);
+		}
+
+		@Test
+		public void testRemoveReferencedColumn() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.remove("one")
+					.build(CTX);
+			assertTrue(table.select().withMetaData(ColumnReference.class).labels().isEmpty());
+		}
+
+		@Test
+		public void testRenameReferencedColumn() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.build(CTX);
+			ColumnReference reference = table.getFirstMetaData("two", ColumnReference.class);
+			assertEquals("renamed", reference.getColumn());
 		}
 
 	}

@@ -22,15 +22,15 @@ import java.util.function.DoubleFunction;
 
 
 /**
- * Maps a {@link Column.Capability#NUMERIC_READABLE} {@link Column} to a {@link TimeColumnBuffer} using a given mapping
+ * Maps a {@link Column.Capability#NUMERIC_READABLE} {@link Column} to a {@link TimeBuffer} using a given mapping
  * operator.
  *
  * @author Gisa Meier
  */
-final class ApplierNumericToTime implements ParallelExecutor.Calculator<TimeColumnBuffer> {
+final class ApplierNumericToTime implements ParallelExecutor.Calculator<TimeBuffer> {
 
 
-	private TimeColumnBuffer target;
+	private TimeBuffer target;
 	private final Column source;
 	private final DoubleFunction<LocalTime> operator;
 
@@ -42,7 +42,7 @@ final class ApplierNumericToTime implements ParallelExecutor.Calculator<TimeColu
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = new TimeColumnBuffer(source.size());
+		target = new TimeBuffer(source.size(), false);
 	}
 
 	@Override
@@ -56,7 +56,7 @@ final class ApplierNumericToTime implements ParallelExecutor.Calculator<TimeColu
 	}
 
 	@Override
-	public TimeColumnBuffer getResult() {
+	public TimeBuffer getResult() {
 		return target;
 	}
 
@@ -64,9 +64,9 @@ final class ApplierNumericToTime implements ParallelExecutor.Calculator<TimeColu
 	 * Maps every index between from (inclusive) and to (exclusive) of the source column using the operator and stores
 	 * the result in target.
 	 */
-	private static void mapPart(Column source, DoubleFunction<LocalTime> operator, TimeColumnBuffer target, int from,
+	private static void mapPart(Column source, DoubleFunction<LocalTime> operator, TimeBuffer target, int from,
 								int to) {
-		final ColumnReader reader = new ColumnReader(source, to);
+		final NumericReader reader = new NumericReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			double value = reader.read();

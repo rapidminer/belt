@@ -133,7 +133,7 @@ class TableSorter {
 		Column column = columnSet[columns[index]];
 		column = column.map(mapping, true);
 
-		ColumnReader reader = new ColumnReader(column, column.size());
+		NumericReader reader = new NumericReader(column, NumericReader.DEFAULT_BUFFER_SIZE, column.size());
 
 		double lastValue = reader.read();
 		int marker = 0;

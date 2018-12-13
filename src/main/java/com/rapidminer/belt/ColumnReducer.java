@@ -72,7 +72,7 @@ final class ColumnReducer<T> implements ParallelExecutor.Calculator<T> {
 	 * Calls the reducer for every column value between from (inclusive) and to (exclusive).
 	 */
 	private static <T> void reducePart(Column source, T container, ObjDoubleConsumer<T> reducer, int from, int to) {
-		final ColumnReader reader = new ColumnReader(source, to);
+		final NumericReader reader = new NumericReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reducer.accept(container, reader.read());

@@ -22,15 +22,15 @@ import java.util.function.DoubleFunction;
 
 
 /**
- * Maps a {@link Column.Capability#NUMERIC_READABLE} {@link Column} to a {@link HighPrecisionDateTimeBuffer} using a
+ * Maps a {@link Column.Capability#NUMERIC_READABLE} {@link Column} to a {@link NanosecondDateTimeBuffer} using a
  * given mapping operator.
  *
  * @author Gisa Meier
  */
-final class ApplierNumericToDateTime implements ParallelExecutor.Calculator<HighPrecisionDateTimeBuffer> {
+final class ApplierNumericToDateTime implements ParallelExecutor.Calculator<NanosecondDateTimeBuffer> {
 
 
-	private HighPrecisionDateTimeBuffer target;
+	private NanosecondDateTimeBuffer target;
 	private final Column source;
 	private final DoubleFunction<Instant> operator;
 
@@ -42,7 +42,7 @@ final class ApplierNumericToDateTime implements ParallelExecutor.Calculator<High
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = new HighPrecisionDateTimeBuffer(source.size());
+		target = new NanosecondDateTimeBuffer(source.size(), false);
 	}
 
 	@Override
@@ -56,7 +56,7 @@ final class ApplierNumericToDateTime implements ParallelExecutor.Calculator<High
 	}
 
 	@Override
-	public HighPrecisionDateTimeBuffer getResult() {
+	public NanosecondDateTimeBuffer getResult() {
 		return target;
 	}
 
@@ -64,9 +64,9 @@ final class ApplierNumericToDateTime implements ParallelExecutor.Calculator<High
 	 * Maps every index between from (inclusive) and to (exclusive) of the source column using the operator and stores
 	 * the result in target.
 	 */
-	private static void mapPart(Column source, DoubleFunction<Instant> operator, HighPrecisionDateTimeBuffer target,
+	private static void mapPart(Column source, DoubleFunction<Instant> operator, NanosecondDateTimeBuffer target,
 								int from, int to) {
-		final ColumnReader reader = new ColumnReader(source, to);
+		final NumericReader reader = new NumericReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			double value = reader.read();

@@ -25,8 +25,10 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -41,6 +43,7 @@ import org.junit.runner.RunWith;
 import com.rapidminer.belt.Column.TypeId;
 import com.rapidminer.belt.util.ColumnAnnotation;
 import com.rapidminer.belt.util.ColumnMetaData;
+import com.rapidminer.belt.util.ColumnReference;
 import com.rapidminer.belt.util.ColumnRole;
 import com.rapidminer.belt.util.Order;
 import com.rapidminer.belt.util.TaskAbortedException;
@@ -113,7 +116,7 @@ public class TableTests {
 		return data;
 	}
 
-	private static double[] readAllToArray(ColumnReader reader) {
+	private static double[] readAllToArray(NumericReader reader) {
 		double[] result = new double[reader.remaining()];
 		int i = 0;
 		while (reader.hasRemaining()) {
@@ -122,7 +125,7 @@ public class TableTests {
 		return result;
 	}
 
-	private static double[][] readAllColumnsToArrays(RowReader reader) {
+	private static double[][] readAllColumnsToArrays(NumericRowReader reader) {
 		double[][] columns = new double[reader.width()][];
 		Arrays.setAll(columns, i -> new double[reader.remaining()]);
 		int i = 0;
@@ -138,7 +141,7 @@ public class TableTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -156,6 +159,11 @@ public class TableTests {
 		@Test(expected = NullPointerException.class)
 		public void testConstructorWithNullColumnSet() {
 			new Table(null, new String[0]);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testConstructorWithNegativeRows() {
+			new Table(-1);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -252,7 +260,7 @@ public class TableTests {
 		public void testRowReaderWithEmptyColumnSet() {
 			Column[] columns = random(3, 128);
 			Table table = new Table(columns, new String[]{"a", "b", "c"});
-			RowReader reader = new RowReader(new Column[]{});
+			NumericRowReader reader = new NumericRowReader(new Column[]{});
 			assertFalse(reader.hasRemaining());
 		}
 
@@ -300,8 +308,8 @@ public class TableTests {
 			Column[] columns = random(width, height);
 			Table table = new Table(columns, randomLabels(width));
 			for (int i = 0; i < width; i++) {
-				ColumnReader direct = new ColumnReader(columns[i], table.height());
-				ColumnReader tableReader = new ColumnReader(table.column(i));
+				NumericReader direct = Readers.numericReader(columns[i], table.height());
+				NumericReader tableReader = Readers.numericReader(table.column(i));
 				double[] directValues = readAllToArray(direct);
 				double[] tableValues = readAllToArray(tableReader);
 				assertArrayEquals(directValues, tableValues, EPSILON);
@@ -314,8 +322,8 @@ public class TableTests {
 			int height = 256;
 			Column[] columns = random(width, height);
 			Table table = new Table(columns, randomLabels(width));
-			RowReader direct = new RowReader(columns);
-			RowReader tableReader = new RowReader(table);
+			NumericRowReader direct = new NumericRowReader(columns);
+			NumericRowReader tableReader = Readers.numericRowReader(table);
 			double[][] directValues = readAllColumnsToArrays(direct);
 			double[][] tableValues = readAllColumnsToArrays(tableReader);
 			assertEquals(5, directValues.length);
@@ -331,8 +339,8 @@ public class TableTests {
 			int height = 512;
 			Column[] columns = random(width, height);
 			Table table = new Table(columns, randomLabels(width));
-			RowReader direct = new RowReader(new Column[]{columns[0], columns[2], columns[1], columns[0], columns[1]});
-			RowReader tableReader = new RowReader(new Column[]{table.column(0), table.column(2),
+			NumericRowReader direct = new NumericRowReader(new Column[]{columns[0], columns[2], columns[1], columns[0], columns[1]});
+			NumericRowReader tableReader = new NumericRowReader(new Column[]{table.column(0), table.column(2),
 					table.column(1), table.column(0), table.column(1)});
 			double[][] directValues = readAllColumnsToArrays(direct);
 			double[][] tableValues = readAllColumnsToArrays(tableReader);
@@ -361,7 +369,7 @@ public class TableTests {
 			int[] mapping = {4, 123, 6, 11, 456, 99, 6};
 			Table mappedTable = table.map(mapping, true);
 
-			RowReader reader = new RowReader(mappedTable);
+			NumericRowReader reader = Readers.numericRowReader(mappedTable);
 			double[][] tableValues = readAllColumnsToArrays(reader);
 			double[] expected = {4, 123, 6, 11, 456, 99, 6};
 			for (double[] tableValue : tableValues) {
@@ -387,7 +395,7 @@ public class TableTests {
 			int[] mapping2 = {1, 0, 6, 10, 8, 5};
 			Table mappedTable2 = mappedTable.map(mapping2, true);
 
-			RowReader reader = new RowReader(mappedTable2);
+			NumericRowReader reader = Readers.numericRowReader(mappedTable2);
 			double[][] tableValues = readAllColumnsToArrays(reader);
 			double[] expected = {123, 4, 6, 123, 4, 99};
 			for (double[] tableValue : tableValues) {
@@ -406,7 +414,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -421,7 +429,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -433,9 +441,43 @@ public class TableTests {
 			assertArrayEquals(new double[][] { third }, readTableToArray(reordered));
 		}
 
+		@Test
+		public void testNoColumn() {
+			double[] first = random(NUMBER_OF_ROWS);
+			double[] second = random(NUMBER_OF_ROWS);
+			double[] third = random(NUMBER_OF_ROWS);
+
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.addReal("a", i -> first[i])
+					.addReal("b", i -> second[i])
+					.addReal("c", i -> third[i])
+					.build(CTX);
+
+			Table reordered = table.columns(new int[]{});
+
+			assertEquals(table.height(), reordered.height());
+		}
+
+		@Test
+		public void testEmptyColumnsList() {
+			double[] first = random(NUMBER_OF_ROWS);
+			double[] second = random(NUMBER_OF_ROWS);
+			double[] third = random(NUMBER_OF_ROWS);
+
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.addReal("a", i -> first[i])
+					.addReal("b", i -> second[i])
+					.addReal("c", i -> third[i])
+					.build(CTX);
+
+			Table reordered = table.columns(Collections.emptyList());
+
+			assertEquals(table.height(), reordered.height());
+		}
+
 		@Test(expected = NullPointerException.class)
 		public void testNullOrdering() {
-			Table table = Table.newTable(2)
+			Table table = Builders.newTableBuilder(2)
 					.addReal("a", i -> 0)
 					.addReal("b", i -> i)
 					.addReal("c", i -> 2 * i)
@@ -444,9 +486,20 @@ public class TableTests {
 			table.columns((int[]) null);
 		}
 
+		@Test(expected = NullPointerException.class)
+		public void testNullOrderingList() {
+			Table table = Builders.newTableBuilder(2)
+					.addReal("a", i -> 0)
+					.addReal("b", i -> i)
+					.addReal("c", i -> 2 * i)
+					.addReal("d", i -> 3 * i)
+					.addReal("e", i -> 4 * i).build(CTX);
+			table.columns((List<String>) null);
+		}
+
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testWrongIndex() {
-			Table table = Table.newTable(2)
+			Table table = Builders.newTableBuilder(2)
 					.addReal("a", i -> 0)
 					.addReal("b", i -> i)
 					.addReal("c", i -> 2 * i)
@@ -457,13 +510,30 @@ public class TableTests {
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testNegativeIndex() {
-			Table table = Table.newTable(2)
+			Table table = Builders.newTableBuilder(2)
 					.addReal("a", i -> 0)
 					.addReal("b", i -> i)
 					.addReal("c", i -> 2 * i)
 					.addReal("d", i -> 3 * i)
 					.addReal("e", i -> 4 * i).build(CTX);
 			table.columns(new int[]{3, -1, 1, 5, 1, 2, 3, 0});
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testDuplicationsList() {
+			double[] first = random(NUMBER_OF_ROWS);
+			double[] second = random(NUMBER_OF_ROWS);
+			double[] third = random(NUMBER_OF_ROWS);
+
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.addReal("a", i -> first[i])
+					.addReal("b", i -> second[i])
+					.addReal("c", i -> third[i])
+					.build(CTX);
+
+			Table reordered = table.columns(Arrays.asList("a", "c", "a"));
+
+			assertEquals(table.height(), reordered.height());
 		}
 	}
 
@@ -475,7 +545,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -492,12 +562,31 @@ public class TableTests {
 		}
 
 		@Test
+		public void testView() {
+			double[] first = random(NUMBER_OF_ROWS);
+			double[] second = random(NUMBER_OF_ROWS);
+			double[] third = random(NUMBER_OF_ROWS);
+
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.addReal("a", i -> first[i])
+					.addReal("b", i -> second[i])
+					.addReal("c", i -> third[i])
+					.build(CTX);
+
+			Table rowSubset = table.rows(new int[]{2, 32, 17, 2}, CTX);
+			Table rowSubsetWithView = table.rows(new int[]{2, 32, 17, 2}, true, CTX);
+
+			assertArrayEquals(new double[][] { first, second, third }, readTableToArray(table));
+			assertArrayEquals( readTableToArray(rowSubset), readTableToArray(rowSubsetWithView));
+		}
+
+		@Test
 		public void testOneRow() {
 			double[] first = random(NUMBER_OF_ROWS);
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -518,7 +607,7 @@ public class TableTests {
 			int numberOfRows = 20;
 			double[] first = random(numberOfRows);
 			double[] second = random(numberOfRows);
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.build(CTX);
@@ -533,7 +622,7 @@ public class TableTests {
 		@Test
 		public void testOneInvalidRow() {
 			int numberOfRows = 20;
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> i)
 					.addReal("b", i -> 2 * i)
 					.addReal("c", i -> 3 * i)
@@ -548,7 +637,7 @@ public class TableTests {
 			int numberOfRows = 20;
 			double[] first = random(numberOfRows);
 			double[] second = random(numberOfRows);
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.build(CTX);
@@ -558,6 +647,41 @@ public class TableTests {
 			double[] secondExpected = new double[]{second[1], second[3], Double.NaN, second[2]};
 			assertArrayEquals(new double[][]{firstExpected, secondExpected}, readTableToArray(selected));
 		}
+
+		@Test
+		public void testImmutability() {
+			int numberOfRows = 50;
+			int numberOfSelectedRows = numberOfRows - 5;
+			double[] first = random(numberOfRows);
+			double[] second = random(numberOfRows);
+			Table table = Builders.newTableBuilder(numberOfRows)
+					.addReal("a", i -> first[i])
+					.addReal("b", i -> second[i])
+					.build(CTX);
+
+			// Identity mapping excluding the last element
+			int[] mapping = new int[numberOfSelectedRows];
+			Arrays.setAll(mapping, i -> i);
+			Table selected = table.rows(mapping).run(CTX);
+
+			// Modify mapping array...
+			Arrays.fill(mapping, 0);
+
+			/// ... this should not affect the generated table.
+			assertArrayEquals(new double[][]{
+					Arrays.copyOf(first, numberOfSelectedRows),
+					Arrays.copyOf(second, numberOfSelectedRows)},
+					readTableToArray(selected));
+		}
+
+		@Test
+		public void testOnEmpty() {
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.build(CTX);
+			Table rowSubset = table.rows(new int[]{2, 32, 17, 2}, CTX);
+			assertEquals(4, rowSubset.height());
+		}
+
 	}
 
 	public static class RangeSelection {
@@ -568,7 +692,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -590,7 +714,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -612,7 +736,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -631,7 +755,7 @@ public class TableTests {
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testInvalidStart() {
 			int numberOfRows = 20;
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> i)
 					.addReal("b", i -> 2 * i)
 					.addReal("c", i -> 3 * i)
@@ -642,7 +766,7 @@ public class TableTests {
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testNegativeStart() {
 			int numberOfRows = 20;
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> i)
 					.addReal("b", i -> 2 * i)
 					.addReal("c", i -> 3 * i)
@@ -653,7 +777,7 @@ public class TableTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testEndTooSmall() {
 			int numberOfRows = 20;
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> i)
 					.addReal("b", i -> 2 * i)
 					.addReal("c", i -> 3 * i)
@@ -664,12 +788,20 @@ public class TableTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testEndTooBig() {
 			int numberOfRows = 20;
-			Table table = Table.newTable(numberOfRows)
+			Table table = Builders.newTableBuilder(numberOfRows)
 					.addReal("a", i -> i)
 					.addReal("b", i -> 2 * i)
 					.addReal("c", i -> 3 * i)
 					.build(CTX);
 			table.rows(1, numberOfRows + 1);
+		}
+
+		@Test
+		public void testOnEmpty() {
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.build(CTX);
+			Table rowSubset = table.rows(11, 15, CTX);
+			assertEquals(15 - 11, rowSubset.height());
 		}
 	}
 
@@ -681,7 +813,7 @@ public class TableTests {
 			double[] second = randomWithSame(NUMBER_OF_ROWS);
 			double[] third = randomWithSame(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -722,7 +854,7 @@ public class TableTests {
 			double[] data = { 6, 5, 4, 3, 2, 1, 0 };
 			int[] mapping = { 3, 5, 4, 5 };
 
-			Table unmapped = Table.newTable(data.length)
+			Table unmapped = Builders.newTableBuilder(data.length)
 					.addReal("a", i -> data[i])
 					.build(CTX);
 			Table mapped = unmapped.rows(mapping, CTX);
@@ -730,10 +862,10 @@ public class TableTests {
 			double[] data2 = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 };
 			int[] mapping2 = { 17, 11, 13, 13 };
 
-			Table unmapped2 = Table.newTable(data2.length).addReal("a", i -> data2[i]).build(CTX);
+			Table unmapped2 = Builders.newTableBuilder(data2.length).addReal("a", i -> data2[i]).build(CTX);
 			Table mapped2 = unmapped2.rows(mapping2, CTX);
 
-			Table union = Table.from(mapped2).add("b", mapped.column(0)).build(CTX);
+			Table union = Builders.newTableBuilder(mapped2).add("b", mapped.column(0)).build(CTX);
 			Table sorted = union.sort(new int[]{0, 1}, Order.DESCENDING, CTX);
 
 			double[] first = { 17, 13, 13, 11 };
@@ -749,7 +881,7 @@ public class TableTests {
 			double[] second = random(NUMBER_OF_ROWS);
 			double[] third = random(NUMBER_OF_ROWS);
 
-			Table table = Table.newTable(NUMBER_OF_ROWS)
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i]).build(CTX);
@@ -770,12 +902,12 @@ public class TableTests {
 			double[] fourth = random(rows.length);
 			double[] newSecond = random(rows.length);
 			double[] fifth = random(rows.length);
-			ColumnBuffer buffer = new FixedRealBuffer(rows.length);
+			NumericBuffer buffer = Buffers.realBuffer(rows.length, false);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, fifth[i]);
 			}
 
-			Table modified = Table.from(rowSubset)
+			Table modified = Builders.newTableBuilder(rowSubset)
 					.addReal("d", i -> fourth[i])
 					.replaceReal("b", i -> newSecond[i])
 					.add("e", buffer.toColumn())
@@ -852,18 +984,18 @@ public class TableTests {
 			buffer.set(4, null);
 			Object[] objects = new Object[data.length];
 			Arrays.setAll(objects, i -> "free" + i);
-			HighPrecisionDateTimeBuffer highBuffer = new HighPrecisionDateTimeBuffer(data.length);
+			NanosecondDateTimeBuffer highBuffer = new NanosecondDateTimeBuffer(data.length, false);
 			for (int i = 0; i < data.length; i++) {
 				highBuffer.set(i, i * 101010101, i * 9990099);
 			}
 			highBuffer.set(2, null);
 
-			LowPrecisionDateTimeBuffer lowBuffer = new LowPrecisionDateTimeBuffer(data.length);
+			SecondDateTimeBuffer lowBuffer = new SecondDateTimeBuffer(data.length, false);
 			for (int i = 0; i < data.length; i++) {
 				lowBuffer.set(i, i * 909090909);
 			}
 			lowBuffer.set(5, null);
-			TimeColumnBuffer timeBuffer = new TimeColumnBuffer(data.length);
+			TimeBuffer timeBuffer = Buffers.timeBuffer(data.length, false);
 			for (int i = 0; i < data.length; i++) {
 				timeBuffer.set(i, 8639999099099L * i);
 			}
@@ -872,9 +1004,9 @@ public class TableTests {
 			Arrays.setAll(veryCustom, Custom::new);
 			Column[] columns = {new DoubleArrayColumn(Column.TypeId.INTEGER, data), new DoubleArrayColumn(data2),
 					buffer.toColumn(ColumnTypes.NOMINAL),
-					new SimpleFreeColumn<>(ColumnTypes.freeType("com.rapidminer.test", String.class, null), objects),
+					new SimpleObjectColumn<>(ColumnTypes.freeType("com.rapidminer.test", String.class, null), objects),
 					highBuffer.toColumn(), lowBuffer.toColumn(), timeBuffer.toColumn(),
-					new SimpleFreeColumn<>(ColumnTypes.freeType("com.rapidminer.custom", Custom.class, null),
+					new SimpleObjectColumn<>(ColumnTypes.freeType("com.rapidminer.custom", Custom.class, null),
 							veryCustom)};
 			Table table = new Table(columns, randomLabels(columns.length));
 
@@ -1048,7 +1180,7 @@ public class TableTests {
 
 		@Test(expected = TaskAbortedException.class)
 		public void testOneSortCancellation() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("a", i -> Math.random())
 					.addReal("b", i -> Math.random())
 					.addReal("c", i -> Math.random())
@@ -1060,7 +1192,7 @@ public class TableTests {
 
 		@Test(expected = TaskAbortedException.class)
 		public void testConstantSortCancellation() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("a", i -> Math.random())
 					.addReal("b", i -> Math.random())
 					.addReal("c", i -> Math.random())
@@ -1072,7 +1204,7 @@ public class TableTests {
 
 		@Test(expected = TaskAbortedException.class)
 		public void testVaryingSortCancellation() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("a", i -> Math.random())
 					.addReal("b", i -> Math.random())
 					.addReal("c", i -> Math.random())
@@ -1092,7 +1224,7 @@ public class TableTests {
 
 		@BeforeClass
 		public static void createTable() {
-			table = Table.newTable(100)
+			table = Builders.newTableBuilder(100)
 					.addReal(labels[0], i -> 0)
 					.addReal(labels[1], i -> 1)
 					.addReal(labels[2], i -> 2)
@@ -1169,7 +1301,7 @@ public class TableTests {
 		@Test
 		public void testRowReader() {
 			double[] indexAccess = new double[200];
-			RowReader reader = new RowReader(table.column(1), table.column(2));
+			NumericRowReader reader = Readers.numericRowReader(table.column(1), table.column(2));
 			int i = 0;
 			while (reader.hasRemaining()) {
 				reader.move();
@@ -1178,7 +1310,7 @@ public class TableTests {
 			}
 
 			double[] labelAccess = new double[200];
-			reader = new RowReader(table.column("one"), table.column("two"));
+			reader = Readers.numericRowReader(table.column("one"), table.column("two"));
 			i = 0;
 			while (reader.hasRemaining()) {
 				reader.move();
@@ -1193,14 +1325,14 @@ public class TableTests {
 		public void testColumn() {
 			double[] indexAccess = new double[100];
 			Column column = table.column(0);
-			ColumnReader reader = new ColumnReader(column, column.size());
+			NumericReader reader = Readers.numericReader(column, column.size());
 			for (int i = 0; i < column.size(); i++) {
 				indexAccess[i] = reader.read();
 			}
 
 			double[] labelAccess = new double[100];
 			column = table.column("zero");
-			reader = new ColumnReader(column, column.size());
+			reader = Readers.numericReader(column, column.size());
 			for (int i = 0; i < column.size(); i++) {
 				labelAccess[i] = reader.read();
 			}
@@ -1217,7 +1349,7 @@ public class TableTests {
 
 		@Test
 		public void testSimpleSorting() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("zero", i -> 0)
 					.addReal("positive", i -> i)
 					.addReal("negative", i -> -i)
@@ -1231,7 +1363,7 @@ public class TableTests {
 
 		@Test
 		public void testSortingSingleOrder() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("zero", i -> 0)
 					.addReal("positive", i -> i)
 					.addReal("negative", i -> -i)
@@ -1245,7 +1377,7 @@ public class TableTests {
 
 		@Test
 		public void testSortingMultipleOrders() {
-			Table table = Table.newTable(100)
+			Table table = Builders.newTableBuilder(100)
 					.addReal("zero", i -> 0)
 					.addReal("positive", i -> i)
 					.addReal("negative", i -> -i)
@@ -1292,7 +1424,7 @@ public class TableTests {
 
 		@BeforeClass
 		public static void createTable() {
-			table = Table.newTable(100)
+			table = Builders.newTableBuilder(100)
 					.addReal(labels[0], i -> 0)
 					.addReal(labels[1], i -> 1)
 					.addReal(labels[2], i -> 2)
@@ -1381,35 +1513,27 @@ public class TableTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testTransformerMultiNull() {
-			new TransformerMulti((List<Column>) null);
+			new RowTransformer((List<Column>) null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testTransformerMultiEmptyList() {
-			new TransformerMulti(new ArrayList<>());
+			new RowTransformer(new ArrayList<>());
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testTransformerMultiEmpty() {
-			new TransformerMulti(new Column[0]);
+			new RowTransformer(new Column[0]);
 		}
 	}
 
 	public static class MetaData {
 
-		static class DummyData implements ColumnMetaData {
-
-			@Override
-			public String type() {
-				return "moo";
-			}
-		}
-
 		private static Table table;
 
 		@BeforeClass
 		public static void createTable() {
-			table = Table.newTable(100)
+			table = Builders.newTableBuilder(100)
 					.addReal("zero", i -> 0)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
@@ -1536,114 +1660,6 @@ public class TableTests {
 			assertTrue(expected.contains(annotation));
 		}
 
-		// withMetaData(Class)
-
-		@Test(expected = NullPointerException.class)
-		public void testLookupOfNullType() {
-			table.withMetaData((Class<ColumnMetaData>) null);
-		}
-
-		@Test
-		public void tesTypeLookupWithoutMatch() {
-			List<String> matches = table.withMetaData(DummyData.class);
-			assertTrue(matches.isEmpty());
-		}
-
-		@Test
-		public void testTypeLookupWithSingleMatch() {
-			List<String> matches = table.withMetaData(ColumnAnnotation.class);
-			List<String> expected = Collections.singletonList("one");
-			assertEquals(expected, matches);
-		}
-
-		@Test
-		public void testTypeLookupWithMultipleMatches() {
-			List<String> matches = table.withMetaData(ColumnRole.class);
-			List<String> expected = Arrays.asList("zero", "one", "three", "four");
-			assertEquals(expected, matches);
-		}
-
-		// withMetaData(ColumnMetaData)
-
-		@Test(expected = NullPointerException.class)
-		public void testLookupOfNullInstance() {
-			table.withMetaData((ColumnMetaData) null);
-		}
-
-		@Test
-		public void testInstanceLookupWithoutMatch() {
-			List<String> matches = table.withMetaData(ColumnRole.CLUSTER);
-			assertTrue(matches.isEmpty());
-		}
-
-		@Test
-		public void testInstanceLookupWithSingleMatch() {
-			List<String> matches = table.withMetaData(new ColumnAnnotation("First annotation"));
-			List<String> expected = Collections.singletonList("one");
-			assertEquals(expected, matches);
-		}
-
-		@Test
-		public void testInstanceLookupWithMultipleMatches() {
-			List<String> matches = table.withMetaData(ColumnRole.METADATA);
-			List<String> expected = Arrays.asList("one", "three");
-			assertEquals(expected, matches);
-		}
-
-		// withoutMetaData(Class)
-
-		@Test(expected = NullPointerException.class)
-		public void testInverseLookupOfNullType() {
-			table.withMetaData((Class<ColumnMetaData>) null);
-		}
-
-		@Test
-		public void testInverseTypeLookupWithoutMatch() {
-			List<String> matches = table.withoutMetaData(DummyData.class);
-			assertEquals(table.labels(), matches);
-		}
-
-		@Test
-		public void testInverseTypeLookupWithSingleMatch() {
-			List<String> matches = table.withoutMetaData(ColumnAnnotation.class);
-			List<String> expected = Arrays.asList("zero", "two", "three", "four");
-			assertEquals(expected, matches);
-		}
-
-		@Test
-		public void testInverseTypeLookupWithMultipleMatches() {
-			List<String> matches = table.withoutMetaData(ColumnRole.class);
-			List<String> expected = Collections.singletonList("two");
-			assertEquals(expected, matches);
-		}
-
-		// withoutMetaData(ColumnMetaData)
-
-		@Test(expected = NullPointerException.class)
-		public void testInverseLookupOfNullInstance() {
-			table.withMetaData((ColumnMetaData) null);
-		}
-
-		@Test
-		public void testInverseInstanceLookupWithoutMatch() {
-			List<String> matches = table.withoutMetaData(ColumnRole.CLUSTER);
-			assertEquals(table.labels(), matches);
-		}
-
-		@Test
-		public void testInverseInstanceLookupWithSingleMatch() {
-			List<String> matches = table.withoutMetaData(new ColumnAnnotation("First annotation"));
-			List<String> expected = Arrays.asList("zero", "two", "three", "four");
-			assertEquals(expected, matches);
-		}
-
-		@Test
-		public void testInverseInstanceLookupWithMultipleMatches() {
-			List<String> matches = table.withoutMetaData(ColumnRole.METADATA);
-			List<String> expected = Arrays.asList("zero", "two", "four");
-			assertEquals(expected, matches);
-		}
-
 		@Test
 		public void testColumnSelection() {
 			Table derived = table.columns(Arrays.asList("zero", "four"));
@@ -1651,7 +1667,192 @@ public class TableTests {
 			assertEquals(Collections.singletonList(ColumnRole.LABEL), derived.getMetaData("four"));
 		}
 
+		// columns(int[])
+
+		@Test
+		public void testRemovalOfInvalidReferences() {
+			Table references = Builders.newTableBuilder(table)
+					.addMetaData("two", new ColumnReference("zero", "test"))
+					.addMetaData("three", new ColumnReference("zero"))
+					.addMetaData("four", new ColumnReference("three", "another test"))
+					.build(CTX);
+
+			Table subset = references.columns(new int[] {1, 3, 4});
+
+			assertEquals(Collections.singletonList("four"), subset.select().withMetaData(ColumnReference.class).labels());
+			assertEquals(new ColumnReference("three", "another test"),
+					subset.getFirstMetaData("four", ColumnReference.class));
+		}
+
 	}
 
+	public static class Renaming {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullRenaming() {
+			Table table = new Table(3);
+			table.rename(null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullRelabel() {
+			int width = 3;
+			int height = 11;
+			Column[] columns = random(width, height);
+			Table table = new Table(columns, new String[]{"one", "two", "three"});
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("one", "1");
+			renaming.put("two", null);
+			table.rename(renaming);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testEmptyRelabel() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Table table = new Table(columns, new String[]{"one", "two", "three"});
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("one", "1");
+			renaming.put("two", "");
+			table.rename(renaming);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testUsedRelabel() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Table table = new Table(columns, new String[]{"one", "two", "three"});
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "one");
+			table.rename(renaming);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testRelabelDouble() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Table table = new Table(columns, new String[]{"one", "two", "three"});
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "xxx");
+			renaming.put("one", "xxx");
+			table.rename(renaming);
+		}
+
+		@Test
+		public void testRenameOne() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Table table = new Table(columns, new String[]{"one", "two", "three"});
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			Table newTable = table.rename(renaming);
+			assertArrayEquals(new String[]{"one", "TWO", "three"}, newTable.labelArray());
+		}
+
+		@Test
+		public void testRenameAll() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Table table = new Table(columns, new String[]{"one", "two", "three"});
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			renaming.put("three", "3");
+			renaming.put("one", "Eins");
+			Table newTable = table.rename(renaming);
+			assertArrayEquals(new String[]{"Eins", "TWO", "3"}, newTable.labelArray());
+		}
+
+		@Test
+		public void testRenameDoesNotChangeRest() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("one", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla")));
+			metaData.put("three", Collections.singletonList(ColumnRole.OUTLIER));
+			Table table = new Table(columns, new String[]{"one", "two", "three"}, metaData);
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			renaming.put("three", "3");
+			renaming.put("one", "Eins");
+			Table newTable = table.rename(renaming);
+			assertArrayEquals(columns, newTable.getColumns());
+			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
+			expectedMetaData.put("Eins", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla")));
+			expectedMetaData.put("3", Collections.singletonList(ColumnRole.OUTLIER));
+			assertEquals(expectedMetaData, newTable.getMetaData());
+		}
+
+		@Test
+		public void testColumnRelations() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("one", new ArrayList<>(Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla"), new ColumnReference("three"))));
+			metaData.put("three", new ArrayList<>(Arrays.asList(ColumnRole.OUTLIER, new ColumnReference("two", "x"))));
+			Table table = new Table(columns, new String[]{"one", "two", "three"}, metaData);
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			renaming.put("three", "3");
+			renaming.put("one", "Eins");
+			Table newTable = table.rename(renaming);
+			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
+			expectedMetaData.put("Eins", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla"), new ColumnReference("3")));
+			expectedMetaData.put("3", Arrays.asList(ColumnRole.OUTLIER, new ColumnReference("TWO", "x")));
+			assertEquals(expectedMetaData, newTable.getMetaData());
+		}
+
+		@Test
+		public void testColumnRelationsOne() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("three", new ArrayList<>(Collections.singletonList(new ColumnReference("two", "x"))));
+			Table table = new Table(columns, new String[]{"one", "two", "three"}, metaData);
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			Table newTable = table.rename(renaming);
+			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
+			expectedMetaData.put("three", Collections.singletonList(new ColumnReference("TWO", "x")));
+			assertEquals(expectedMetaData, newTable.getMetaData());
+			assertArrayEquals(new String[]{"one", "TWO", "three"}, newTable.labelArray());
+		}
+
+		@Test
+		public void testEmptyMap() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("one", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla")));
+			metaData.put("three", Collections.singletonList(ColumnRole.OUTLIER));
+			String[] labels = {"one", "two", "three"};
+			Table table = new Table(columns, labels, metaData);
+			Table newTable = table.rename(Collections.emptyMap());
+			assertArrayEquals(columns, newTable.getColumns());
+			assertEquals(metaData, newTable.getMetaData());
+			assertEquals(labels, newTable.labelArray());
+		}
+
+		@Test
+		public void testEmptyTable() {
+			Table table = new Table(17);
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			renaming.put("three", "3");
+			renaming.put("one", "Eins");
+			Table newTable = table.rename(renaming);
+			assertEquals(table.height(), newTable.height());
+			assertEquals(0, newTable.width());
+		}
+
+	}
 
 }

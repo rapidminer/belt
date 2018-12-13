@@ -27,7 +27,7 @@ import com.rapidminer.belt.Column.TypeId;
 
 /**
  * Utility class to create {@link ColumnType}s. Columns types of the categories {@link Category#CATEGORICAL} and
- * {@link Category#FREE} can be created using the {@link #categoricalType(String, Class, Comparator)} and
+ * {@link Category#OBJECT} can be created using the {@link #categoricalType(String, Class, Comparator)} and
  * {@link #freeType(String, Class, Comparator)} methods respectively. Column types for builtin formats are predefined,
  * e.g., {@link #NOMINAL}.
  *
@@ -48,11 +48,11 @@ public final class ColumnTypes {
 			Void.class, null);
 
 	/** Complex id for time columns. */
-	public static ColumnType<LocalTime> TIME = new ColumnType<>(TypeId.TIME, null, Category.FREE,
+	public static final ColumnType<LocalTime> TIME = new ColumnType<>(TypeId.TIME, null, Category.OBJECT,
 			LocalTime.class, LocalTime::compareTo);
 
 	/** Complex id for date-time columns. */
-	public static ColumnType<Instant> DATETIME = new ColumnType<>(TypeId.DATE_TIME, null, Category.FREE,
+	public static final ColumnType<Instant> DATETIME = new ColumnType<>(TypeId.DATE_TIME, null, Category.OBJECT,
 			Instant.class, Instant::compareTo);
 
 	/**
@@ -91,12 +91,12 @@ public final class ColumnTypes {
 	 * @param <T>
 	 * 		the element type
 	 * @return the complex custom type
-	 * @see Category#FREE
+	 * @see Category#OBJECT
 	 */
 	public static <T> ColumnType<T> freeType(String customTypeId, Class<T> elementType, Comparator<T> comparator) {
 		Objects.requireNonNull(customTypeId, "Custom type id must not be null");
 		Objects.requireNonNull(elementType, "Element type must not be null");
-		return new ColumnType<>(TypeId.CUSTOM, customTypeId, Category.FREE, elementType, comparator);
+		return new ColumnType<>(TypeId.CUSTOM, customTypeId, Category.OBJECT, elementType, comparator);
 	}
 
 	private ColumnTypes() {

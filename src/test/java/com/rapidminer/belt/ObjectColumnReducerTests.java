@@ -46,7 +46,7 @@ public class ObjectColumnReducerTests {
 
 	private static final ColumnType<String> FREE_STRING_TYPE = ColumnTypes.freeType("test", String.class, null);
 
-	private static final Table table = Table.newTable(NUMBER_OF_ROWS)
+	private static final Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 			.add("a", getNominal())
 			.add("b", getFree())
 			.build(CTX);
@@ -64,7 +64,7 @@ public class ObjectColumnReducerTests {
 	private static Column getFree() {
 		String[] data = new String[NUMBER_OF_ROWS];
 		Arrays.setAll(data, i -> "value" + (i % 10));
-		return new SimpleFreeColumn<>(FREE_STRING_TYPE, data);
+		return new SimpleObjectColumn<>(FREE_STRING_TYPE, data);
 	}
 
 	private static String[] random(int n) {
@@ -77,55 +77,45 @@ public class ObjectColumnReducerTests {
 	public static class InputValidationOneColumn {
 
 		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a").reduceObjects(String.class, ArrayList::new, ArrayList::add, ArrayList::addAll, null,
-					CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform("a").reduceObjects(null, ArrayList::new, ArrayList::add, ArrayList::addAll,
-					Workload.DEFAULT, CTX);
+			table.transform("a").reduceObjects(null, ArrayList::new, ArrayList::add, ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
-			table.transform("a").reduceObjects(String.class, ArrayList::new, ArrayList::add, ArrayList::addAll,
-					Workload.DEFAULT, null);
+			table.transform("a").reduceObjects(String.class, ArrayList::new, ArrayList::add, ArrayList::addAll, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullSupplier() {
 			table.transform("a").reduceObjects(String.class, (Supplier<ArrayList<String>>) null, ArrayList::add,
-					ArrayList::addAll, Workload.DEFAULT, CTX);
+					ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullReducer() {
-			table.transform("a").reduceObjects(String.class, ArrayList::new, null, ArrayList::addAll,
-					Workload.DEFAULT, CTX);
+			table.transform("a").reduceObjects(String.class, ArrayList::new, null, ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullCombiner() {
-			table.transform("a").reduceObjects(String.class, ArrayList::new, ArrayList::add, null, Workload.DEFAULT,
-					CTX);
+			table.transform("a").reduceObjects(String.class, ArrayList::new, ArrayList::add, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullProducingSupplier() {
 			table.transform("a").reduceObjects(String.class, (Supplier<ArrayList<String>>) (() -> null),
-					ArrayList::add, ArrayList::addAll, Workload.DEFAULT, CTX);
+					ArrayList::add, ArrayList::addAll, CTX);
 		}
 
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
-			Table table2 = Table.newTable(table.height())
-					.add("a", new SimpleFreeColumn<>(FREE_STRING_TYPE, new Object[table.height()]))
+			Table table2 = Builders.newTableBuilder(table.height())
+					.add("a", new SimpleObjectColumn<>(FREE_STRING_TYPE, new Object[table.height()]))
 					.add("b", new DoubleArrayColumn(new double[table.height()])).build(CTX);
 			table2.transform(1).reduceObjects(Void.class, ArrayList::new, (t, r) -> {
-			}, ArrayList::addAll, Workload.DEFAULT, CTX);
+			}, ArrayList::addAll, CTX);
 		}
 
 	}
@@ -134,59 +124,52 @@ public class ObjectColumnReducerTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			table.transform("a", "b").reduceObjects(String.class, ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
-					ArrayList::addAll, null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullWorkload() {
-			table.transform("a", "b").reduceObjects(String.class, ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
-					ArrayList::addAll, null, CTX);
+			table.transform("a", "b").reduceObjects((Class<String>) null, ArrayList::new,
+					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullContext() {
 			table.transform("a", "b").reduceObjects(String.class, ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
-					ArrayList::addAll, Workload.DEFAULT, null);
+					ArrayList::addAll, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullSupplier() {
 			table.transform("a", "b").reduceObjects(String.class, (Supplier<ArrayList<String>>) null,
-					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, Workload.DEFAULT, CTX);
+					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullReducer() {
-			table.transform("a", "b").reduceObjects(String.class, ArrayList::new, null, ArrayList::addAll,
-					Workload.DEFAULT, CTX);
+			table.transform("a", "b").reduceObjects(String.class, ArrayList::new, null, ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullCombiner() {
 			table.transform("a", "b").reduceObjects(String.class, ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
-					null, Workload.DEFAULT, CTX);
+					null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullProducingSupplier() {
 			table.transform("a", "b").reduceObjects(String.class, (Supplier<ArrayList<String>>) (() -> null),
-					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, Workload.DEFAULT, CTX);
+					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongClass() {
 			table.transform(new int[]{0, 1}).reduceObjects(Integer.class, ArrayList::new,
-					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, Workload.DEFAULT, CTX);
+					(t, r) -> t.add(r.get(0) + r.get(1)), ArrayList::addAll, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
-			Table table2 = Table.newTable(table.height())
-					.add("a", new SimpleFreeColumn<>(FREE_STRING_TYPE, new Object[table.height()]))
+			Table table2 = Builders.newTableBuilder(table.height())
+					.add("a", new SimpleObjectColumn<>(FREE_STRING_TYPE, new Object[table.height()]))
 					.add("b", new DoubleArrayColumn(new double[table.height()])).build(CTX);
 			table2.transform(new int[]{0, 1}).reduceObjects(Object.class, ArrayList::new, (t, r) -> {},
-					ArrayList::addAll, Workload.DEFAULT, CTX);
+					ArrayList::addAll, CTX);
 		}
 	}
 
@@ -197,7 +180,7 @@ public class ObjectColumnReducerTests {
 		public void testOneColumn() {
 			int size = 75;
 			String[] data = random(size);
-			Column column = new SimpleFreeColumn<>(FREE_STRING_TYPE, data);
+			Column column = new SimpleObjectColumn<>(FREE_STRING_TYPE, data);
 			ObjectColumnReducer<double[], String> calculator =
 					new ObjectColumnReducer<>(column, String.class, () -> new double[2],
 							(t, d) -> {
@@ -233,8 +216,8 @@ public class ObjectColumnReducerTests {
 			int size = 75;
 			String[] data = random(size);
 			String[] data2 = random(size);
-			Column column = new SimpleFreeColumn<>(FREE_STRING_TYPE, data);
-			Column column2 = new SimpleFreeColumn<>(FREE_STRING_TYPE, data2);
+			Column column = new SimpleObjectColumn<>(FREE_STRING_TYPE, data);
+			Column column2 = new SimpleObjectColumn<>(FREE_STRING_TYPE, data2);
 			ObjectColumnsReducer<double[], String> calculator =
 					new ObjectColumnsReducer<>(new Column[]{column, column2},
 							String.class, () -> new double[2],
@@ -273,9 +256,9 @@ public class ObjectColumnReducerTests {
 			String[] data = random(size);
 			String[] data2 = random(size);
 			String[] data3 = random(size);
-			Column column = new SimpleFreeColumn<>(FREE_STRING_TYPE, data);
-			Column column2 = new SimpleFreeColumn<>(FREE_STRING_TYPE, data2);
-			Column column3 = new SimpleFreeColumn<>(FREE_STRING_TYPE, data3);
+			Column column = new SimpleObjectColumn<>(FREE_STRING_TYPE, data);
+			Column column2 = new SimpleObjectColumn<>(FREE_STRING_TYPE, data2);
+			Column column3 = new SimpleObjectColumn<>(FREE_STRING_TYPE, data3);
 			ObjectColumnsReducer<double[], String> calculator =
 					new ObjectColumnsReducer<>(new Column[]{column, column2, column3},
 							String.class, () -> new double[2],
@@ -321,11 +304,11 @@ public class ObjectColumnReducerTests {
 		public void testOneColumn() {
 			int size = 75;
 			String[] data = random(size);
-			Column column = new SimpleFreeColumn<>(FREE_STRING_TYPE, data);
+			Column column = new SimpleObjectColumn<>(FREE_STRING_TYPE, data);
 			Transformer transformer = new Transformer(column);
 			MutableDouble result = transformer.reduceObjects(String.class, MutableDouble::new,
 					(r, v) -> r.value += v.length(),
-					(l, r) -> l.value += r.value, Workload.DEFAULT, CTX);
+					(l, r) -> l.value += r.value, CTX);
 
 			MutableDouble expected = Arrays.stream(data).collect(MutableDouble::new,
 					(r, v) -> r.value += v.length(),
@@ -342,12 +325,12 @@ public class ObjectColumnReducerTests {
 			String[] data2 = random(size);
 			String[] data3 = random(size);
 
-			TransformerMulti transformer = new TransformerMulti(new Column[]{
-					new SimpleFreeColumn<>(FREE_STRING_TYPE, data), new SimpleFreeColumn<>(FREE_STRING_TYPE, data2),
-					new SimpleFreeColumn<>(FREE_STRING_TYPE, data3)});
+			RowTransformer transformer = new RowTransformer(new Column[]{
+					new SimpleObjectColumn<>(FREE_STRING_TYPE, data), new SimpleObjectColumn<>(FREE_STRING_TYPE, data2),
+					new SimpleObjectColumn<>(FREE_STRING_TYPE, data3)});
 			MutableDouble result = transformer.reduceObjects(String.class, MutableDouble::new,
 					(d, row) -> d.value += (row.get(0).length() + row.get(1).length() + row.get(2).length()),
-					(l, r) -> l.value += r.value, Workload.LARGE, CTX);
+					(l, r) -> l.value += r.value, CTX);
 
 			double[] sum = new double[data.length];
 			Arrays.setAll(sum, i -> data[i].length() + data2[i].length() + data3[i].length());
@@ -355,7 +338,39 @@ public class ObjectColumnReducerTests {
 			assertEquals(expected, result.value, EPSILON);
 		}
 
+		@Test
+		public void testOneColumnZeroHeight() {
+			String[] data = random(0);
+			Column column = new SimpleObjectColumn<>(FREE_STRING_TYPE, data);
+			Transformer transformer = new Transformer(column);
+			MutableDouble result = transformer.reduceObjects(String.class, () -> {
+						MutableDouble d = new MutableDouble();
+						d.value = 1;
+						return d;
+					},
+					(r, v) -> r.value *= v.length(),
+					(l, r) -> l.value *= r.value, CTX);
 
+			assertEquals(1, result.value, EPSILON);
+		}
+
+		@Test
+		public void testThreeColumnsZeroHeight() {
+			String[] data = random(0);
+
+			RowTransformer transformer = new RowTransformer(new Column[]{
+					new SimpleObjectColumn<>(FREE_STRING_TYPE, data), new SimpleObjectColumn<>(FREE_STRING_TYPE, data),
+					new SimpleObjectColumn<>(FREE_STRING_TYPE, data)});
+			MutableDouble result = transformer.reduceObjects(String.class, () -> {
+						MutableDouble d = new MutableDouble();
+						d.value = 1;
+						return d;
+					},
+					(d, row) -> d.value += (row.get(0).length() + row.get(1).length() + row.get(2).length()),
+					(l, r) -> l.value += r.value, CTX);
+
+			assertEquals(1, result.value, EPSILON);
+		}
 	}
 
 }

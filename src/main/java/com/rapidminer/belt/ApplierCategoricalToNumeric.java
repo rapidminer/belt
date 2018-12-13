@@ -21,14 +21,14 @@ import java.util.function.IntToDoubleFunction;
 
 
 /**
- * Maps a {@link Column.Category#CATEGORICAL} {@link Column} to a {@link ColumnBuffer} using a given mapping operator.
+ * Maps a {@link Column.Category#CATEGORICAL} {@link Column} to a {@link NumericBuffer} using a given mapping operator.
  *
  * @author Gisa Meier
  */
-final class ApplierCategoricalToNumeric implements ParallelExecutor.Calculator<ColumnBuffer> {
+final class ApplierCategoricalToNumeric implements ParallelExecutor.Calculator<NumericBuffer> {
 
 
-	private ColumnBuffer target;
+	private NumericBuffer target;
 	private final Column source;
 	private final IntToDoubleFunction operator;
 	private final boolean round;
@@ -42,7 +42,7 @@ final class ApplierCategoricalToNumeric implements ParallelExecutor.Calculator<C
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = round ? new FixedIntegerBuffer(source.size()) : new FixedRealBuffer(source.size());
+		target = round ? new IntegerBuffer(source.size(), false) : new RealBuffer(source.size(), false);
 	}
 
 	@Override
@@ -56,7 +56,7 @@ final class ApplierCategoricalToNumeric implements ParallelExecutor.Calculator<C
 	}
 
 	@Override
-	public ColumnBuffer getResult() {
+	public NumericBuffer getResult() {
 		return target;
 	}
 
@@ -64,8 +64,8 @@ final class ApplierCategoricalToNumeric implements ParallelExecutor.Calculator<C
 	 * Maps every index between from (inclusive) and to (exclusive) of the source column using the operator and stores
 	 * the result in target.
 	 */
-	private static void mapPart(Column source, IntToDoubleFunction operator, ColumnBuffer target, int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+	private static void mapPart(Column source, IntToDoubleFunction operator, NumericBuffer target, int from, int to) {
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			int value = reader.read();

@@ -33,8 +33,7 @@ public enum ColumnRole implements ColumnMetaData {
 	SCORE,
 	WEIGHT;
 
-	/** Identifier for column meta data of type column role. */
-	public static final String TYPE_ID = "com.rapidminer.belt.meta.column.role";
+	private static final String TYPE_ID = "com.rapidminer.belt.meta.column.role";
 
 	@Override
 	public String type() {

@@ -80,7 +80,7 @@ final class ObjectColumnFilterer<T> implements ParallelExecutor.Calculator<int[]
 	 */
 	private static <T> int filterPart(Column source, Class<T> type, boolean[] target, Predicate<T> operator, int from, int to) {
 		int found = 0;
-		final ObjectColumnReader<T> reader = new ObjectColumnReader<>(source, type, to);
+		final ObjectReader<T> reader = new ObjectReader<>(source, type, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			boolean testResult = operator.test(reader.read());

@@ -23,6 +23,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.DoubleBinaryOperator;
+import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
@@ -57,11 +58,6 @@ public final class Transformer {
 	private static final String MESSAGE_REDUCER_NULL = "Reducer function must not be null";
 
 	/**
-	 * Message for {@code null} workloads
-	 */
-	private static final String MESSAGE_WORKLOAD_NULL = "Workload must not be null";
-
-	/**
 	 * Message for {@code null} suppliers
 	 */
 	private static final String MESSAGE_SUPPLIER_NULL = "Supplier function must not be null";
@@ -81,7 +77,16 @@ public final class Transformer {
 	 */
 	private static final String MESSAGE_COMBINER_NULL = "Combiner function must not be null";
 
+	/**
+	 * Default progress callback which does nothing at all.
+	 */
+	private static final DoubleConsumer NOOP_CALLBACK = i -> {};
+
 	private final Column transformationColumn;
+
+	private Workload workload = Workload.DEFAULT;
+
+	private DoubleConsumer callback = NOOP_CALLBACK;
 
 	/**
 	 * Creates a new transformer for transformations of the given column.
@@ -97,6 +102,32 @@ public final class Transformer {
 	}
 
 	/**
+	 * Specifies the expected {@link Workload} per data point.
+	 *
+	 * @param workload
+	 * 		the workload
+	 * @return this transformer
+	 */
+	public Transformer workload(Workload workload) {
+		this.workload = Objects.requireNonNull(workload, "Workload must not be null");
+		return this;
+	}
+
+	/**
+	 * Specifies a progress callback function. The progress is reported as single {@code double} value where zero and
+	 * one indicate 0% and 100% progress respectively. The value {@link Double#NaN} is used to indicate indeterminate
+	 * states.
+	 *
+	 * @param callback
+	 * 		the progress callback
+	 * @return this transformer
+	 */
+	public Transformer callback(DoubleConsumer callback) {
+		this.callback = Objects.requireNonNull(callback, "Callback must not be null");
+		return this;
+	}
+
+	/**
 	 * Creates a task that applies the given unary operator to the numeric-readable transformation column in
 	 * order to create a real column buffer. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel. If the transformation column is not numeric-readable, an
@@ -104,17 +135,14 @@ public final class Transformer {
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @return a task that applies the given operator
 	 * @throws NullPointerException
 	 * 		if any of the parameters is {@code null}
 	 */
-	public ColumnTask applyNumericToReal(DoubleUnaryOperator operator, Workload workload) {
+	public ColumnTask applyNumericToReal(DoubleUnaryOperator operator) {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ColumnTask(new ParallelExecutor<>(
-				new ApplierNumericToNumeric(transformationColumn, operator, false), workload).create(),
+				new ApplierNumericToNumeric(transformationColumn, operator, false), workload, callback).create(),
 				transformationColumn.size());
 	}
 
@@ -127,30 +155,25 @@ public final class Transformer {
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @return a task that applies the given operator
 	 * @throws NullPointerException
 	 * 		if any of the parameters is {@code null}
 	 */
-	public ColumnTask applyNumericToInteger(DoubleUnaryOperator operator, Workload workload) {
+	public ColumnTask applyNumericToInteger(DoubleUnaryOperator operator) {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ColumnTask(new ParallelExecutor<>(
-				new ApplierNumericToNumeric(transformationColumn, operator, true), workload).create(),
+				new ApplierNumericToNumeric(transformationColumn, operator, true), workload, callback).create(),
 				transformationColumn.size());
 	}
 
 
 	/**
 	 * Applies the given unary operator to the numeric-readable transformation column returning the result in a new
-	 * real {@link ColumnBuffer}. Depending on the input size and the specified workload per data-point, the
+	 * real {@link NumericBuffer}. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -159,20 +182,18 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public ColumnBuffer applyNumericToReal(DoubleUnaryOperator operator, Workload workload, Context context) {
+	public NumericBuffer applyNumericToReal(DoubleUnaryOperator operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		return applyNumericToReal(operator, workload).run(context);
+		return applyNumericToReal(operator).run(context);
 	}
 
 	/**
 	 * Applies the given unary operator to the numeric readable column returning the result in a new {@link
-	 * ColumnBuffer} of type {@link Column.TypeId#INTEGER}. Depending on the input size and the specified workload per
+	 * NumericBuffer} of type {@link Column.TypeId#INTEGER}. Depending on the input size and the specified workload per
 	 * data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -181,9 +202,9 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public ColumnBuffer applyNumericToInteger(DoubleUnaryOperator operator, Workload workload, Context context) {
+	public NumericBuffer applyNumericToInteger(DoubleUnaryOperator operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		return applyNumericToInteger(operator, workload).run(context);
+		return applyNumericToInteger(operator).run(context);
 	}
 
 
@@ -195,29 +216,25 @@ public final class Transformer {
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @return a task that applies the given operator
 	 * @throws NullPointerException
 	 * 		if any of the parameters is {@code null}
 	 */
-	public ColumnTask applyCategoricalToReal(IntToDoubleFunction operator, Workload workload) {
+	public ColumnTask applyCategoricalToReal(IntToDoubleFunction operator) {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ColumnTask(new ParallelExecutor<>(
-				new ApplierCategoricalToNumeric(transformationColumn, operator, false), workload).create(),
+				new ApplierCategoricalToNumeric(transformationColumn, operator, false), workload, callback)
+				.create(),
 				transformationColumn.size());
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new real {@link
-	 * ColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might be
+	 * NumericBuffer}. Depending on the input size and the specified workload per data-point, the computation might be
 	 * performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -226,9 +243,9 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 */
-	public ColumnBuffer applyCategoricalToReal(IntToDoubleFunction operator, Workload workload, Context context) {
+	public NumericBuffer applyCategoricalToReal(IntToDoubleFunction operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		return applyCategoricalToReal(operator, workload).run(context);
+		return applyCategoricalToReal(operator).run(context);
 	}
 
 	/**
@@ -239,29 +256,25 @@ public final class Transformer {
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @return a task that applies the given operator
 	 * @throws NullPointerException
 	 * 		if any of the parameters is {@code null}
 	 */
-	public ColumnTask applyCategoricalToInteger(IntToDoubleFunction operator, Workload workload) {
+	public ColumnTask applyCategoricalToInteger(IntToDoubleFunction operator) {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ColumnTask(new ParallelExecutor<>(
-				new ApplierCategoricalToNumeric(transformationColumn, operator, true), workload).create(),
+				new ApplierCategoricalToNumeric(transformationColumn, operator, true), workload, callback)
+				.create(),
 				transformationColumn.size());
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new integer {@link
-	 * ColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might be
+	 * NumericBuffer}. Depending on the input size and the specified workload per data-point, the computation might be
 	 * performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -270,10 +283,9 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 */
-	public ColumnBuffer applyCategoricalToInteger(IntToDoubleFunction operator, Workload workload,
-												  Context context) {
+	public NumericBuffer applyCategoricalToInteger(IntToDoubleFunction operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		return applyCategoricalToInteger(operator, workload).run(context);
+		return applyCategoricalToInteger(operator).run(context);
 	}
 
 	/**
@@ -286,26 +298,23 @@ public final class Transformer {
 	 * 		the type of the objects in the transformation column
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param <T>
 	 * 		type of objects in the column
 	 * @return a task that applies the given operator
 	 * @throws NullPointerException
 	 * 		if any of the parameters is {@code null}
 	 */
-	public <T> ColumnTask applyObjectToReal(Class<T> type, ToDoubleFunction<T> operator, Workload
-			workload) {
+	public <T> ColumnTask applyObjectToReal(Class<T> type, ToDoubleFunction<T> operator) {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
 		return new ColumnTask(new ParallelExecutor<>(
-				new ApplierObjectToNumeric<T>(transformationColumn, type, operator, false), workload).create(),
+				new ApplierObjectToNumeric<T>(transformationColumn, type, operator, false), workload, callback)
+				.create(),
 				transformationColumn.size());
 	}
 
 	/**
-	 * Applies the given operator to the object-readable column returning the result in a new {@link ColumnBuffer}.
+	 * Applies the given operator to the object-readable column returning the result in a new {@link NumericBuffer}.
 	 * Depending on the input size and the specified workload per data-point, the computation might be performed in
 	 * parallel.
 	 *
@@ -313,8 +322,6 @@ public final class Transformer {
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -327,10 +334,9 @@ public final class Transformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation column cannot be read as the given type
 	 */
-	public <T> ColumnBuffer applyObjectToReal(Class<T> type, ToDoubleFunction<T> operator, Workload workload,
-											  Context context) {
+	public <T> NumericBuffer applyObjectToReal(Class<T> type, ToDoubleFunction<T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		return applyObjectToReal(type, operator, workload).run(context);
+		return applyObjectToReal(type, operator).run(context);
 	}
 
 	/**
@@ -342,34 +348,30 @@ public final class Transformer {
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param <T>
 	 * 		type of objects in the column
 	 * @return a task that applies the given operator
 	 * @throws NullPointerException
 	 * 		if any of the parameters is {@code null}
 	 */
-	public <T> ColumnTask applyObjectToInteger(Class<T> type, ToDoubleFunction<T> operator, Workload workload) {
+	public <T> ColumnTask applyObjectToInteger(Class<T> type, ToDoubleFunction<T> operator) {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
 		return new ColumnTask(new ParallelExecutor<>(
-				new ApplierObjectToNumeric<T>(transformationColumn, type, operator, true), workload).create(),
+				new ApplierObjectToNumeric<T>(transformationColumn, type, operator, true), workload, callback)
+				.create(),
 				transformationColumn.size());
 	}
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new integer
-	 * {@link ColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation
+	 * {@link NumericBuffer}. Depending on the input size and the specified workload per data-point, the computation
 	 * might be performed in parallel.
 	 *
 	 * @param type
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -382,24 +384,21 @@ public final class Transformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation column cannot be read as the given type
 	 */
-	public <T> ColumnBuffer applyObjectToInteger(Class<T> type, ToDoubleFunction<T> operator,
-												 Workload workload, Context context) {
+	public <T> NumericBuffer applyObjectToInteger(Class<T> type, ToDoubleFunction<T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		return applyObjectToInteger(type, operator, workload).run(context);
+		return applyObjectToInteger(type, operator).run(context);
 	}
 
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
-	 * CategoricalColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation
+	 * CategoricalBuffer}. Depending on the input size and the specified workload per data-point, the computation
 	 * might be performed in parallel.
 	 *
 	 * @param type
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -415,19 +414,18 @@ public final class Transformer {
 	 * 		if the objects in the transformation column cannot be read as the given type
 	 */
 	public <T, R> Int32CategoricalBuffer<T> applyObjectToCategorical(Class<R> type, Function<R, T> operator,
-																	 Workload workload, Context context) {
+																	 Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
 		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(new ApplierObjectToCategorical<>
 				(transformationColumn,
-						type, operator, IntegerFormats.Format.SIGNED_INT32), workload).create().run(context);
+						type, operator, IntegerFormats.Format.SIGNED_INT32), workload, callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
-	 * CategoricalColumnBuffer}. The format of the target buffer is derived from given maxNumberOfValues parameter.
+	 * CategoricalBuffer}. The format of the target buffer is derived from given maxNumberOfValues parameter.
 	 * Depending on the input size and the specified workload per data-point, the computation might be performed in
 	 * parallel.
 	 *
@@ -437,8 +435,6 @@ public final class Transformer {
 	 * 		the operator to apply to each value
 	 * @param maxNumberOfValues
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -454,30 +450,26 @@ public final class Transformer {
 	 * 		if the objects in the transformation column cannot be read as the given type or if more different values
 	 * 		are	supplied than supported by the buffer format calculated from the maxNumberOfValues
 	 */
-	public <T, R> CategoricalColumnBuffer<T> applyObjectToCategorical(Class<R> type, Function<R, T> operator,
-																	  int maxNumberOfValues, Workload workload,
-																	  Context context) {
+	public <T, R> CategoricalBuffer<T> applyObjectToCategorical(Class<R> type, Function<R, T> operator,
+																int maxNumberOfValues, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(Math.min(transformationColumn.size(),
 				maxNumberOfValues));
 		return new ParallelExecutor<>(new ApplierObjectToCategorical<>(transformationColumn,
-				type, operator, format), workload).create().run(context);
+				type, operator, format), workload, callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
-	 * FreeColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might
+	 * ObjectBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
 	 * @param type
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -492,27 +484,23 @@ public final class Transformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation column cannot be read as the given type
 	 */
-	public <T, R> FreeColumnBuffer<T> applyObjectToFree(Class<R> type, Function<R, T> operator,
-														Workload workload, Context context) {
+	public <T, R> ObjectBuffer<T> applyObjectToObject(Class<R> type, Function<R, T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		return new ParallelExecutor<>(new ApplierObjectToFree<>(transformationColumn, type, operator), workload)
-				.create().run(context);
+		return new ParallelExecutor<>(new ApplierObjectToObject<>(transformationColumn, type, operator), workload,
+				callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
-	 * TimeColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might
+	 * TimeBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
 	 * @param type
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <R>
@@ -525,27 +513,23 @@ public final class Transformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation column cannot be read as the given type
 	 */
-	public <R> TimeColumnBuffer applyObjectToTime(Class<R> type, Function<R, LocalTime> operator,
-												  Workload workload, Context context) {
+	public <R> TimeBuffer applyObjectToTime(Class<R> type, Function<R, LocalTime> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		return new ParallelExecutor<>(new ApplierObjectToTime<>(transformationColumn, type, operator), workload)
-				.create().run(context);
+		return new ParallelExecutor<>(new ApplierObjectToTime<>(transformationColumn, type, operator), workload,
+				callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
-	 * HighPrecisionDateTimeBuffer}. Depending on the input size and the specified workload per data-point, the
+	 * NanosecondDateTimeBuffer}. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel.
 	 *
 	 * @param type
 	 * 		the type of the objects in the column to work on
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <R>
@@ -558,25 +542,22 @@ public final class Transformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation column cannot be read as the given type
 	 */
-	public <R> HighPrecisionDateTimeBuffer applyObjectToDateTime(Class<R> type, Function<R, Instant> operator,
-																 Workload workload, Context context) {
+	public <R> NanosecondDateTimeBuffer applyObjectToDateTime(Class<R> type, Function<R, Instant> operator,
+															  Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		return new ParallelExecutor<>(new ApplierObjectToDateTime<>(transformationColumn, type, operator), workload)
-				.create().run(context);
+		return new ParallelExecutor<>(new ApplierObjectToDateTime<>(transformationColumn, type, operator), workload,
+				callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
-	 * CategoricalColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation
+	 * CategoricalBuffer}. Depending on the input size and the specified workload per data-point, the computation
 	 * might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -587,26 +568,23 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public <T> Int32CategoricalBuffer<T> applyNumericToCategorical(DoubleFunction<T> operator,
-																   Workload workload, Context context) {
+	public <T> Int32CategoricalBuffer<T> applyNumericToCategorical(DoubleFunction<T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(new ApplierNumericToCategorical<>
-				(transformationColumn, operator, IntegerFormats.Format.SIGNED_INT32), workload).create().run(context);
+				(transformationColumn, operator, IntegerFormats.Format.SIGNED_INT32), workload, callback)
+				.create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
-	 * CategoricalColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation
+	 * CategoricalBuffer}. Depending on the input size and the specified workload per data-point, the computation
 	 * might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
 	 * @param maxNumberOfValues
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -620,27 +598,23 @@ public final class Transformer {
 	 * 		if more different values are supplied than supported by the buffer format calculated from the
 	 * 		maxNumberOfValues
 	 */
-	public <T> CategoricalColumnBuffer<T> applyNumericToCategorical(DoubleFunction<T> operator,
-																	int maxNumberOfValues, Workload workload,
-																	Context context) {
+	public <T> CategoricalBuffer<T> applyNumericToCategorical(DoubleFunction<T> operator,
+															  int maxNumberOfValues, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(Math.min(transformationColumn.size(),
 				maxNumberOfValues));
 		return new ParallelExecutor<>(new ApplierNumericToCategorical<>(transformationColumn, operator, format),
-				workload).create().run(context);
+				workload, callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
-	 * FreeColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might
+	 * ObjectBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -651,24 +625,20 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public <T> FreeColumnBuffer<T> applyNumericToFree(DoubleFunction<T> operator, Workload workload,
-													  Context context) {
+	public <T> ObjectBuffer<T> applyNumericToObject(DoubleFunction<T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ApplierNumericToFree<>(transformationColumn, operator), workload).create()
-				.run(context);
+		return new ParallelExecutor<>(new ApplierNumericToObject<>(transformationColumn, operator), workload, callback)
+				.create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
-	 * TimeColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might
+	 * TimeBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -677,24 +647,20 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public TimeColumnBuffer applyNumericToTime(DoubleFunction<LocalTime> operator, Workload workload,
-											   Context context) {
+	public TimeBuffer applyNumericToTime(DoubleFunction<LocalTime> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ApplierNumericToTime(transformationColumn, operator), workload).create()
-				.run(context);
+		return new ParallelExecutor<>(new ApplierNumericToTime(transformationColumn, operator), workload, callback)
+				.create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
-	 * HighPrecisionDateTimeBuffer}. Depending on the input size and the specified workload per data-point, the
+	 * NanosecondDateTimeBuffer}. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -703,24 +669,20 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public HighPrecisionDateTimeBuffer applyNumericToDateTime(DoubleFunction<Instant> operator, Workload workload,
-															  Context context) {
+	public NanosecondDateTimeBuffer applyNumericToDateTime(DoubleFunction<Instant> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ApplierNumericToDateTime(transformationColumn, operator), workload).create()
-				.run(context);
+		return new ParallelExecutor<>(new ApplierNumericToDateTime(transformationColumn, operator), workload, callback)
+				.create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new {@link
-	 * CategoricalColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation
+	 * CategoricalBuffer}. Depending on the input size and the specified workload per data-point, the computation
 	 * might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -731,18 +693,17 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 */
-	public <T> Int32CategoricalBuffer<T> applyCategoricalToCategorical(IntFunction<T> operator,
-																	   Workload workload, Context context) {
+	public <T> Int32CategoricalBuffer<T> applyCategoricalToCategorical(IntFunction<T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(new ApplierCategoricalToCategorical<T>
-				(transformationColumn, operator, IntegerFormats.Format.SIGNED_INT32), workload).create().run(context);
+				(transformationColumn, operator, IntegerFormats.Format.SIGNED_INT32), workload, callback)
+				.create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new {@link
-	 * CategoricalColumnBuffer}. The format of the target buffer is derived from given maxNumberOfValues parameter.
+	 * CategoricalBuffer}. The format of the target buffer is derived from given maxNumberOfValues parameter.
 	 * Depending on the input size and the specified workload per data-point, the computation might be performed in
 	 * parallel.
 	 *
@@ -750,8 +711,6 @@ public final class Transformer {
 	 * 		the operator to apply to each value
 	 * @param maxNumberOfValues
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -765,27 +724,23 @@ public final class Transformer {
 	 * 		if more different values are supplied than supported by the buffer format calculated from the
 	 * 		maxNumberOfValues
 	 */
-	public <T> CategoricalColumnBuffer<T> applyCategoricalToCategorical(IntFunction<T> operator,
-																		int maxNumberOfValues, Workload workload,
-																		Context context) {
+	public <T> CategoricalBuffer<T> applyCategoricalToCategorical(IntFunction<T> operator,
+																  int maxNumberOfValues, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(Math.min(transformationColumn.size(),
 				maxNumberOfValues));
 		return new ParallelExecutor<>(new ApplierCategoricalToCategorical<>(transformationColumn,
-				operator, format), workload).create().run(context);
+				operator, format), workload, callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new {@link
-	 * FreeColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might
+	 * ObjectBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @param <T>
@@ -796,24 +751,20 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 */
-	public <T> FreeColumnBuffer<T> applyCategoricalToFree(IntFunction<T> operator, Workload workload,
-														  Context context) {
+	public <T> ObjectBuffer<T> applyCategoricalToObject(IntFunction<T> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ApplierCategoricalToFree<>(transformationColumn,
-				operator), workload).create().run(context);
+		return new ParallelExecutor<>(new ApplierCategoricalToObject<>(transformationColumn,
+				operator), workload, callback).create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new {@link
-	 * TimeColumnBuffer}. Depending on the input size and the specified workload per data-point, the computation might
+	 * TimeBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -822,24 +773,20 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 */
-	public TimeColumnBuffer applyCategoricalToTime(IntFunction<LocalTime> operator, Workload workload,
-												   Context context) {
+	public TimeBuffer applyCategoricalToTime(IntFunction<LocalTime> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ApplierCategoricalToTime(transformationColumn, operator), workload).create()
-				.run(context);
+		return new ParallelExecutor<>(new ApplierCategoricalToTime(transformationColumn, operator), workload, callback)
+				.create().run(context);
 	}
 
 	/**
 	 * Applies the given operator to the categorical transformation column returning the result in a new {@link
-	 * HighPrecisionDateTimeBuffer}. Depending on the input size and the specified workload per data-point, the
+	 * NanosecondDateTimeBuffer}. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each value
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context to use
 	 * @return a buffer containing the result of the operation
@@ -848,13 +795,11 @@ public final class Transformer {
 	 * @throws UnsupportedOperationException
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 */
-	public HighPrecisionDateTimeBuffer applyCategoricalToDateTime(IntFunction<Instant> operator, Workload workload,
-																  Context context) {
+	public NanosecondDateTimeBuffer applyCategoricalToDateTime(IntFunction<Instant> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ApplierCategoricalToDateTime(transformationColumn, operator), workload)
-				.create().run(context);
+		return new ParallelExecutor<>(new ApplierCategoricalToDateTime(transformationColumn, operator), workload,
+				callback).create().run(context);
 	}
 
 	/**
@@ -863,7 +808,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     double result = identity;
-	 *     ColumnReader reader = new ColumnReader(transformationColumn);
+	 *     NumericReader reader = new NumericReader(transformationColumn);
 	 *     while (reader.hasRemaining){
 	 *         result = reducer.applyAsDouble(result, reader.read())
 	 *     }
@@ -883,8 +828,6 @@ public final class Transformer {
 	 * 		the identity value for the reduction function
 	 * @param reducer
 	 * 		an associative, stateless function for combining two values
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @return the result of the reduction
@@ -894,12 +837,11 @@ public final class Transformer {
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 * @see java.util.stream.DoubleStream#reduce(double, DoubleBinaryOperator)
 	 */
-	public double reduceNumeric(double identity, DoubleBinaryOperator reducer, Workload workload, Context context) {
+	public double reduceNumeric(double identity, DoubleBinaryOperator reducer, Context context) {
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ColumnReducerDouble(transformationColumn, identity, reducer), workload)
-				.create().run(context);
+		return new ParallelExecutor<>(new ColumnReducerDouble(transformationColumn, identity, reducer), workload,
+				callback).create().run(context);
 	}
 
 
@@ -909,7 +851,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     double result = identity;
-	 *     ColumnReader reader = new ColumnReader(transformationColumn);
+	 *     NumericReader reader = new NumericReader(transformationColumn);
 	 *     while (reader.hasRemaining){
 	 *         result = reducer.applyAsDouble(result, reader.read())
 	 *     }
@@ -935,8 +877,6 @@ public final class Transformer {
 	 * @param combiner
 	 * 		an associative, stateless function for combining two values, which must be compatible with the reducer
 	 * 		function
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @return the result of the reduction
@@ -947,13 +887,12 @@ public final class Transformer {
 	 * @see java.util.stream.Stream#reduce(Object, BiFunction, BinaryOperator)
 	 */
 	public double reduceNumeric(double identity, DoubleBinaryOperator reducer, DoubleBinaryOperator combiner,
-								Workload workload, Context context) {
+								Context context) {
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(combiner, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ParallelExecutor<>(new ColumnReducerDouble(transformationColumn, identity, reducer, combiner),
-				workload).create().run(context);
+				workload, callback).create().run(context);
 	}
 
 
@@ -964,7 +903,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     int result = identity;
-	 *     CategoricalColumnReader reader = new CategoricalColumnReader(transformationColumn);
+	 *     CategoricalReader reader = new CategoricalReader(transformationColumn);
 	 *     while (reader.hasRemaining){
 	 *         result = reducer.applyAsInt(result, reader.read())
 	 *     }
@@ -984,8 +923,6 @@ public final class Transformer {
 	 * 		the identity value for the reduction function
 	 * @param reducer
 	 * 		an associative, stateless function for combining two values
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @return the result of the reduction
@@ -995,13 +932,11 @@ public final class Transformer {
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 * @see java.util.stream.IntStream#reduce(int, IntBinaryOperator)
 	 */
-	public int reduceCategorical(int identity, IntBinaryOperator reducer, Workload workload, Context
-			context) {
+	public int reduceCategorical(int identity, IntBinaryOperator reducer, Context context) {
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ParallelExecutor<>(new CategoricalColumnReducerInt(transformationColumn, identity, reducer),
-				workload).create().run(context);
+				workload, callback).create().run(context);
 	}
 
 
@@ -1011,7 +946,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     int result = identity;
-	 *     CategoricalColumnReader reader = new CategoricalColumnReader(transformationColumn);
+	 *     CategoricalReader reader = new CategoricalReader(transformationColumn);
 	 *     while (reader.hasRemaining){
 	 *         result = reducer.applyAsInt(result, reader.read())
 	 *     }
@@ -1037,8 +972,6 @@ public final class Transformer {
 	 * @param combiner
 	 * 		an associative, stateless function for combining two values, which must be compatible with the reducer
 	 * 		function
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @return the result of the reduction
@@ -1048,14 +981,12 @@ public final class Transformer {
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 * @see java.util.stream.Stream#reduce(Object, BiFunction, BinaryOperator)
 	 */
-	public int reduceCategorical(int identity, IntBinaryOperator reducer, IntBinaryOperator combiner,
-								 Workload workload, Context context) {
+	public int reduceCategorical(int identity, IntBinaryOperator reducer, IntBinaryOperator combiner, Context context) {
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(combiner, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ParallelExecutor<>(new CategoricalColumnReducerInt(transformationColumn, identity, reducer,
-				combiner), workload).create().run(context);
+				combiner), workload, callback).create().run(context);
 	}
 
 	/**
@@ -1066,7 +997,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     T result = supplier.get();
-	 *     ColumnReader reader = new ColumnReader(transformationColumn);
+	 *     NumericReader reader = new NumericReader(transformationColumn);
 	 *     while (reader.hasRemaining){
 	 *         reducer.accept(result, reader.read());
 	 *     }
@@ -1086,8 +1017,6 @@ public final class Transformer {
 	 * @param combiner
 	 * 		an associative, stateless function for combining two values, which must be compatible with the reducer
 	 * 		function
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @param <T>
@@ -1099,15 +1028,14 @@ public final class Transformer {
 	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
 	 * @see java.util.stream.DoubleStream#collect(Supplier, ObjDoubleConsumer, BiConsumer)
 	 */
-	public <T> T reduceNumeric(Supplier<T> supplier, ObjDoubleConsumer<T> reducer,
-							   BiConsumer<T, T> combiner, Workload workload, Context context) {
+	public <T> T reduceNumeric(Supplier<T> supplier, ObjDoubleConsumer<T> reducer, BiConsumer<T, T> combiner,
+							   Context context) {
 		Objects.requireNonNull(supplier, MESSAGE_SUPPLIER_NULL);
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(combiner, MESSAGE_COMBINER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
-		return new ParallelExecutor<>(new ColumnReducer<>(transformationColumn, supplier, reducer, combiner), workload)
-				.create().run(context);
+		return new ParallelExecutor<>(new ColumnReducer<>(transformationColumn, supplier, reducer, combiner), workload,
+				callback).create().run(context);
 	}
 
 
@@ -1120,7 +1048,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     T result = supplier.get();
-	 *     CategoricalColumnReader reader = new CategoricalColumnReader(transformationColumn);
+	 *     CategoricalReader reader = new CategoricalReader(transformationColumn);
 	 *     while (reader.hasRemaining){
 	 *         reducer.accept(result, reader.read());
 	 *     }
@@ -1141,8 +1069,6 @@ public final class Transformer {
 	 * @param combiner
 	 * 		an associative, stateless function for combining two values, which must be compatible with the reducer
 	 * 		function
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @param <T>
@@ -1154,15 +1080,14 @@ public final class Transformer {
 	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
 	 * @see java.util.stream.IntStream#collect(Supplier, ObjIntConsumer, BiConsumer)
 	 */
-	public <T> T reduceCategorical(Supplier<T> supplier, ObjIntConsumer<T> reducer,
-								   BiConsumer<T, T> combiner, Workload workload, Context context) {
+	public <T> T reduceCategorical(Supplier<T> supplier, ObjIntConsumer<T> reducer, BiConsumer<T, T> combiner,
+								   Context context) {
 		Objects.requireNonNull(supplier, MESSAGE_SUPPLIER_NULL);
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(combiner, MESSAGE_COMBINER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ParallelExecutor<>(new CategoricalColumnReducer<>(transformationColumn, supplier, reducer,
-				combiner), workload).create().run(context);
+				combiner), workload, callback).create().run(context);
 	}
 
 	/**
@@ -1175,7 +1100,7 @@ public final class Transformer {
 	 *
 	 * <pre>{@code
 	 *     T result = supplier.get();
-	 *     ObjectColumnReader<R> reader = new ObjectColumnReader(transformationColumn, type);
+	 *     ObjectReader<R> reader = new ObjectReader(transformationColumn, type);
 	 *     while (reader.hasRemaining){
 	 *         reducer.accept(result, reader.read());
 	 *     }
@@ -1198,8 +1123,6 @@ public final class Transformer {
 	 * @param combiner
 	 * 		an associative, stateless function for combining two values, which must be compatible with the reducer
 	 * 		function
-	 * @param workload
-	 * 		the expected workload per data point
 	 * @param context
 	 * 		the execution context
 	 * @param <T>
@@ -1216,15 +1139,14 @@ public final class Transformer {
 	 * @see java.util.stream.Stream#collect(Supplier, BiConsumer, BiConsumer)
 	 */
 	public <T, R> T reduceObjects(Class<R> type, Supplier<T> supplier, BiConsumer<T, R> reducer,
-								  BiConsumer<T, T> combiner, Workload workload, Context context) {
+								  BiConsumer<T, T> combiner, Context context) {
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
 		Objects.requireNonNull(supplier, MESSAGE_SUPPLIER_NULL);
 		Objects.requireNonNull(reducer, MESSAGE_REDUCER_NULL);
 		Objects.requireNonNull(combiner, MESSAGE_COMBINER_NULL);
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(workload, MESSAGE_WORKLOAD_NULL);
 		return new ParallelExecutor<>(new ObjectColumnReducer<>(transformationColumn, type, supplier, reducer,
-				combiner), workload).create().run(context);
+				combiner), workload, callback).create().run(context);
 	}
 
 }

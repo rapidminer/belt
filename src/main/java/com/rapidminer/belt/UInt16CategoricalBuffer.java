@@ -28,12 +28,12 @@ import com.rapidminer.belt.util.IntegerFormats.Format;
 
 
 /**
- * Implementation of a {@link CategoricalColumnBuffer} with category index format {@link Format#UNSIGNED_INT16} that can
+ * Implementation of a {@link CategoricalBuffer} with category index format {@link Format#UNSIGNED_INT16} that can
  * hold {@code 65535} different categories. The category indices are stored as {@code short}.
  *
  * @author Gisa Meier
  */
-public class UInt16CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T> {
+public class UInt16CategoricalBuffer<T> extends CategoricalBuffer<T> {
 
 
 	private final short[] data;
@@ -46,13 +46,8 @@ public class UInt16CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<
 	 *
 	 * @param length
 	 * 		the length of the buffer
-	 * @throws IllegalArgumentException
-	 * 		if the given length is negative
 	 */
-	public UInt16CategoricalBuffer(int length) {
-		if (length < 0) {
-			throw new IllegalArgumentException("Illegal Capacity: " + length);
-		}
+	UInt16CategoricalBuffer(int length) {
 		data = new short[length];
 		valueLookup.add(null); //position 0 stands for missing value, i.e. null
 	}
@@ -67,36 +62,36 @@ public class UInt16CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<
 	 * @param elementType
 	 * 		the desired type of the buffer, must be a super type of the column type
 	 */
-	public UInt16CategoricalBuffer(Column column, Class<T> elementType) {
+	UInt16CategoricalBuffer(Column column, Class<T> elementType) {
 		if (column instanceof CategoricalColumn) {
 			CategoricalColumn<?> categoricalColumn = (CategoricalColumn) column;
+			List<T> dictionary = categoricalColumn.getDictionary(elementType);
 			if (categoricalColumn.getFormat() == indexFormat()) {
-				//same format: directly copy the data
+				// Same format: directly copy the data
 				short[] originalData = categoricalColumn.getShortData();
 				data = Arrays.copyOf(originalData, originalData.length);
-			} else if (categoricalColumn.getFormat().maxValue() < indexFormat().maxValue()) {
-				//smaller format: go via column reader
+			} else if (dictionary.size() <= indexFormat().maxValue()) {
+				// Different format: go via column reader
 				data = new short[column.size()];
-				CategoricalColumnReader reader = new CategoricalColumnReader(column);
+				CategoricalReader reader = Readers.categoricalReader(column);
 				for (int i = 0; i < data.length; i++) {
 					data[i] = (short) reader.read();
 				}
 			} else {
-				//bigger format
-				throw new UnsupportedOperationException("Column format incompatible with buffer format");
+				throw new UnsupportedOperationException("Column contains to many categories for this buffer format");
 			}
+			fillStructures(dictionary);
 		} else {
 			throw new UnsupportedOperationException("Column is not categorical");
 		}
-		fillStructures(column.getDictionary(elementType));
 	}
 
 	private void fillStructures(List<T> values) {
 		valueLookup.add(null);
-		for (short i = 1; i < values.size(); i++) {
+		for (int i = 1; i < values.size(); i++) {
 			T value = values.get(i);
 			valueLookup.add(value);
-			indexLookup.put(value, i);
+			indexLookup.put(value, (short) i);
 		}
 	}
 
@@ -124,7 +119,7 @@ public class UInt16CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<
 	@Override
 	public boolean setSave(int index, T value) {
 		if (frozen) {
-			throw new IllegalStateException(BUFFER_FROZEN_MESSAGE);
+			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
 		if (value == null) {
 			//set NaN
@@ -202,4 +197,24 @@ public class UInt16CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<
 		freeze();
 		return new SimpleCategoricalColumn<>(type, data, valueLookup);
 	}
+
+	@Override
+	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
+		freeze();
+		Objects.requireNonNull(type, "Column type must not be null");
+		if (type.category() != Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Column type must be categorical");
+		}
+		int positiveIndex = CategoricalColumn.NO_POSITIVE_ENTRY;
+		if (positiveValue != null) {
+			Short index = indexLookup.get(positiveValue);
+			if (index == null) {
+				throw new IllegalArgumentException("Positive value \"" + Objects.toString(positiveValue)
+						+ "\" not in dictionary.");
+			}
+			positiveIndex = Short.toUnsignedInt(index);
+		}
+		return new SimpleCategoricalColumn<>(type, data, valueLookup, positiveIndex);
+	}
+
 }

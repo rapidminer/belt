@@ -36,7 +36,7 @@ import java.util.Objects;
  * }</pre>
  *
  * <p>Given the column-oriented design of Belt, {@link CategoricalRowReader}s do not perform as well as {@link
- * CategoricalColumnReader}s. Thus, whenever possible the use of {@link CategoricalColumnReader}s is preferred.
+ * CategoricalReader}s. Thus, whenever possible the use of {@link CategoricalReader}s is preferred.
  *
  * @author Michael Knopf, Gisa Meier
  */
@@ -50,12 +50,12 @@ public final class CategoricalRowReader implements CategoricalRow{
 	/**
 	 * Maximal number of rows in a buffer
 	 */
-	private static final int MAX_BUFFER_ROWS = ColumnReader.SMALL_BUFFER_SIZE;
+	private static final int MAX_BUFFER_ROWS = NumericReader.SMALL_BUFFER_SIZE;
 
 	/**
 	 * Minimal number of rows in a buffer
 	 */
-	private static final int MIN_BUFFER_ROWS = ColumnReader.MIN_BUFFER_SIZE;
+	private static final int MIN_BUFFER_ROWS = NumericReader.MIN_BUFFER_SIZE;
 
 
 	/**
@@ -78,7 +78,7 @@ public final class CategoricalRowReader implements CategoricalRow{
 	 * category {@link Column.Category#CATEGORICAL}.
 	 *
 	 * <p>Given the column-oriented design of Belt, {@link CategoricalRowReader}s do not perform as well as {@link
-	 * CategoricalColumnReader}s. Thus, whenever possible the use of {@link CategoricalColumnReader}s is preferred.
+	 * CategoricalReader}s. Thus, whenever possible the use of {@link CategoricalReader}s is preferred.
 	 *
 	 * @param table
 	 * 		the table to read
@@ -95,7 +95,7 @@ public final class CategoricalRowReader implements CategoricalRow{
 	 * Column.Category#CATEGORICAL}.
 	 *
 	 * <p>Given the column-oriented design of Belt, {@link CategoricalRowReader}s do not perform as well as {@link
-	 * CategoricalColumnReader}s. Thus, whenever possible the use of {@link CategoricalColumnReader}s is preferred.
+	 * CategoricalReader}s. Thus, whenever possible the use of {@link CategoricalReader}s is preferred.
 	 *
 	 * @param first
 	 * 		the first column to read
@@ -115,7 +115,7 @@ public final class CategoricalRowReader implements CategoricalRow{
 	 * Column.Category#CATEGORICAL}.
 	 *
 	 * <p>Given the column-oriented design of Belt, {@link CategoricalRowReader}s do not perform as well as {@link
-	 * CategoricalColumnReader}s. Thus, whenever possible the use of {@link CategoricalColumnReader}s is preferred.
+	 * CategoricalReader}s. Thus, whenever possible the use of {@link CategoricalReader}s is preferred.
 	 *
 	 * @param src
 	 * 		the columns to read
@@ -212,7 +212,7 @@ public final class CategoricalRowReader implements CategoricalRow{
 	}
 
 	/**
-	 * Returns the position of the row in the table (0-based). Returns {@link Row#BEFORE_FIRST} if the reader
+	 * Returns the position of the row in the table (0-based). Returns {@link Readers#BEFORE_FIRST_ROW} if the reader
 	 * is before the first position, i.e., {@link #move()} has not been called.
 	 *
 	 * @return the row position

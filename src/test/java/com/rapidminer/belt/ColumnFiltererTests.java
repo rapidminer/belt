@@ -49,7 +49,7 @@ public class ColumnFiltererTests {
 	 * deadlocks!
 	 */
 	@SuppressWarnings("Convert2Lambda")
-	private static final Table table = Table.newTable(NUMBER_OF_ROWS)
+	private static final Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 			.addReal("a", new IntToDoubleFunction() {
 						@Override
 						public double applyAsDouble(int value) {
@@ -69,7 +69,7 @@ public class ColumnFiltererTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -337,27 +337,27 @@ public class ColumnFiltererTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullWorkload() {
-			table.filterGeneral(Arrays.asList("a", "b"), row -> true, null, CTX);
+			table.filterMixed(Arrays.asList("a", "b"), row -> true, null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
-			table.filterGeneral(Arrays.asList("a", "b"), null, Workload.DEFAULT, CTX);
+			table.filterMixed(Arrays.asList("a", "b"), null, Workload.DEFAULT, CTX);
 		}
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testWrongIndex() {
-			table.filterGeneral(new int[]{3, 0}, row -> false, Workload.DEFAULT, CTX);
+			table.filterMixed(new int[]{3, 0}, row -> false, Workload.DEFAULT, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongLabel() {
-			table.filterGeneral(Arrays.asList("a", "x"), row -> false, Workload.DEFAULT, CTX);
+			table.filterMixed(Arrays.asList("a", "x"), row -> false, Workload.DEFAULT, CTX);
 		}
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testNegativeIndex() {
-			table.filterGeneral(new int[]{-1, 0}, row -> false, Workload.DEFAULT, CTX);
+			table.filterMixed(new int[]{-1, 0}, row -> false, Workload.DEFAULT, CTX);
 		}
 
 	}
@@ -608,7 +608,7 @@ public class ColumnFiltererTests {
 			int[] second = randomInt(size);
 			int[] third = randomInt(size);
 			List<String> mappingList = getMappingList();
-			GeneralColumnsFilterer calculator = new GeneralColumnsFilterer(new Column[]{
+			MixedColumnsFilterer calculator = new MixedColumnsFilterer(new Column[]{
 					new DoubleArrayColumn(first),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)},
@@ -636,7 +636,7 @@ public class ColumnFiltererTests {
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, second, mappingList),
 					new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, third, mappingList)},
 					new String[]{"a", "b", "c"});
-			Table filtered = table.filterGeneral(new int[]{0, 1, 2},
+			Table filtered = table.filterMixed(new int[]{0, 1, 2},
 					row -> row.getNumeric(0) > 0.1 && row.getObject(1) != null && row.getObject(2) != null,
 					Workload.DEFAULT, CTX);
 

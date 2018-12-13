@@ -25,6 +25,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.DoubleConsumer;
 
 import com.rapidminer.belt.util.ScheduledTaskRunner;
 import com.rapidminer.belt.util.Task;
@@ -145,10 +146,12 @@ class ParallelExecutor<T> {
 	 */
 	private final int batchSize;
 	private final Calculator<T> calculator;
+	private final DoubleConsumer callback;
 	private ArrayList<Future<Void>> futures;
 
-	ParallelExecutor(Calculator<T> calculator, Workload workload) {
+	ParallelExecutor(Calculator<T> calculator, Workload workload, DoubleConsumer callback) {
 		this.calculator = calculator;
+		this.callback = callback;
 		switch (workload) {
 			case HUGE:
 				thresholdParallel = THRESHOLD_PARALLEL_HUGE;
@@ -158,15 +161,15 @@ class ParallelExecutor<T> {
 				thresholdParallel = THRESHOLD_PARALLEL_LARGE;
 				batchSize = BATCH_SIZE_LARGE;
 				break;
-			case MEDIUM:
-				thresholdParallel = THRESHOLD_PARALLEL_MEDIUM;
-				batchSize = BATCH_SIZE_MEDIUM;
-				break;
 			case SMALL:
-			case DEFAULT:
-			default:
 				thresholdParallel = THRESHOLD_PARALLEL_SMALL;
 				batchSize = BATCH_SIZE_SMALL;
+				break;
+			case MEDIUM:
+			case DEFAULT:
+			default:
+				thresholdParallel = THRESHOLD_PARALLEL_MEDIUM;
+				batchSize = BATCH_SIZE_MEDIUM;
 				break;
 		}
 	}
@@ -202,6 +205,7 @@ class ParallelExecutor<T> {
 				}
 				try {
 					calculator.doPart(start, end, start / batchSize);
+					callback.accept((double) (end - 1) / calculator.getNumberOfOperations());
 				} catch (RuntimeException e) {
 					return handleException(sentinel, e);
 				}
@@ -242,14 +246,14 @@ class ParallelExecutor<T> {
 
 
 			if (expectedNumberOfOperations < thresholdParallel) {
-				//calculator initialization is done inside doEqualParts
+				// calculator initialization is done inside doEqualParts
 				doEqualParts(1, context, sentinel);
 				return null;
 			}
 
 			// ensure that a batch is at least threshold parallel big
 			nTasks = Math.min(nTasks, expectedNumberOfOperations / thresholdParallel);
-			//calculator initialization is done inside doEqualParts
+			// calculator initialization is done inside doEqualParts
 			doEqualParts(nTasks, context, sentinel);
 			return null;
 		};
@@ -265,7 +269,10 @@ class ParallelExecutor<T> {
 			for (int i = futures.size(); i > 0; i--) {
 				futures.get(i - 1).get();
 			}
-			return calculator.getResult();
+			T result = calculator.getResult();
+			// Invoke getResult() before setting the progress to 100%, since the method need not return instantaneously.
+			callback.accept(1);
+			return result;
 		};
 	}
 
@@ -296,16 +303,23 @@ class ParallelExecutor<T> {
 			int padding = BATCH_DIVISOR - targetBatchSize % BATCH_DIVISOR;
 			targetBatchSize += padding;
 		}
+		// Set progress to indeterminate...
+		callback.accept(Double.NaN);
+		if (size > 0) {
+			nTasks = size / targetBatchSize + (size % targetBatchSize == 0 ? 0 : 1);
+			calculator.init(nTasks);
+			futures = new ArrayList<>(nTasks);
 
-		nTasks = size / targetBatchSize + (size % targetBatchSize == 0 ? 0 : 1);
-		calculator.init(nTasks);
-		futures = new ArrayList<>(nTasks);
-
-		int covered = 0;
-		int batch = 0;
-		while (covered < size) {
-			futures.add(submitBatch(context, sentinel, covered, min(covered + targetBatchSize, size), batch++));
-			covered += targetBatchSize;
+			int covered = 0;
+			int batch = 0;
+			while (covered < size) {
+				futures.add(submitBatch(context, sentinel, covered, min(covered + targetBatchSize, size), batch++));
+				covered += targetBatchSize;
+			}
+		} else {
+			calculator.init(1);
+			futures = new ArrayList<>(1);
+			futures.add(submitBatch(context, sentinel, 0,0, 0));
 		}
 	}
 

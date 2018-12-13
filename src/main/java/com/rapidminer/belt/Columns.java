@@ -31,7 +31,7 @@ public final class Columns {
 	/**
 	 * The index of the first non-null category.
 	 */
-	private static final int FIRST_CATEGORY_INDEX = CategoricalColumnReader.MISSING_CATEGORY + 1;
+	private static final int FIRST_CATEGORY_INDEX = CategoricalReader.MISSING_CATEGORY + 1;
 
 	/**
 	 * The index of the second non-null category.

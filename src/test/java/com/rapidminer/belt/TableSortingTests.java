@@ -54,7 +54,7 @@ public class TableSortingTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -95,7 +95,7 @@ public class TableSortingTests {
 		public void testSortingOfZeroColumnTable() {
 			double[] single = random(250);
 
-			Table table = Table.newTable(single.length)
+			Table table = Builders.newTableBuilder(single.length)
 					.addReal("a", i -> single[i]).build(CTX);
 
 			Table sorted = delegateSort(table, Order.DESCENDING);
@@ -110,7 +110,7 @@ public class TableSortingTests {
 			double[] expected = copyOf(single, single.length);
 			sort(expected);
 
-			Table table = Table.newTable(single.length)
+			Table table = Builders.newTableBuilder(single.length)
 					.addReal("a", i -> single[i])
 					.build(CTX);
 
@@ -128,7 +128,7 @@ public class TableSortingTests {
 			double[] expectedFirst = {3, 7, 2, 6, 1, 5, 0, 4};
 			double[] expectedSecond = {3, 3, 2, 2, 1, 1, 0, 0};
 
-			Table table = Table.newTable(8)
+			Table table = Builders.newTableBuilder(8)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> first[i])
@@ -150,7 +150,7 @@ public class TableSortingTests {
 			double[] expectedSecond = {0, 0, 0, 0, 1, 1, 1, 1};
 			double[] expectedThird = {2, 3, 4, 4, 1, 2, 3, 4};
 
-			Table table = Table.newTable(8)
+			Table table = Builders.newTableBuilder(8)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -170,7 +170,7 @@ public class TableSortingTests {
 			double[] expectedFirst = {3, 7, 2, 6, 1, 5, 0, 4};
 			double[] expectedSecond = {3, 3, 2, 2, 1, 1, 0, 0};
 
-			Table table = Table.newTable(8)
+			Table table = Builders.newTableBuilder(8)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> first[i])
@@ -196,7 +196,7 @@ public class TableSortingTests {
 			double[] expectedSecond = {0, 0, 1, 0, 1, 0, 1, 1};
 			double[] expectedThird = {4, 4, 4, 3, 3, 2, 2, 1};
 
-			Table table = Table.newTable(8)
+			Table table = Builders.newTableBuilder(8)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> third[i])
@@ -216,7 +216,7 @@ public class TableSortingTests {
 			double[] expectedFirst = {3, 7, 2, 6, 1, 5, 0, 4};
 			double[] expectedSecond = {3, 3, 2, 2, 1, 1, 0, 0};
 
-			Table table = Table.newTable(8)
+			Table table = Builders.newTableBuilder(8)
 					.addReal("a", i -> first[i])
 					.addReal("b", i -> second[i])
 					.addReal("c", i -> first[i])
@@ -236,37 +236,37 @@ public class TableSortingTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullIndices() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort((int[]) null, Order.ASCENDING, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOrder() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort("a", (Order) null, CTX);
 		}
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testOutOfBoundsColumn() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort(5, Order.ASCENDING, CTX);
 		}
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testNegativeColumn() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort(-1, Order.ASCENDING,CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullLabel() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort((String) null, Order.DESCENDING, CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testInvalidLabel() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort("x", Order.ASCENDING, CTX);
 		}
 
@@ -276,31 +276,31 @@ public class TableSortingTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOrderList() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort(new int[]{0}, (List<Order>) null, CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullIndices() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort((int[]) null, singletonList(Order.ASCENDING), CTX);
 		}
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testOutOfBoundsColumn() {
-			Table table = Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table = Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort(new int[]{5}, singletonList(Order.ASCENDING), CTX);
 		}
 
 		@Test(expected = IndexOutOfBoundsException.class)
 		public void testNegativeColumn() {
-			Table table =  Table.newTable(10).addReal("a", i -> i).build(CTX);
+			Table table =  Builders.newTableBuilder(10).addReal("a", i -> i).build(CTX);
 			table.sort(new int[]{-1}, singletonList(Order.ASCENDING), CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchingOrderList() {
-			Table table = Table.newTable(10)
+			Table table = Builders.newTableBuilder(10)
 					.addReal("a", i -> i)
 					.addReal("b", i -> i)
 					.addReal("c", i -> i)
@@ -310,7 +310,7 @@ public class TableSortingTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullOrders() {
-			Table table = Table.newTable(10)
+			Table table = Builders.newTableBuilder(10)
 					.addReal("a", i -> i)
 					.addReal("b", i -> i)
 					.addReal("c", i -> i)

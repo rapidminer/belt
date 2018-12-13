@@ -47,7 +47,7 @@ public class ColumnsTests {
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(3), 1),
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(2), 1),
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(4)),
-				new SimpleFreeColumn<>(INTEGER_FREE_TYPE, new Object[11])};
+				new SimpleObjectColumn<>(INTEGER_FREE_TYPE, new Object[11])};
 		Boolean[] test = new Boolean[columns.length];
 		Arrays.setAll(test, i -> Columns.isBicategorical(columns[i]));
 		assertArrayEquals(new Boolean[]{false, true, false, false, false}, test);
@@ -59,7 +59,7 @@ public class ColumnsTests {
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(3), 1),
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(2), 1),
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(4)),
-				new SimpleFreeColumn<>(INTEGER_FREE_TYPE, new Object[11])};
+				new SimpleObjectColumn<>(INTEGER_FREE_TYPE, new Object[11])};
 		Boolean[] test = new Boolean[columns.length];
 		Arrays.setAll(test, i -> Columns.isAtMostBicategorical(columns[i]));
 		assertArrayEquals(new Boolean[]{false, true, true, false, false}, test);
@@ -72,7 +72,7 @@ public class ColumnsTests {
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(3)),
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(2), 1),
 				new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[22], getMappingList(4)),
-				new SimpleFreeColumn<>(INTEGER_FREE_TYPE, new Object[11]),
+				new SimpleObjectColumn<>(INTEGER_FREE_TYPE, new Object[11]),
 				new SimpleCategoricalColumn<String>(ColumnTypes.NOMINAL, new int[22], getMappingList(3), 1) {
 					@Override
 					public boolean toBoolean(int categoryIndex) {

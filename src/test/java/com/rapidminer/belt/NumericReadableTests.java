@@ -40,7 +40,7 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 /**
  * Tests functionality of columns with capability {@link Column.Capability#NUMERIC_READABLE}. In particular, the
- * corresponding methods to fill the buffers of {@link ColumnReader}s.
+ * corresponding methods to fill the buffers of {@link NumericReader}s.
  *
  * @author Michael Knopf, Gisa Meier
  */

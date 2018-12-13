@@ -35,8 +35,8 @@ import com.rapidminer.belt.util.Order;
 import com.rapidminer.belt.util.Sorting;
 
 /**
- * Column with data associated to integer categories. Data can be accessed via a {@link CategoricalColumnReader} or a
- * {@link ColumnReader} together with access to the mapping by {@link #getDictionary(Class)}.
+ * Column with data associated to integer categories. Data can be accessed via a {@link CategoricalReader}, an {@link
+ * ObjectReader}, or a {@link NumericReader} together with access to the mapping by {@link #getDictionary(Class)}.
  *
  * @author Gisa Meier, Michael Knopf
  */
@@ -608,7 +608,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = readUInt2(byteData.data(), position);
-			return datum == CategoricalColumnReader.MISSING_CATEGORY ? Double.NaN : datum;
+			return datum == CategoricalReader.MISSING_CATEGORY ? Double.NaN : datum;
 		} else {
 			return Double.NaN;
 		}
@@ -618,7 +618,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = readUInt4(byteData.data(), position);
-			return datum == CategoricalColumnReader.MISSING_CATEGORY ? Double.NaN : datum;
+			return datum == CategoricalReader.MISSING_CATEGORY ? Double.NaN : datum;
 		} else {
 			return Double.NaN;
 		}
@@ -628,7 +628,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = Byte.toUnsignedInt(byteData.data()[position]);
-			return datum == CategoricalColumnReader.MISSING_CATEGORY ? Double.NaN : datum;
+			return datum == CategoricalReader.MISSING_CATEGORY ? Double.NaN : datum;
 		} else {
 			return Double.NaN;
 		}
@@ -638,7 +638,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < shortData.length) {
 			int datum = Short.toUnsignedInt(shortData[position]);
-			return datum == CategoricalColumnReader.MISSING_CATEGORY ? Double.NaN : datum;
+			return datum == CategoricalReader.MISSING_CATEGORY ? Double.NaN : datum;
 		} else {
 			return Double.NaN;
 		}
@@ -648,7 +648,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < intData.length) {
 			int datum = intData[position];
-			return datum == CategoricalColumnReader.MISSING_CATEGORY ? Double.NaN : datum;
+			return datum == CategoricalReader.MISSING_CATEGORY ? Double.NaN : datum;
 		} else {
 			return Double.NaN;
 		}
@@ -658,7 +658,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = readUInt2(byteData.data(), position);
-			if (datum == CategoricalColumnReader.MISSING_CATEGORY) {
+			if (datum == CategoricalReader.MISSING_CATEGORY) {
 				return null;
 			} else {
 				return dictionary.get(datum);
@@ -672,7 +672,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = readUInt4(byteData.data(), position);
-			if (datum == CategoricalColumnReader.MISSING_CATEGORY) {
+			if (datum == CategoricalReader.MISSING_CATEGORY) {
 				return null;
 			} else {
 				return dictionary.get(datum);
@@ -686,7 +686,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = Byte.toUnsignedInt(byteData.data()[position]);
-			if (datum == CategoricalColumnReader.MISSING_CATEGORY) {
+			if (datum == CategoricalReader.MISSING_CATEGORY) {
 				return null;
 			} else {
 				return dictionary.get(datum);
@@ -700,7 +700,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < shortData.length) {
 			int datum = Short.toUnsignedInt(shortData[position]);
-			if (datum == CategoricalColumnReader.MISSING_CATEGORY) {
+			if (datum == CategoricalReader.MISSING_CATEGORY) {
 				return null;
 			} else {
 				return dictionary.get(datum);
@@ -714,7 +714,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		int position = mapping[i];
 		if (position >= 0 && position < intData.length) {
 			int datum = intData[position];
-			if (datum == CategoricalColumnReader.MISSING_CATEGORY) {
+			if (datum == CategoricalReader.MISSING_CATEGORY) {
 				return null;
 			} else {
 				return dictionary.get(datum);

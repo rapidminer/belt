@@ -32,11 +32,11 @@ final class ColumnsReducer<T> implements ParallelExecutor.Calculator<T> {
 
 	private final Column[] sources;
 	private final Supplier<T> supplier;
-	private final BiConsumer<T, Row> reducer;
+	private final BiConsumer<T, NumericRow> reducer;
 	private final BiConsumer<T, T> combiner;
 	private ColumnReducer.CombineTree<T> combineTree;
 
-	ColumnsReducer(Column[] sources, Supplier<T> supplier, BiConsumer<T, Row> reducer, BiConsumer<T, T> combiner) {
+	ColumnsReducer(Column[] sources, Supplier<T> supplier, BiConsumer<T, NumericRow> reducer, BiConsumer<T, T> combiner) {
 		this.sources = sources;
 		this.supplier = supplier;
 		this.reducer = reducer;
@@ -69,8 +69,8 @@ final class ColumnsReducer<T> implements ParallelExecutor.Calculator<T> {
 	/**
 	 * Calls the reducer for every row between from (inclusive) and to (exclusive).
 	 */
-	private static <T> void reducePart(Column[] sources, T container, BiConsumer<T, Row> reducer, int from, int to) {
-		final RowReader reader = new RowReader(sources);
+	private static <T> void reducePart(Column[] sources, T container, BiConsumer<T, NumericRow> reducer, int from, int to) {
+		final NumericRowReader reader = new NumericRowReader(sources);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();

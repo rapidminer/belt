@@ -78,7 +78,7 @@ final class CategoricalColumnFilterer implements ParallelExecutor.Calculator<int
 	 */
 	private static int filterPart(Column source, boolean[] target, IntPredicate operator, int from, int to) {
 		int found = 0;
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			boolean testResult = operator.test(reader.read());

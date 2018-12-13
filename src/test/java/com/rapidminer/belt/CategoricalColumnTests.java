@@ -16,6 +16,7 @@
 
 package com.rapidminer.belt;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
@@ -23,6 +24,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -31,7 +34,10 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.rapidminer.belt.util.IntegerFormats;
+import com.rapidminer.belt.util.IntegerFormats.Format;
 import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
+
+import junit.framework.TestCase;
 
 
 /**
@@ -45,17 +51,17 @@ public class CategoricalColumnTests {
 	private static final String IMPL_MAPPED_CATEGORICAL_STRING = "MappedCategoricalColumn_String";
 
 	private static final List<Object[]> MINIMAL_CATEGORICAL_COLUMNS = Arrays.asList(
-			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT2},
-			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT4},
-			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT8},
-			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT16},
-			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, IntegerFormats.Format.SIGNED_INT32},
-			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT2},
-			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT4},
-			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT8},
-			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, IntegerFormats.Format.UNSIGNED_INT16},
-			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, IntegerFormats.Format.SIGNED_INT32},
-			new Object[] {IMPL_MAPPED_CATEGORICAL_STRING, IntegerFormats.Format.SIGNED_INT32});
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.UNSIGNED_INT2},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.UNSIGNED_INT4},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.UNSIGNED_INT8},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.UNSIGNED_INT16},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.SIGNED_INT32},
+			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT2},
+			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT4},
+			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT8},
+			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT16},
+			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.SIGNED_INT32},
+			new Object[] {IMPL_MAPPED_CATEGORICAL_STRING, Format.SIGNED_INT32});
 
 	private static final double EPSILON = 1e-10;
 	private static final int MAX_VALUES = 30;
@@ -74,7 +80,7 @@ public class CategoricalColumnTests {
 		return data;
 	}
 
-	private static int[] random(int n, IntegerFormats.Format format) {
+	private static int[] random(int n, Format format) {
 		int[] data = new int[n];
 		Random random = new Random();
 		Arrays.setAll(data, i -> random.nextInt(format.maxValue()));
@@ -112,7 +118,7 @@ public class CategoricalColumnTests {
 		return list;
 	}
 
-	private static byte[] toByteArray(int[] data, IntegerFormats.Format format) {
+	private static byte[] toByteArray(int[] data, Format format) {
 		byte[] bytes;
 		switch (format) {
 			case UNSIGNED_INT2:
@@ -150,7 +156,7 @@ public class CategoricalColumnTests {
 	private static final ColumnType<String> TYPE = ColumnTypes.categoricalType(
 			"com.rapidminer.belt.column.test.stringcolumn", String.class, null);
 
-	private static Column column(String columnImplementation, int[] data, IntegerFormats.Format format) {
+	private static Column column(String columnImplementation, int[] data, Format format) {
 		switch (columnImplementation) {
 			case IMPL_SIMPLE_CATEGORICAL_STRING:
 				switch (format) {
@@ -191,7 +197,7 @@ public class CategoricalColumnTests {
 		}
 	}
 
-	private static CategoricalColumn<?> booleanColumn(String columnImplementation, int[] data, IntegerFormats.Format format, int positiveIndex) {
+	private static CategoricalColumn<?> booleanColumn(String columnImplementation, int[] data, Format format, int positiveIndex) {
 		switch (columnImplementation) {
 			case IMPL_SIMPLE_CATEGORICAL_STRING:
 				switch (format) {
@@ -239,7 +245,7 @@ public class CategoricalColumnTests {
 		public String columnImplementation;
 
 		@Parameter(value = 1)
-		public IntegerFormats.Format format;
+		public Format format;
 
 		@Parameters(name = "{0}_({1})")
 		public static Iterable<Object[]> columnImplementations() {
@@ -286,15 +292,15 @@ public class CategoricalColumnTests {
 
 		@SuppressWarnings("unchecked")
 		private CategoricalColumn<String> column(int[] data) {
-			return (CategoricalColumn<String>) CategoricalColumnTests.column(columnImplementation, data, IntegerFormats.Format.SIGNED_INT32);
+			return (CategoricalColumn<String>) CategoricalColumnTests.column(columnImplementation, data, Format.SIGNED_INT32);
 		}
 
 		private Int32CategoricalBuffer<String> toCategoricalBuffer(Column column) {
 			return new Int32CategoricalBuffer<>(column, String.class);
 		}
 
-		private FreeColumnBuffer<String> toFreeBuffer(Column column) {
-			return new FreeColumnBuffer<>(String.class, column);
+		private ObjectBuffer<String> toFreeBuffer(Column column) {
+			return new ObjectBuffer<>(String.class, column);
 		}
 
 		@Test
@@ -321,10 +327,10 @@ public class CategoricalColumnTests {
 			int nValues = 1703;
 			int[] data = random(nValues);
 			Column column = column(data);
-			ColumnBuffer buffer = new FixedIntegerBuffer(column);
+			NumericBuffer buffer = new IntegerBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
-			ColumnReader reader = new ColumnReader(column, column.size());
+			NumericReader reader = Readers.numericReader(column, column.size());
 			int index = 0;
 			while (reader.hasRemaining()) {
 				assertEquals(reader.read(), buffer.get(index++), EPSILON);
@@ -337,7 +343,7 @@ public class CategoricalColumnTests {
 			int nValues = 1404;
 			int[] data = random(nValues);
 			CategoricalColumn<String> column = column(data);
-			FreeColumnBuffer buffer = toFreeBuffer(column);
+			ObjectBuffer buffer = toFreeBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
 			for (int i = 0; i < column.size(); i++) {
@@ -359,7 +365,7 @@ public class CategoricalColumnTests {
 		public String columnImplementation;
 
 		@Parameter(value = 1)
-		public IntegerFormats.Format format;
+		public Format format;
 
 		@Parameters(name = "{0}_({1})")
 		public static Iterable<Object[]> columnImplementations() {
@@ -424,6 +430,96 @@ public class CategoricalColumnTests {
 			Column column = CategoricalColumnTests.booleanColumn(columnImplementation, data, format, CategoricalColumn.NOT_BOOLEAN);
 			column.toBoolean(0.5);
 		}
+	}
+
+	@RunWith(Parameterized.class)
+	public static class ReadAsBoolean {
+
+		private static final int BUFFER_LENGTH = 2 * Format.UNSIGNED_INT16.maxValue();
+
+		@Parameter
+		public Format bufferFormat;
+
+		@Parameters(name = "{0}")
+		public static Iterable<Format> formats() {
+			return Arrays.asList(Format.values());
+		}
+
+		private boolean[] expected = new boolean[BUFFER_LENGTH];
+		private boolean[] result = new boolean[BUFFER_LENGTH];
+		private CategoricalColumn<String> column;
+
+		@Before
+		public void generate() {
+			// Generate random boolean array (with mostly false entries)
+			Random rng = new Random(29843562984L + bufferFormat.ordinal());
+			for (int i = 0; i < BUFFER_LENGTH; i++) {
+				expected[i] = rng.nextDouble() < 0.0625;
+			}
+
+			// Generate buffer that should result in the same sequence of boolean values, use both missing and existing
+			// values for the false entries. Try to generate a non-trivial mapping.
+			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(BUFFER_LENGTH, bufferFormat.maxValue());
+			int maxNegativeEntries = bufferFormat.maxValue() - 1;
+			int entry = 0;
+			for (int i = 0; i < BUFFER_LENGTH; i++) {
+				if (expected[i]) {
+					buffer.set(i, "positive");
+				} else {
+					// Use both missing and existing values
+					if (rng.nextDouble() < 0.0625) {
+						buffer.set(i, null);
+					} else {
+						buffer.set(i, String.valueOf(entry));
+						entry++;
+						entry %= maxNegativeEntries;
+					}
+				}
+			}
+
+			column = buffer.toBooleanColumn(ColumnTypes.NOMINAL, "positive");
+		}
+
+		@After
+		public void reset() {
+			Arrays.fill(expected, false);
+			Arrays.fill(result, false);
+			column = null;
+		}
+
+		@Test
+		public void testCategoryIndexToBoolean() {
+			CategoricalReader categoricalReader = Readers.categoricalReader(column);
+			while (categoricalReader.hasRemaining()) {
+				int category = categoricalReader.read();
+				result[categoricalReader.position()] = column.toBoolean(category);
+			}
+			TestCase.assertEquals(bufferFormat, column.getFormat());
+			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testCategoryIndexAsDoubleToBoolean() {
+			CategoricalReader categoricalReader = Readers.categoricalReader(column);
+			while (categoricalReader.hasRemaining()) {
+				int category = categoricalReader.read();
+				result[categoricalReader.position()] = column.toBoolean((double) category);
+			}
+			TestCase.assertEquals(bufferFormat, column.getFormat());
+			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testValueToBoolean() {
+			ObjectReader<String> objectReader = Readers.objectReader(column, String.class);
+			while (objectReader.hasRemaining()) {
+				String value = objectReader.read();
+				result[objectReader.position()] = column.toBoolean(value);
+			}
+			TestCase.assertEquals(bufferFormat, column.getFormat());
+			assertArrayEquals(expected, result);
+		}
+
 	}
 
 }

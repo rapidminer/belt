@@ -70,13 +70,13 @@ final class PrettyPrinter {
 	}
 
 	/**
-	 * Prints a single {@link ColumnBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
+	 * Prints a single {@link NumericBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
 	 *
 	 * @param buffer
 	 * 		the buffer to print
 	 * @return the formatted string
 	 */
-	static String print(ColumnBuffer buffer) {
+	static String print(NumericBuffer buffer) {
 		int size = buffer.size();
 		boolean rowSubset = size > MAX_COLUMN_ROWS;
 
@@ -96,13 +96,13 @@ final class PrettyPrinter {
 	}
 
 	/**
-	 * Prints a single {@link CategoricalColumnBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
+	 * Prints a single {@link CategoricalBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
 	 *
 	 * @param buffer
 	 * 		the buffer to print
 	 * @return the formatted string
 	 */
-	static String print(AbstractCategoricalColumnBuffer<?> buffer) {
+	static String print(CategoricalBuffer<?> buffer) {
 		int size = buffer.size();
 		boolean rowSubset = size > MAX_COLUMN_ROWS;
 
@@ -124,13 +124,13 @@ final class PrettyPrinter {
 	}
 
 	/**
-	 * Prints a single {@link FreeColumnBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
+	 * Prints a single {@link ObjectBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
 	 *
 	 * @param buffer
 	 * 		the buffer to print
 	 * @return the formatted string
 	 */
-	static String print(FreeColumnBuffer<?> buffer) {
+	static String print(ObjectBuffer<?> buffer) {
 		int size = buffer.size();
 		boolean rowSubset = size > MAX_COLUMN_ROWS;
 
@@ -152,13 +152,13 @@ final class PrettyPrinter {
 	}
 
 	/**
-	 * Prints a single {@link AbstractDateTimeBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
+	 * Prints a single {@link DateTimeBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
 	 *
 	 * @param buffer
 	 * 		the buffer to print
 	 * @return the formatted string
 	 */
-	static String print(AbstractDateTimeBuffer buffer) {
+	static String print(DateTimeBuffer buffer) {
 		int size = buffer.size();
 		boolean rowSubset = size > MAX_COLUMN_ROWS;
 
@@ -180,13 +180,13 @@ final class PrettyPrinter {
 	}
 
 	/**
-	 * Prints a single {@link TimeColumnBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
+	 * Prints a single {@link TimeBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
 	 *
 	 * @param buffer
 	 * 		the buffer to print
 	 * @return the formatted string
 	 */
-	static String print(TimeColumnBuffer buffer) {
+	static String print(TimeBuffer buffer) {
 		int size = buffer.size();
 		boolean rowSubset = size > MAX_COLUMN_ROWS;
 
@@ -237,7 +237,7 @@ final class PrettyPrinter {
 
 
 	/**
-	 * Prints a single {@link CategoricalColumn} or {@link FreeColumn} showing up to {@value MAX_COLUMN_ROWS} rows
+	 * Prints a single {@link CategoricalColumn} or {@link ObjectColumn} showing up to {@value MAX_COLUMN_ROWS} rows
 	 * (horizontal layout).
 	 *
 	 * @param column
@@ -329,11 +329,11 @@ final class PrettyPrinter {
 
 		// Determine row set
 		boolean rowSubset = height > MAX_TABLE_ROWS;
-		GeneralRowReader reader = new GeneralRowReader(columns);
+		MixedRowReader reader = new MixedRowReader(columns);
 
 		// Determine column formatting (constant width columns)
 		int[] widths = getColumnWidths(labels, reader, rowSubset, columns);
-		List<Function<GeneralRow, String>> formatters = new ArrayList<>(nColumns);
+		List<Function<MixedRow, String>> formatters = new ArrayList<>(nColumns);
 		int index = 0;
 		for (int w : widths) {
 			String formatString = "%" + w + "s";
@@ -401,7 +401,7 @@ final class PrettyPrinter {
 		return Objects.toString(object, MISSING_VALUE_STRING);
 	}
 
-	private static int[] getColumnWidths(String[] labels, GeneralRowReader reader, boolean rowSubset,
+	private static int[] getColumnWidths(String[] labels, MixedRowReader reader, boolean rowSubset,
 										 Column[] columns) {
 		int[] columnWidths = new int[labels.length];
 		Arrays.fill(columnWidths, 5);
@@ -427,8 +427,8 @@ final class PrettyPrinter {
 		return columnWidths;
 	}
 
-	private static String rowToString(List<Function<GeneralRow, String>> formatters, boolean columnSubset,
-									  GeneralRowReader reader) {
+	private static String rowToString(List<Function<MixedRow, String>> formatters, boolean columnSubset,
+									  MixedRowReader reader) {
 		StringJoiner columnJoiner = new StringJoiner(COLUMN_DELIMITER);
 		for (int c = 0; c < formatters.size(); c++) {
 			columnJoiner.add(formatters.get(c).apply(reader));

@@ -23,7 +23,7 @@ import com.rapidminer.belt.util.Order;
 
 
 /**
- * Immutable column of double precision values. Data can be accessed via a {@link ColumnReader} wrapping the column.
+ * Immutable column of double precision values. Data can be accessed via a {@link NumericReader} wrapping the column.
  *
  * @author Gisa Meier
  */

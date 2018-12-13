@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 
 import com.rapidminer.belt.Column.TypeId;
 import com.rapidminer.belt.util.ColumnMetaData;
+import com.rapidminer.belt.util.ColumnReference;
 import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.Task;
 import com.rapidminer.belt.util.TaskAbortedException;
@@ -327,7 +328,7 @@ public final class TableBuilder {
 		requireValidUnusedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.FREE) {
+		if (type.category() != Column.Category.OBJECT) {
 			throw new IllegalArgumentException("Type must be free");
 		}
 		Supplier<Column> supplier = getFreeColumnSupplier(generator, type);
@@ -360,7 +361,7 @@ public final class TableBuilder {
 	/**
 	 * Adds a date-time column that is filled as specified by the generator. The generated date-time column will be of
 	 * nanosecond precision. If you only want second precision, please create a column from a {@link
-	 * LowPrecisionDateTimeBuffer} and use {@link #add(String, Column)}.
+	 * SecondDateTimeBuffer} and use {@link #add(String, Column)}.
 	 *
 	 * @param label
 	 * 		the label for the new column
@@ -422,6 +423,12 @@ public final class TableBuilder {
 	 */
 	private void addMetaDataUnchecked(String label, ColumnMetaData metaData) {
 		boolean duplicate = false;
+		if (metaData instanceof ColumnReference) {
+			ColumnReference reference = (ColumnReference) metaData;
+			if (!columnSources.containsKey(reference.getColumn())) {
+				throw new IllegalStateException("Column meta data references unknown column");
+			}
+		}
 		switch (metaData.uniqueness()) {
 			case NONE:
 				// Column meta data type need not be unique, but we still need to prevent duplicates.
@@ -460,6 +467,8 @@ public final class TableBuilder {
 	 * 		if the given label or meta data is {@code null}
 	 * @throws IllegalArgumentException
 	 * 		if there is no column with the given label
+	 * @throws IllegalStateException
+	 * 		if the given meta data violates constraints such as uniqueness levels
 	 */
 	public synchronized TableBuilder addMetaData(String label, ColumnMetaData metaData) {
 		requireUsedLabel(label);
@@ -481,6 +490,8 @@ public final class TableBuilder {
 	 * 		if the given label, meta data list, or an item of the list is {@code null}
 	 * @throws IllegalArgumentException
 	 * 		if there is no column with the given label
+	 * @throws IllegalStateException
+	 * 		if the given meta data violates constraints such as uniqueness levels
 	 */
 	public synchronized TableBuilder addMetaData(String label, List<ColumnMetaData> metaData) {
 		requireUsedLabel(label);
@@ -498,7 +509,7 @@ public final class TableBuilder {
 	 */
 	private Supplier<Column> getTimeColumnSupplier(IntFunction<LocalTime> generator) {
 		return () -> {
-			TimeColumnBuffer buffer = new TimeColumnBuffer(numberOfRows);
+			TimeBuffer buffer = new TimeBuffer(numberOfRows, false);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, generator.apply(i));
 			}
@@ -511,7 +522,7 @@ public final class TableBuilder {
 	 */
 	private Supplier<Column> getDateTimeColumnSupplier(IntFunction<Instant> generator) {
 		return () -> {
-			HighPrecisionDateTimeBuffer buffer = new HighPrecisionDateTimeBuffer(numberOfRows);
+			NanosecondDateTimeBuffer buffer = new NanosecondDateTimeBuffer(numberOfRows, false);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, generator.apply(i));
 			}
@@ -609,7 +620,7 @@ public final class TableBuilder {
 	 */
 	private <T> Supplier<Column> getFreeColumnSupplier(IntFunction<T> generator, ColumnType<T> type) {
 		return () -> {
-			FreeColumnBuffer<T> buffer = new FreeColumnBuffer<>(numberOfRows);
+			ObjectBuffer<T> buffer = new ObjectBuffer<>(numberOfRows);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, generator.apply(i));
 			}
@@ -702,6 +713,7 @@ public final class TableBuilder {
 			ensureMetaDataOwnership();
 			columnMetaData.remove(label);
 		}
+		updateColumnReferences(label, null);
 		return this;
 	}
 
@@ -937,7 +949,7 @@ public final class TableBuilder {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.FREE) {
+		if (type.category() != Column.Category.OBJECT) {
 			throw new IllegalArgumentException("Type must be free.");
 		}
 		Supplier<Column> supplier = getFreeColumnSupplier(generator, type);
@@ -969,7 +981,7 @@ public final class TableBuilder {
 	/**
 	 * Replaces the column with the given label by a date-time column filled by the given generator. The generated
 	 * date-time column will be of nanosecond precision. If you only want second precision, please create a column
-	 * from a {@link LowPrecisionDateTimeBuffer} and use {@link #add(String, Column)}.
+	 * from a {@link SecondDateTimeBuffer} and use {@link #add(String, Column)}.
 	 *
 	 * @param label
 	 * 		the label of the column to replace
@@ -1061,7 +1073,7 @@ public final class TableBuilder {
 	 */
 	public synchronized TableBuilder rename(String label, String newLabel) {
 		requireUsedLabel(label);
-		if (label != null && label.equals(newLabel)) {
+		if (label.equals(newLabel)) {
 			//labels are the same, nothing to do
 			return this;
 		}
@@ -1082,7 +1094,28 @@ public final class TableBuilder {
 			columnMetaData.put(newLabel, columnMetaData.remove(label));
 		}
 
+		updateColumnReferences(label, newLabel);
+
 		return this;
+	}
+
+	/**
+	 * Updates or removes all {@link ColumnReference}s with the given label.
+	 *
+	 * @param referencedLabel
+	 * 		the label of the referenced column
+	 * @param replacementLabel
+	 * 		the new label (update) or {@code null} (removal)
+	 */
+	private void updateColumnReferences(String referencedLabel, String replacementLabel) {
+		for (Map.Entry<String, List<ColumnMetaData>> entry : columnMetaData.entrySet()) {
+			ColumnReference invalidReference = ColumnRenamer.findInvalidReference(referencedLabel, entry.getValue());
+			if (invalidReference != null) {
+				ensureMetaDataOwnership();
+				ColumnRenamer
+						.replaceInvalidReference(invalidReference, replacementLabel, entry.getKey(), columnMetaData);
+			}
+		}
 	}
 
 	/**
@@ -1143,6 +1176,9 @@ public final class TableBuilder {
 				}
 				columns[i] = getColumn(sources[i]);
 			}
+			if (columns.length == 0) {
+				return new Table(numberOfRows);
+			}
 			return new Table(columns, labels, columnMetaData);
 		});
 	}
@@ -1167,6 +1203,9 @@ public final class TableBuilder {
 				} else {
 					columns[i] = intermediateColumns[info.intermediateIndex];
 				}
+			}
+			if (columns.length == 0) {
+				return new Table(numberOfRows);
 			}
 			return new Table(columns, labels, columnMetaData);
 		});

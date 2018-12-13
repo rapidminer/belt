@@ -89,17 +89,17 @@ public abstract class Column {
 		CATEGORICAL,
 
 		/**
-		 * Columns of numeric data, like real or integer. Columns of this category are always numeric-readable but
+		 * Columns of numeric data, such as real or integer. Columns of this category are always numeric-readable but
 		 * not object-readable.
 		 */
 		NUMERIC,
 
 
 		/**
-		 * Columns of data that is neither categorical nor numerical. Columns of this category are not
-		 * numeric-readable but object-readable.
+		 * Columns of complex types such as instants of time. Columns of this category are always object-readable but
+		 * usually not numeric-readable.
 		 */
-		FREE
+		OBJECT
 	}
 
 	public enum Capability {

@@ -27,8 +27,7 @@ import java.util.Objects;
  */
 public class ColumnAnnotation implements ColumnMetaData {
 
-	/** Identifier for column meta data of type annotation. */
-	public static final String TYPE_ID = "com.rapidminer.belt.meta.column.annotation";
+	private static final String TYPE_ID = "com.rapidminer.belt.meta.column.annotation";
 
 	private static final int TO_STRING_CUTOFF = 50;
 

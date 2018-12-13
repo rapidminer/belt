@@ -260,4 +260,11 @@ class MappedDateTimeColumn extends Column implements CacheMappedColumn {
 		return mapping;
 	}
 
+	/**
+	 * @return {@code true} iff the column supports sub-second precision
+	 */
+	boolean hasSubSecondPrecision() {
+		return highPrecision;
+	}
+
 }

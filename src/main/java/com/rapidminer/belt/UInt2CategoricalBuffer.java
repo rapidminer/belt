@@ -19,7 +19,6 @@ package com.rapidminer.belt;
 import static com.rapidminer.belt.util.IntegerFormats.readUInt2;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,12 +31,12 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 
 /**
- * Implementation of a {@link CategoricalColumnBuffer} with category index format {@link Format#UNSIGNED_INT2} that can
+ * Implementation of a {@link CategoricalBuffer} with category index format {@link Format#UNSIGNED_INT2} that can
  * hold {@code 3} different categories. Four category indices are stored in a single {@code byte}.
  *
  * @author Gisa Meier
  */
-public class UInt2CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T> {
+public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
 
 	private final PackedIntegers bytes;
 	private boolean frozen = false;
@@ -49,52 +48,10 @@ public class UInt2CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	 *
 	 * @param length
 	 * 		the length of the buffer
-	 * @throws IllegalArgumentException
-	 * 		if the given length is negative
 	 */
-	public UInt2CategoricalBuffer(int length) {
-		if (length < 0) {
-			throw new IllegalArgumentException("Illegal Capacity: " + length);
-		}
+	UInt2CategoricalBuffer(int length) {
 		bytes = new PackedIntegers(new byte[length % 4 == 0 ? length / 4 : length / 4 + 1], indexFormat(), length);
 		valueLookup.add(null); //position 0 stands for missing value, i.e. null
-	}
-
-	/**
-	 * Copies the data of the given column into a buffer. Throws an {@link UnsupportedOperationException} if the column
-	 * category is not {@link Column.Category#CATEGORICAL} or if the compression format of the column has more values
-	 * than supported by this buffer.
-	 *
-	 * @param column
-	 * 		the column to convert to a buffer
-	 * @param elementType
-	 * 		the desired type of the buffer, must be a super type of the column type
-	 */
-	public UInt2CategoricalBuffer(Column column, Class<T> elementType) {
-		if (column instanceof CategoricalColumn) {
-			CategoricalColumn<?> categoricalColumn = (CategoricalColumn) column;
-			if (categoricalColumn.getFormat() == indexFormat()) {
-				//same format: directly copy the data
-				PackedIntegers originalData = categoricalColumn.getByteData();
-				bytes = new PackedIntegers(Arrays.copyOf(originalData.data(), originalData.data().length),
-						indexFormat(), originalData.size());
-			} else {
-				//bigger format
-				throw new UnsupportedOperationException("Column format incompatible with buffer format");
-			}
-		} else {
-			throw new UnsupportedOperationException("Column is not categorical");
-		}
-		fillStructures(column.getDictionary(elementType));
-	}
-
-	private void fillStructures(List<T> values) {
-		valueLookup.add(null);
-		for (byte i = 1; i < values.size(); i++) {
-			T value = values.get(i);
-			valueLookup.add(value);
-			indexLookup.put(value, i);
-		}
 	}
 
 	@Override
@@ -127,7 +84,7 @@ public class UInt2CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 	@Override
 	public boolean setSave(int index, T value) {
 		if (frozen) {
-			throw new IllegalStateException(BUFFER_FROZEN_MESSAGE);
+			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
 		if (value == null) {
 			//set NaN
@@ -204,36 +161,24 @@ public class UInt2CategoricalBuffer<T> extends AbstractCategoricalColumnBuffer<T
 		freeze();
 		return new SimpleCategoricalColumn<>(type, bytes, valueLookup);
 	}
-	/**
-	 * Creates a boolean column with the given positive value if the buffer has at most two {@link #differentValues()}.
-	 * The other value is automatically negative.
-	 *
-	 * @param type
-	 * 		the column type of the column
-	 * @param positiveValue
-	 * 		the positive value
-	 * @return a categorical column with {@link Column.Capability#BOOLEAN}
-	 * @throws IllegalArgumentException
-	 * 		if there are more than two different values or if the given positive value is not one of the values
-	 */
+
+	@Override
 	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
 		Objects.requireNonNull(type, "Column type must not be null");
 		if (type.category() != Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column type must be categorical");
 		}
 		freeze();
-		if (differentValues() > 2) {
-			throw new IllegalArgumentException("More than 2 different values");
-		}
-		int size = valueLookup.size();
-		int positiveIndex;
-		if (size > 0 && valueLookup.get(1).equals(positiveValue)) {
-			positiveIndex = 1;
-		} else if (size > 1 && valueLookup.get(2).equals(positiveValue)) {
-			positiveIndex = 2;
-		} else {
-			throw new IllegalArgumentException("Positive value \"" + Objects.toString(positiveValue) + "\" not in dictionary.");
+		int positiveIndex = CategoricalColumn.NO_POSITIVE_ENTRY;
+		if (positiveValue != null) {
+			Byte index = indexLookup.get(positiveValue);
+			if (index == null) {
+				throw new IllegalArgumentException("Positive value \"" + Objects.toString(positiveValue)
+						+ "\" not in dictionary.");
+			}
+			positiveIndex = Byte.toUnsignedInt(index);
 		}
 		return new SimpleCategoricalColumn<>(type, bytes, valueLookup, positiveIndex);
 	}
+
 }

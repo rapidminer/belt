@@ -29,11 +29,11 @@ import java.util.function.Predicate;
 final class ColumnsFilterer implements ParallelExecutor.Calculator<int[]> {
 
 	private final Column[] sources;
-	private final Predicate<Row> operator;
+	private final Predicate<NumericRow> operator;
 	private boolean[] target;
 	private AtomicInteger found = new AtomicInteger();
 
-	ColumnsFilterer(Column[] sources, Predicate<Row> operator) {
+	ColumnsFilterer(Column[] sources, Predicate<NumericRow> operator) {
 		this.sources = sources;
 		this.operator = operator;
 	}
@@ -64,9 +64,9 @@ final class ColumnsFilterer implements ParallelExecutor.Calculator<int[]> {
 	 * Writes the result of the filter into the target array for every index between from (inclusive) and to (exclusive)
 	 * of the source column using the operator.
 	 */
-	private static int filterPart(Column[] sources, boolean[] target, Predicate<Row> operator, int from, int to) {
+	private static int filterPart(Column[] sources, boolean[] target, Predicate<NumericRow> operator, int from, int to) {
 		int found = 0;
-		final RowReader reader = new RowReader(sources);
+		final NumericRowReader reader = new NumericRowReader(sources);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();

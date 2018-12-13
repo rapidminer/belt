@@ -25,10 +25,12 @@ import java.util.stream.IntStream;
 import org.junit.Test;
 
 import com.rapidminer.belt.Belt;
-import com.rapidminer.belt.ColumnBuffer;
-import com.rapidminer.belt.ColumnReader;
+import com.rapidminer.belt.Buffers;
+import com.rapidminer.belt.Builders;
+import com.rapidminer.belt.NumericBuffer;
+import com.rapidminer.belt.NumericReader;
 import com.rapidminer.belt.Context;
-import com.rapidminer.belt.FixedRealBuffer;
+import com.rapidminer.belt.Readers;
 import com.rapidminer.belt.Table;
 import com.rapidminer.belt.Workload;
 import com.rapidminer.belt.util.Order;
@@ -51,7 +53,7 @@ public class UseCaseTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		ColumnReader reader = new ColumnReader(table.column(column));
+		NumericReader reader = Readers.numericReader(table.column(column));
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -71,12 +73,12 @@ public class UseCaseTests {
 		double[] second = random(NUMBER_OF_ROWS);
 		double[] third = random(NUMBER_OF_ROWS);
 
-		ColumnBuffer buffer = new FixedRealBuffer(NUMBER_OF_ROWS);
+		NumericBuffer buffer = Buffers.realBuffer(NUMBER_OF_ROWS);
 		for (int i = 0; i < NUMBER_OF_ROWS; i++) {
 			buffer.set(i, second[i]);
 		}
 
-		Table table = Table.newTable(NUMBER_OF_ROWS)
+		Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 				.addReal("one", i -> first[i])
 				.add("two", buffer.toColumn())
 				.addReal("three", i -> third[i])
@@ -85,10 +87,10 @@ public class UseCaseTests {
 		double[] copyOfSecond = Arrays.copyOf(second, second.length);
 		copyOfSecond[3] = 42;
 
-		ColumnBuffer secondAsBuffer = new FixedRealBuffer(table.column(1));
+		NumericBuffer secondAsBuffer = Buffers.realBuffer(table.column(1));
 		secondAsBuffer.set(3, 42);
 
-		Table derivedTable = Table.from(table)
+		Table derivedTable = Builders.newTableBuilder(table)
 				.replace("two", secondAsBuffer.toColumn())
 				.remove("three")
 				.build(CTX);
@@ -105,7 +107,7 @@ public class UseCaseTests {
 		double[] third = random(NUMBER_OF_ROWS);
 		double[] fourth = random(NUMBER_OF_ROWS);
 
-		Table table = Table.newTable(NUMBER_OF_ROWS)
+		Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 				.addReal("one", i -> first[i])
 				.addReal("two", i -> second[i])
 				.addReal("three", i -> third[i])
@@ -113,11 +115,11 @@ public class UseCaseTests {
 				.build(CTX);
 
 		double[] fifth = random(NUMBER_OF_ROWS);
-		Table fifthAsTable = Table.newTable(NUMBER_OF_ROWS)
+		Table fifthAsTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
 				.addReal("one", i -> fifth[i])
 				.build(CTX);
 
-		Table derivedTable = Table.from(table.columns(Arrays.asList("one", "three", "four")))
+		Table derivedTable = Builders.newTableBuilder(table.columns(Arrays.asList("one", "three", "four")))
 				.add("five", fifthAsTable.column(0))
 				.build(CTX);
 
@@ -141,7 +143,7 @@ public class UseCaseTests {
 		double second[] = { 100, 0, 1, 0, 1, 100, 0, 1, 0, 1, 100, 100 };
 		double third[] = { 100, 7, 6, 5, 4, 100, 3, 2, 1, 0, 100, 100 };
 
-		Table table = Table.newTable(12)
+		Table table = Builders.newTableBuilder(12)
 				.addReal("one", i -> first[i])
 				.addReal("two", i -> second[i])
 				.addReal("three", i -> third[i])
@@ -171,7 +173,7 @@ public class UseCaseTests {
 		double second[] = { 100, -0.001, 0.423, 0.157, 0.423, 100, 0.350, -0.089, 0.157, 0.375, 100, 100 };
 		double third[] = { 10, 100, 10, 100, 10, 100, 10, 100 };
 
-		Table tableSecond = Table.newTable(12)
+		Table tableSecond = Builders.newTableBuilder(12)
 				.addReal("two", i -> second[i])
 				.build(CTX);
 
@@ -179,7 +181,7 @@ public class UseCaseTests {
 
 		double[] secondSelected = { -0.001, 0.423, 0.157, 0.423, 0.350, -0.089, 0.157, 0.375 };
 
-		Table table = Table.newTable(8)
+		Table table = Builders.newTableBuilder(8)
 				.addReal("one", i -> first[i])
 				.add("two", tableSecondSelected.column("two"))
 				.addReal("three", i -> third[i])
@@ -205,17 +207,16 @@ public class UseCaseTests {
 		double[] second = random(NUMBER_OF_ROWS);
 		double[] third = random(NUMBER_OF_ROWS);
 
-		Table table = Table.newTable(NUMBER_OF_ROWS)
+		Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 				.addReal("one", i -> first[i])
 				.addReal("two", i -> second[i])
 				.addReal("three", i -> third[i])
 				.build(CTX);
 
-		ColumnBuffer secondTimesTwo = table.transform("two").applyNumericToReal(i -> 2 * i, Workload.DEFAULT, CTX);
-		ColumnBuffer onePlusThree = table.transform("one", "three").applyNumericToReal((a, b) -> a + b,
-				Workload.DEFAULT, CTX);
+		NumericBuffer secondTimesTwo = table.transform("two").applyNumericToReal(i -> 2 * i, CTX);
+		NumericBuffer onePlusThree = table.transform("one", "three").applyNumericToReal((a, b) -> a + b, CTX);
 
-		Table derivedTable = Table.from(table)
+		Table derivedTable = Builders.newTableBuilder(table)
 				.replace("two", secondTimesTwo.toColumn())
 				.replace("one", onePlusThree.toColumn())
 				.build(CTX);
@@ -235,7 +236,7 @@ public class UseCaseTests {
 		double second[] = {2, 2, 0, 0, 7, 7, 3, 3, 1, 1};
 		double third[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-		Table table = Table.newTable(10)
+		Table table = Builders.newTableBuilder(10)
 				.addReal("one", i -> first[i])
 				.addReal("two", i -> second[i])
 				.addReal("three", i -> third[i])
@@ -244,7 +245,7 @@ public class UseCaseTests {
 		Table derived = table.columns(Arrays.asList("one", "two"))
 				.sort(Arrays.asList("two", "one"), Order.DESCENDING, CTX);
 
-		derived = Table.from(derived)
+		derived = Builders.newTableBuilder(derived)
 				.add("three", table.column("three"))
 				.build(CTX);
 
@@ -259,13 +260,13 @@ public class UseCaseTests {
 	public void testSelectionOfTopThree() {
 		double first[] = {0.350, 0.157, 0.157, -0.001, 0.427, 0.423, 0.375, -0.089};
 
-		Table table = Table.newTable(8)
+		Table table = Builders.newTableBuilder(8)
 				.addReal("data", i -> first[i])
 				.build(CTX);
 
 		Table derived = table.sort("data", Order.DESCENDING, CTX);
 		derived = derived.rows(0, 3, CTX);
-		derived = Table.from(derived)
+		derived = Builders.newTableBuilder(derived)
 				.addReal("id", i -> i + 1)
 				.build(CTX);
 
@@ -281,7 +282,7 @@ public class UseCaseTests {
 		double[] second = random(NUMBER_OF_ROWS);
 		double[] third = random(NUMBER_OF_ROWS);
 
-		Table table = Table.newTable(NUMBER_OF_ROWS)
+		Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 				.addReal("one", i -> first[i])
 				.addReal("two", i -> second[i])
 				.addReal("three", i -> third[i])
@@ -295,7 +296,7 @@ public class UseCaseTests {
 				(t1, t2) -> {
 					t1[0] += t2[0];
 					t1[1] += t2[1];
-				}, Workload.DEFAULT, CTX);
+				}, CTX);
 
 		double average = averageInfo[0] / averageInfo[1];
 
@@ -321,7 +322,7 @@ public class UseCaseTests {
 		double[] second = random(NUMBER_OF_ROWS);
 		double[] third = random(NUMBER_OF_ROWS);
 
-		Table table = Table.newTable(NUMBER_OF_ROWS)
+		Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 				.addReal("one", i -> first[i])
 				.addReal("two", i -> second[i])
 				.addReal("three", i -> third[i])
@@ -329,7 +330,7 @@ public class UseCaseTests {
 
 		Table filtered = table.filterNumeric("two", "three", (two, three) -> three - two > 0, Workload.DEFAULT, CTX);
 
-		double maxLeft = filtered.transform("one").reduceNumeric(-1, Double::max, Workload.DEFAULT, CTX);
+		double maxLeft = filtered.transform("one").reduceNumeric(-1, Double::max, CTX);
 
 		int[] expectedIndices = IntStream.range(0, first.length).filter(i -> third[i] - second[i] > 0).toArray();
 		double[] expectedFirst = new double[expectedIndices.length];

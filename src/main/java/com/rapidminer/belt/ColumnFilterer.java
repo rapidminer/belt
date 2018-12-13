@@ -78,7 +78,7 @@ final class ColumnFilterer implements ParallelExecutor.Calculator<int[]> {
 	 */
 	private static int filterPart(Column source, boolean[] target, DoublePredicate operator, int from, int to) {
 		int found = 0;
-		final ColumnReader reader = new ColumnReader(source, to);
+		final NumericReader reader = new NumericReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			boolean testResult = operator.test(reader.read());

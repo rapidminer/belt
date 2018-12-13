@@ -25,7 +25,7 @@ import com.rapidminer.belt.Column.TypeId;
 
 /**
  * Describes the type of a column but does not hold any data. Can be used to create new columns, e.g.,
- * via {@link CategoricalColumnBuffer#toColumn(ColumnType)}.
+ * via {@link CategoricalBuffer#toColumn(ColumnType)}.
  *
  * @param <T>
  * 		the complex type of the column elements (optional)

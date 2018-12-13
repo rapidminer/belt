@@ -81,7 +81,7 @@ final class CategoricalColumnReducerInt implements ParallelExecutor.Calculator<I
 	 */
 	private static int reducePart(Column source, int identity, IntBinaryOperator reducer, int from, int to) {
 		int container = identity;
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			container = reducer.applyAsInt(container, reader.read());

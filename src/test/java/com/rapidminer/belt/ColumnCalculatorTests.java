@@ -49,7 +49,7 @@ public class ColumnCalculatorTests {
 	private static final Context CTX = Belt.defaultContext();
 
 
-	private static double[] readBufferToArray(ColumnBuffer buffer) {
+	private static double[] readBufferToArray(NumericBuffer buffer) {
 		double[] data = new double[buffer.size()];
 		for (int j = 0; j < buffer.size(); j++) {
 			data[j] = buffer.get(j);
@@ -110,7 +110,7 @@ public class ColumnCalculatorTests {
 				}, calc -> readBufferToArray(calc.getResult())));
 
 		tests.add(new CalculatorTest<>("map_more",
-				(data, data2) -> new ApplierNumericToNumericMulti(new Column[]{new DoubleArrayColumn(data), new DoubleArrayColumn(data2)},
+				(data, data2) -> new ApplierNNumericToNumeric(new Column[]{new DoubleArrayColumn(data), new DoubleArrayColumn(data2)},
 						row -> 2 * row.get(0) + row.get(1), false),
 				(data, data2) -> {
 					double[] expected = new double[data.length];

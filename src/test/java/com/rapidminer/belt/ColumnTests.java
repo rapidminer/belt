@@ -120,11 +120,11 @@ public class ColumnTests {
 			return ColumnTests.column(columnImplementation, data);
 		}
 
-		private ColumnBuffer toBuffer(Column column) {
+		private NumericBuffer toBuffer(Column column) {
 			if (column.type().id() == Column.TypeId.INTEGER) {
-				return new FixedIntegerBuffer(column);
+				return new IntegerBuffer(column);
 			} else {
-				return new FixedRealBuffer(column);
+				return new RealBuffer(column);
 			}
 		}
 
@@ -133,10 +133,10 @@ public class ColumnTests {
 			int nValues = 1605;
 			double[] data = random(nValues);
 			Column column = column(data);
-			ColumnBuffer buffer = toBuffer(column);
+			NumericBuffer buffer = toBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
-			ColumnReader reader = new ColumnReader(column, column.size());
+			NumericReader reader = Readers.numericReader(column, column.size());
 			int index = 0;
 			while (reader.hasRemaining()) {
 				assertEquals(reader.read(), buffer.get(index++), EPSILON);
@@ -152,10 +152,10 @@ public class ColumnTests {
 			Arrays.setAll(mapping, i -> random.nextInt(nValues));
 
 			Column column = column(data).map(mapping, true);
-			ColumnBuffer buffer = toBuffer(column);
+			NumericBuffer buffer = toBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
-			ColumnReader reader = new ColumnReader(column, column.size());
+			NumericReader reader = Readers.numericReader(column, column.size());
 			int index = 0;
 			while (reader.hasRemaining()) {
 				assertEquals(reader.read(), buffer.get(index++), EPSILON);
@@ -171,10 +171,10 @@ public class ColumnTests {
 			Arrays.setAll(mapping, i -> random.nextInt(nValues));
 
 			Column column = column(data).map(mapping, true);
-			ColumnBuffer buffer = toBuffer(column);
+			NumericBuffer buffer = toBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
-			ColumnReader reader = new ColumnReader(column, column.size());
+			NumericReader reader = Readers.numericReader(column, column.size());
 			int index = 0;
 			while (reader.hasRemaining()) {
 				assertEquals(reader.read(), buffer.get(index++), EPSILON);
@@ -190,10 +190,10 @@ public class ColumnTests {
 			Arrays.setAll(mapping, i -> random.nextInt(2 * nValues) - nValues);
 
 			Column column = column(data).map(mapping, true);
-			ColumnBuffer buffer = toBuffer(column);
+			NumericBuffer buffer = toBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
-			ColumnReader reader = new ColumnReader(column, column.size());
+			NumericReader reader = Readers.numericReader(column, column.size());
 			int index = 0;
 			while (reader.hasRemaining()) {
 				assertEquals(reader.read(), buffer.get(index++), EPSILON);
@@ -205,7 +205,7 @@ public class ColumnTests {
 			int nValues = 105;
 			double[] data = random(nValues);
 			Column column = column(data);
-			ColumnBuffer buffer = toBuffer(column);
+			NumericBuffer buffer = toBuffer(column);
 			assertEquals(column.type().id(), buffer.type());
 
 		}
@@ -237,7 +237,7 @@ public class ColumnTests {
 			Column column = column(data);
 			int[] order = column.sort(Order.ASCENDING);
 			double[] customSorting = new double[column.size()];
-			ColumnBuffer buffer = new FixedRealBuffer(column.map(order, false));
+			NumericBuffer buffer = new RealBuffer(column.map(order, false));
 			Arrays.setAll(customSorting, buffer::get);
 
 			assertArrayEquals(jdkSorting, customSorting, EPSILON);
@@ -257,7 +257,7 @@ public class ColumnTests {
 			Column column = column(data);
 			int[] order = column.sort(Order.DESCENDING);
 			double[] customSorting = new double[column.size()];
-			ColumnBuffer buffer = new FixedRealBuffer(column.map(order, false));
+			NumericBuffer buffer = new RealBuffer(column.map(order, false));
 			Arrays.setAll(customSorting, buffer::get);
 
 			assertArrayEquals(reversedJdkSorting, customSorting, EPSILON);
@@ -278,7 +278,7 @@ public class ColumnTests {
 			Column column = column(data).map(mapping, true);
 			int[] order = column.sort(Order.ASCENDING);
 			double[] customSorting = new double[column.size()];
-			ColumnBuffer buffer = new FixedRealBuffer(column.map(order, false));
+			NumericBuffer buffer = new RealBuffer(column.map(order, false));
 			Arrays.setAll(customSorting, buffer::get);
 
 			assertArrayEquals(jdkSorting, customSorting, EPSILON);
@@ -303,7 +303,7 @@ public class ColumnTests {
 			Column column = column(data).map(mapping, true);
 			int[] order = column.sort(Order.DESCENDING);
 			double[] customSorting = new double[column.size()];
-			ColumnBuffer buffer = new FixedRealBuffer(column.map(order, false));
+			NumericBuffer buffer = new RealBuffer(column.map(order, false));
 			Arrays.setAll(customSorting, buffer::get);
 
 			assertArrayEquals(reversedJdkSorting, customSorting, EPSILON);
@@ -324,7 +324,7 @@ public class ColumnTests {
 			Column column = column(data).map(mapping, true);
 			int[] order = column.sort(Order.ASCENDING);
 			double[] customSorting = new double[column.size()];
-			ColumnBuffer buffer = new FixedRealBuffer(column.map(order, false));
+			NumericBuffer buffer = new RealBuffer(column.map(order, false));
 			Arrays.setAll(customSorting, buffer::get);
 
 			assertArrayEquals(jdkSorting, customSorting, EPSILON);
@@ -349,7 +349,7 @@ public class ColumnTests {
 			Column column = column(data).map(mapping, true);
 			int[] order = column.sort(Order.DESCENDING);
 			double[] customSorting = new double[column.size()];
-			ColumnBuffer buffer = new FixedRealBuffer(column.map(order, false));
+			NumericBuffer buffer = new RealBuffer(column.map(order, false));
 			Arrays.setAll(customSorting, buffer::get);
 
 			assertArrayEquals(reversedJdkSorting, customSorting, EPSILON);

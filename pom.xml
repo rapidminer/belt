@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.rapidminer</groupId>
     <artifactId>belt</artifactId>
-    <version>0.2.0</version>
+    <version>0.3</version>
     <packaging>jar</packaging>
     <name>belt</name>
     <properties>
@@ -18,7 +18,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
+                <version>3.8.0</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

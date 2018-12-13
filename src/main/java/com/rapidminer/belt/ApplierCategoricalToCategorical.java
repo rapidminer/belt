@@ -23,15 +23,15 @@ import com.rapidminer.belt.util.IntegerFormats;
 
 
 /**
- * Maps a {@link Column.Category#CATEGORICAL} {@link Column} to a {@link CategoricalColumnBuffer} using a given mapping
+ * Maps a {@link Column.Category#CATEGORICAL} {@link Column} to a {@link CategoricalBuffer} using a given mapping
  * operator.
  *
  * @author Gisa Meier
  */
-final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calculator<CategoricalColumnBuffer<T>> {
+final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calculator<CategoricalBuffer<T>> {
 
 
-	private CategoricalColumnBuffer<T> target;
+	private CategoricalBuffer<T> target;
 	private final Column source;
 	private final IntFunction<T> operator;
 	private final IntegerFormats.Format format;
@@ -91,7 +91,7 @@ final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calcu
 	}
 
 	@Override
-	public CategoricalColumnBuffer<T> getResult() {
+	public CategoricalBuffer<T> getResult() {
 		return target;
 	}
 
@@ -101,7 +101,7 @@ final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calcu
 	 */
 	private static <T> void mapPart(Column source, IntFunction<T> operator, Int32CategoricalBuffer<T> target,
 									   int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			int value = reader.read();
@@ -115,7 +115,7 @@ final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calcu
 	 */
 	private static <T> void mapPart(Column source, IntFunction<T> operator, UInt16CategoricalBuffer<T> target,
 									   int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			int value = reader.read();
@@ -129,7 +129,7 @@ final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calcu
 	 */
 	private static <T> void mapPart(Column source, IntFunction<T> operator, UInt8CategoricalBuffer<T> target,
 									   int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			int value = reader.read();
@@ -143,7 +143,7 @@ final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calcu
 	 */
 	private static <T> void mapPart(Column source, IntFunction<T> operator, UInt4CategoricalBuffer<T> target,
 									   int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			int value = reader.read();
@@ -157,7 +157,7 @@ final class ApplierCategoricalToCategorical<T> implements ParallelExecutor.Calcu
 	 */
 	private static <T> void mapPart(Column source, IntFunction<T> operator, UInt2CategoricalBuffer<T> target,
 									   int from, int to) {
-		final CategoricalColumnReader reader = new CategoricalColumnReader(source, to);
+		final CategoricalReader reader = new CategoricalReader(source, NumericReader.DEFAULT_BUFFER_SIZE, to);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			int value = reader.read();
