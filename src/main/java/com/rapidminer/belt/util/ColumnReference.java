@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2018 RapidMiner GmbH
+ * Copyright (C) 2017-2019 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -36,7 +36,7 @@ public final class ColumnReference implements ColumnMetaData {
 	}
 
 	public ColumnReference(String column, Object value) {
-		this.column = Objects.requireNonNull(column);
+		this.column = column;
 		this.value = value;
 	}
 

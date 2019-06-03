@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2018 RapidMiner GmbH
+ * Copyright (C) 2017-2019 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -24,15 +24,15 @@ import java.util.stream.IntStream;
 
 import org.junit.Test;
 
-import com.rapidminer.belt.Belt;
-import com.rapidminer.belt.Buffers;
-import com.rapidminer.belt.Builders;
-import com.rapidminer.belt.NumericBuffer;
-import com.rapidminer.belt.NumericReader;
-import com.rapidminer.belt.Context;
-import com.rapidminer.belt.Readers;
-import com.rapidminer.belt.Table;
-import com.rapidminer.belt.Workload;
+import com.rapidminer.belt.util.Belt;
+import com.rapidminer.belt.buffer.Buffers;
+import com.rapidminer.belt.table.Builders;
+import com.rapidminer.belt.buffer.NumericBuffer;
+import com.rapidminer.belt.reader.NumericReader;
+import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.reader.Readers;
+import com.rapidminer.belt.table.Table;
+import com.rapidminer.belt.execution.Workload;
 import com.rapidminer.belt.util.Order;
 
 
