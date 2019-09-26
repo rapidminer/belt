@@ -17,6 +17,8 @@ package com.rapidminer.belt.column;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.SplittableRandom;
 
 import com.rapidminer.belt.util.IntegerFormats;
 
@@ -28,6 +30,20 @@ import com.rapidminer.belt.util.IntegerFormats;
  */
 final class InternalColumnsImpl extends Columns.InternalColumns {
 
+	/**
+	 * See {@link #createNumericColumn(Column.TypeId, double[], SplittableRandom)}.
+	 */
+	static final int MIN_SPARSE_COLUMN_SIZE = 1024;
+
+	/**
+	 * See {@link #createNumericColumn(Column.TypeId, double[], SplittableRandom)}.
+	 */
+	static final int SPARSITY_SAMPLE_SIZE = 1024;
+
+	/**
+	 * See {@link #createNumericColumn(Column.TypeId, double[], SplittableRandom)}.
+	 */
+	static final double MIN_SPARSITY = 0.625d;
 
 	@Override
 	public <T> SimpleCategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, int[] data,
@@ -78,8 +94,8 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 	}
 
 	@Override
-	public DoubleArrayColumn newNumericColumn(Column.TypeId type, double[] src) {
-		return new DoubleArrayColumn(type, src);
+	public NumericColumn newNumericColumn(Column.TypeId type, double[] src) {
+		return createNumericColumn(type, src, new SplittableRandom());
 	}
 
 	@Override
@@ -107,6 +123,25 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 	@Override
 	public Column map(Column column, int[] mapping, boolean preferView) {
 		return column.map(mapping, preferView);
+	}
+
+	/**
+	 * Numeric columns that have less than {@link #MIN_SPARSE_COLUMN_SIZE} rows are represented via dense columns.
+	 * Otherwise an estimate of the columns sparsity is calculated via {@link ColumnUtils#estimateDefaultValue(int,
+	 * double, double[], SplittableRandom)} with {@code sampleSize = } {@link #SPARSITY_SAMPLE_SIZE}. If the estimated
+	 * sparsity is {@code >=} {@link #MIN_SPARSITY}, the column will be represented by a sparse column implementation
+	 * that is optimized for sparse data. Otherwise it will be represented by a dense column.
+	 */
+	NumericColumn createNumericColumn(Column.TypeId type, double[] src, SplittableRandom random) {
+		if (src.length < MIN_SPARSE_COLUMN_SIZE) {
+			return new DoubleArrayColumn(type, src);
+		}
+		Optional<Double> defaultValue = ColumnUtils.estimateDefaultValue(SPARSITY_SAMPLE_SIZE, MIN_SPARSITY, src, random);
+		if (defaultValue.isPresent()) {
+			return new DoubleSparseColumn(type, defaultValue.get(), src);
+		} else {
+			return new DoubleArrayColumn(type, src);
+		}
 	}
 
 }

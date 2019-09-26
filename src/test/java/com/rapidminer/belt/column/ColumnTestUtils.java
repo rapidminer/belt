@@ -25,6 +25,10 @@ import com.rapidminer.belt.util.IntegerFormats;
  */
 public class ColumnTestUtils {
 
+	public static Column getSparseDoubleColumn(Column.TypeId typeId, double defaultValue, double[] data) {
+		return new DoubleSparseColumn(typeId, defaultValue, data);
+	}
+
 	public static Column getMappedTimeColumn(long[] data, int[] mapping) {
 		return new MappedTimeColumn(data, mapping);
 	}
@@ -150,5 +154,12 @@ public class ColumnTestUtils {
 			}
 
 		};
+	}
+
+	public static double getMostFrequentValue(double[] data, double orElse) {
+		if (data == null || data.length == 0) {
+			return orElse;
+		}
+		return ColumnUtils.getMostFrequentValue(data)[0];
 	}
 }

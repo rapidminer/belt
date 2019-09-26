@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.rapidminer</groupId>
     <artifactId>belt</artifactId>
-    <version>1.0.0-BETA</version>
+    <version>1.0.0-BETA2</version>
     <packaging>jar</packaging>
     <name>belt</name>
     <organization>

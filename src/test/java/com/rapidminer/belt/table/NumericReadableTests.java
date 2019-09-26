@@ -64,6 +64,24 @@ public class NumericReadableTests {
 		DOUBLE_ARRAY("DoubleArray",
 				NumericReadableTests::randomDoubles,
 				a -> ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, a)),
+		SPARSE_DOUBLE_COLUMN("SparseDoubleColumn",
+				NumericReadableTests::randomDoubles,
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL,  ColumnTestUtils.getMostFrequentValue(a, -0.00001d), a)),
+		SPARSE_INT_COLUMN("SparseIntColumn",
+				NumericReadableTests::random4BitIntegers,
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER, ColumnTestUtils.getMostFrequentValue(a, 17d), a)),
+		SPARSE_DOUBLE_COLUMN_VERY_SPARSE_DATA("SparseDoubleColumnVerySparseData",
+				NumericReadableTests::verySparseDoubleData,
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, ColumnTestUtils.getMostFrequentValue(a, 0.00001d), a)),
+		SPARSE_DOUBLE_COLUMN_SPARSE_DATA("SparseDoubleColumnSparseData",
+				NumericReadableTests::sparseDoubleData,
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, ColumnTestUtils.getMostFrequentValue(a, -0.00001d), a)),
+		SPARSE_DOUBLE_COLUMN_DEFAULT_IS_NAN("SparseDoubleColumnDefaultIsNaN",
+				NumericReadableTests::randomDoubles,
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, Double.NaN, a)),
+		SPARSE_INT_COLUMN_DEFAULT_IS_NAN("SparseIntColumnDefaultIsNan",
+				NumericReadableTests::random4BitIntegers,
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER, Double.NaN, a)),
 		MAPPED_DOUBLE_ARRAY("MappedDoubleArray",
 				NumericReadableTests::randomDoubles,
 				a -> mappedDoubleColumn(a, Column.TypeId.REAL)),
@@ -249,6 +267,38 @@ public class NumericReadableTests {
 			indices[b] = tmp;
 		}
 		return indices;
+	}
+
+	private static double[] verySparseDoubleData(long seed, int n) {
+		double[] result = new double[n];
+		Arrays.fill(result, Math.random());
+		if (n > 0) {
+			// only two non-default values
+			result[0] = Math.random();
+			result[n / 2] = Double.NaN;
+		}
+		return result;
+	}
+
+	private static double[] sparseDoubleData(long seed, int n) {
+		double[] result = new double[n];
+		double[] valuePool = getValuePool(10);
+		Random random = new Random();
+		for (int i = 0; i < n; i++) {
+			result[i] = valuePool[random.nextInt(valuePool.length)];
+		}
+		return result;
+	}
+
+	/**
+	 * Helper method that return a pool of random values.
+	 */
+	private static double[] getValuePool(int size) {
+		double[] valuePool = new double[size];
+		for (int i = 0; i < size; i++) {
+			valuePool[i] = Math.random();
+		}
+		return valuePool;
 	}
 
 	private static Column mappedDoubleColumn(double[] data, Column.TypeId type) {
@@ -560,29 +610,33 @@ public class NumericReadableTests {
 			int end = nValues + start;
 
 			double[] data = impl.getGenerator().generate(55406729L, nValues);
-			double[] expected = Arrays.copyOfRange(data, start, end);
+
+			// ignore the part that is out of bounds because it is undefined (see javadoc of fill)
+			double[] expected = Arrays.copyOfRange(data, start, data.length);
 
 			Column column = impl.getBuilder().build(data);
 			double[] buffer = new double[end - start];
 			column.fill(buffer, start);
 
-			assertArrayEquals(expected, buffer, EPSILON);
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, buffer.length - start), EPSILON);
 		}
 
 		@Test
 		public void testOutOfBoundsContinuous() {
 			int nValues = 1703;
-			int start = nValues + 69;
-			int end = start + 110;
+			int start = nValues - 10;
+			int end = nValues + 10;
 
 			double[] data = impl.getGenerator().generate(61555865L, nValues);
-			double[] expected = new double[end - start];
+			double[] expected = Arrays.copyOfRange(data, start, data.length);
 
 			Column column = impl.getBuilder().build(data);
 			double[] buffer = new double[end - start];
 			column.fill(buffer, start);
 
-			assertArrayEquals(expected, buffer, EPSILON);
+			// The first 10 elements that have been read should be equal to the last 10 elements of data.
+			// The rest of the read elements is undefined (see javadoc of fill).
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, 10), EPSILON);
 		}
 
 		@Test
@@ -747,30 +801,34 @@ public class NumericReadableTests {
 
 			double[] data = impl.getGenerator().generate(93603515L, nValues);
 
-			double[] expected = new double[nValues];
+			double[] expected = new double[nValues / 2];
 			System.arraycopy(data, nValues / 2, expected, 0, nValues / 2);
 
 			double[] buffer = new double[nValues];
 			Column column = impl.getBuilder().build(data);
 			column.fill(buffer, nValues / 2, 0, 1);
 
-			assertArrayEquals(expected, buffer, EPSILON);
+			// The values that are out of range are undefined (see javadoc of fill).
+			// Therefore, we only check the first half of the arrays.
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, nValues / 2), EPSILON);
 		}
 
 		@Test
 		public void testOutOfBoundsInterleaved() {
 			int nValues = 1703;
-			int start = nValues + 69;
-			int end = start + 110;
+			int start = nValues - 10;
+			int end = nValues + 10;
 
 			double[] data = impl.getGenerator().generate(77273138L, nValues);
-			double[] expected = new double[end - start];
+			double[] expected = Arrays.copyOfRange(data, start, data.length);
 
 			Column column = impl.getBuilder().build(data);
 			double[] buffer = new double[end - start];
 			column.fill(buffer, start, 0, 1);
 
-			assertArrayEquals(expected, buffer, EPSILON);
+			// The first 10 elements that have been read should be equal to the last 10 elements of data.
+			// The rest of the read elements is undefined (see javadoc of fill).
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, 10), EPSILON);
 		}
 
 		@Test
@@ -868,12 +926,11 @@ public class NumericReadableTests {
 			int[] mapping = new int[nSubsetValues];
 			Arrays.setAll(mapping, i -> i);
 
-			// Use buffer larger than mapped column to test bounds of subset.
-			double[] expected = new double[nValues];
+			double[] expected = new double[nSubsetValues];
 			System.arraycopy(data, 0, expected, 0, nSubsetValues);
 
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
-			double[] mapped = new double[nValues];
+			double[] mapped = new double[nSubsetValues];
 			mappedColumn.fill(mapped, 0);
 
 			assertEquals(nSubsetValues, mappedColumn.size());
@@ -1187,8 +1244,8 @@ public class NumericReadableTests {
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
 			double[] array = new double[10];
-			column.fill(array, nValues + 1);
-			assertArrayEquals(new double[10], array, 1e-15);
+			column.fill(array, nValues - 1);
+			assertEquals(data[nValues - 1], array[0], EPSILON);
 		}
 
 		@Test
@@ -1202,10 +1259,10 @@ public class NumericReadableTests {
 
 			double[] all = new double[nValues];
 			column.fill(all, 0);
-			double[] expected = new double[10];
+			double[] expected = new double[4];
 			System.arraycopy(all, nValues - 4, expected, 0, 4);
 
-			assertArrayEquals(expected, array, 1e-20);
+			assertArrayEquals(expected, Arrays.copyOfRange(array, 0, 4), EPSILON);
 		}
 
 		@Test(expected = NullPointerException.class)
