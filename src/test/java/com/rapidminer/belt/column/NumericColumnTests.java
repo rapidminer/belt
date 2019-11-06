@@ -144,13 +144,13 @@ public class NumericColumnTests {
 		 */
 		private static SplittableRandom random;
 
-		private static final int NUM_ROWS = 16746;
+		private static final int NUM_ROWS = 6746;
 
-		private static final int ITERATIONS = 1000;
+		private static final int ITERATIONS = 50;
 
 		/**
 		 * We use values for sparsity that will lead very likely either to sparse columns or to dense columns. Values
-		 * close to {@link InternalColumnsImpl#MIN_SPARSITY} can lead to both and we are not interested in testing this
+		 * close to {@link InternalColumnsImpl#MIN_SPARSITY_64BIT} can lead to both and we are not interested in testing this
 		 * here.
 		 */
 		@Parameter
@@ -183,15 +183,15 @@ public class NumericColumnTests {
 		public void testNewNumericColumn() {
 			InternalColumnsImpl columns = new InternalColumnsImpl();
 			double[] data = new double[NUM_ROWS];
-			Arrays.setAll(data, i -> sparsity > Math.random() ? paramDefaultValue : Math.random());
+			Arrays.setAll(data, i -> sparsity > random.nextDouble() ? paramDefaultValue : random.nextDouble());
 			double dataSparsity = Arrays.stream(data).map(x -> doubleEquals(x, paramDefaultValue) ? 1 : 0).sum() / data.length;
 			for (int i = 0; i < ITERATIONS; i++) {
 				Column column = columns.createNumericColumn(Math.random() > 0.5 ? TypeId.REAL : TypeId.INTEGER, data, random);
 				if (column instanceof DoubleSparseColumn) {
-					assertTrue(dataSparsity >= InternalColumnsImpl.MIN_SPARSITY);
+					assertTrue(dataSparsity >= InternalColumnsImpl.MIN_SPARSITY_64BIT);
 					assertTrue(doubleEquals(((DoubleSparseColumn) column).getDefaultValue(), paramDefaultValue));
 				} else {
-					assertTrue(dataSparsity < InternalColumnsImpl.MIN_SPARSITY);
+					assertTrue(dataSparsity < InternalColumnsImpl.MIN_SPARSITY_64BIT);
 				}
 			}
 		}
@@ -490,7 +490,7 @@ public class NumericColumnTests {
 		}
 
 		/**
-		 * Helper method that return a pool of random values.
+		 * Helper method that returns a pool of random values.
 		 */
 		private static double[] getValuePool(int size) {
 			double[] valuePool = new double[size];

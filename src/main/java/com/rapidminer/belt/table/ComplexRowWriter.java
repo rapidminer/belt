@@ -1,6 +1,5 @@
 /**
- * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -18,17 +17,20 @@ package com.rapidminer.belt.table;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.SplittableRandom;
 
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnUtils;
 import com.rapidminer.belt.reader.NumericReader;
 
 
 /**
  * Writer to create a {@link Table} from row-wise non-numeric data.
  *
- * @author Gisa Meier
+ * @author Gisa Meier, Kevin Majchrzak
  */
 final class ComplexRowWriter {
 
@@ -47,6 +49,11 @@ final class ComplexRowWriter {
 	private final String[] columnLabels;
 	private final int bufferWidth;
 
+	/**
+	 * If this row number is reached, the columns will be checked for sparsity. The row number will be mulitplied with 2
+	 * after every check so that the checks occur in exponential steps.
+	 */
+	private int checkForSparsityRow;
 
 	private Object[] buffer = PLACEHOLDER_BUFFER;
 	private int bufferOffset = -BUFFER_HEIGHT;
@@ -64,6 +71,8 @@ final class ComplexRowWriter {
 	 */
 	ComplexRowWriter(List<String> columnLabels, List<ColumnType<?>> types) {
 		int numberOfColumns = columnLabels.size();
+		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(NumericRowWriter.MAX_CHECK_FOR_SPARSITY_ROW,
+				NumericRowWriter.MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
 		columns = new ComplexWriter[numberOfColumns];
 		classes = new Class<?>[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
@@ -87,6 +96,8 @@ final class ComplexRowWriter {
 	 */
 	ComplexRowWriter(List<String> columnLabels, List<ColumnType<?>> types, int expectedRows) {
 		int numberOfColumns = columnLabels.size();
+		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(NumericRowWriter.MAX_CHECK_FOR_SPARSITY_ROW,
+				NumericRowWriter.MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
 		columns = new ComplexWriter[numberOfColumns];
 		classes = new Class<?>[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
@@ -97,35 +108,6 @@ final class ComplexRowWriter {
 		}
 		bufferWidth = numberOfColumns;
 	}
-
-	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType) {
-		if (ColumnTypes.DATETIME.equals(columnType)) {
-			return new NanosecondsDateTimeWriter();
-		} else if (ColumnTypes.TIME.equals(columnType)) {
-			return new TimeColumnWriter();
-		} else if (columnType.category() == Column.Category.CATEGORICAL) {
-			return new Int32CategoricalWriter<>(columnType);
-		} else if (columnType.category() == Column.Category.OBJECT) {
-			return new ObjectWriter<>(columnType);
-		} else {
-			throw new IllegalArgumentException("Numeric types not supported for object row writer.");
-		}
-	}
-
-	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType, int length) {
-		if (ColumnTypes.DATETIME.equals(columnType)) {
-			return new NanosecondsDateTimeWriter(length);
-		} else if (ColumnTypes.TIME.equals(columnType)) {
-			return new TimeColumnWriter(length);
-		} else if (columnType.category() == Column.Category.CATEGORICAL) {
-			return new Int32CategoricalWriter<>(columnType, length);
-		} else if (columnType.category() == Column.Category.OBJECT) {
-			return new ObjectWriter<>(columnType, length);
-		} else {
-			throw new IllegalArgumentException("Numeric types not supported for object row writer.");
-		}
-	}
-
 
 	/**
 	 * Moves the reader to the next row.
@@ -143,6 +125,11 @@ final class ComplexRowWriter {
 			bufferRowIndex += bufferWidth;
 		}
 		rowIndex++;
+		if (rowIndex == checkForSparsityRow) {
+			checkForSparsity();
+			// check again in exponential steps
+			checkForSparsityRow *= 2;
+		}
 	}
 
 
@@ -181,15 +168,6 @@ final class ComplexRowWriter {
 	}
 
 	/**
-	 * Writes the writer buffer to the column buffers.
-	 */
-	private void writeBuffer() {
-		for (int i = 0; i < columns.length; i++) {
-			columns[i].fill(buffer, bufferOffset, i, bufferWidth, rowIndex + 1);
-		}
-	}
-
-	/**
 	 * @return the number of values per row
 	 */
 	public int width() {
@@ -200,5 +178,127 @@ final class ComplexRowWriter {
 	@Override
 	public String toString() {
 		return "Object row writer (" + (rowIndex + 1) + "x" + bufferWidth + ")";
+	}
+
+	/**
+	 * Used for testing.
+	 */
+	ComplexWriter[] getColumns() {
+		return columns;
+	}
+
+	/**
+	 * Used for testing.
+	 */
+	void checkForSparsity(){
+		checkForSparsity(columns, bufferOffset);
+	}
+
+	/**
+	 * Writes the writer buffer to the column buffers.
+	 */
+	private void writeBuffer() {
+		for (int i = 0; i < columns.length; i++) {
+			columns[i].fill(buffer, bufferOffset, i, bufferWidth, rowIndex + 1);
+		}
+	}
+
+	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType) {
+		if (ColumnTypes.DATETIME.equals(columnType)) {
+			return new NanosecondsDateTimeWriter();
+		} else if (ColumnTypes.TIME.equals(columnType)) {
+			return new TimeColumnWriter();
+		} else if (columnType.category() == Column.Category.CATEGORICAL) {
+			return new Int32CategoricalWriter<>(columnType);
+		} else if (columnType.category() == Column.Category.OBJECT) {
+			return new ObjectWriter<>(columnType);
+		} else {
+			throw new IllegalArgumentException("Numeric types not supported for object row writer.");
+		}
+	}
+
+	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType, int length) {
+		if (ColumnTypes.DATETIME.equals(columnType)) {
+			return new NanosecondsDateTimeWriter(length);
+		} else if (ColumnTypes.TIME.equals(columnType)) {
+			return new TimeColumnWriter(length);
+		} else if (columnType.category() == Column.Category.CATEGORICAL) {
+			return new Int32CategoricalWriter<>(columnType, length);
+		} else if (columnType.category() == Column.Category.OBJECT) {
+			return new ObjectWriter<>(columnType, length);
+		} else {
+			throw new IllegalArgumentException("Numeric types not supported for object row writer.");
+		}
+	}
+
+	/**
+	 * Checks the column writers for sparsity. If a dense column writer contains sufficiently sparse data it is
+	 * converted into a sparse column writer.
+	 *
+	 * @param columns
+	 * 		The column writers to check and convert.
+	 * @param length
+	 * 		The length of the data stored in the column writers (the max row index that has been filled so far).
+	 */
+	static void checkForSparsity(ComplexWriter[] columns, int length) {
+		for (int i = 0; i < columns.length; i++) {
+			ComplexWriter column = columns[i];
+			if (column instanceof TimeColumnWriter) {
+				TimeColumnWriter writer = (TimeColumnWriter) column;
+				long[] data = writer.getData();
+				Optional<Long> defaultValue = estimateDefaultValue(data, length);
+				if (defaultValue.isPresent()) {
+					// replace the dense column writer by its sparse version
+					column = TimeColumnWriterSparse.ofNanos(defaultValue.get(), data, length);
+					columns[i] = column;
+				}
+			} else if (column instanceof NanosecondsDateTimeWriter) {
+				NanosecondsDateTimeWriter writer = (NanosecondsDateTimeWriter) column;
+				long[] seconds = writer.getSeconds();
+				Optional<Long> defaultValue = estimateDefaultValue(seconds, length);
+				if (defaultValue.isPresent()) {
+					// replace the dense column writer by its sparse version
+					column = NanoDateTimeWriterSparse.ofSecondsAndNanos(defaultValue.get(),
+							seconds, writer.getNanos(), length);
+					columns[i] = column;
+				}
+			} else if (column instanceof Int32CategoricalWriter) {
+				Int32CategoricalWriter writer = (Int32CategoricalWriter) column;
+				int[] indexData = writer.getData();
+				Optional<Integer> defaultValue = estimateDefaultValue(indexData, length);
+				if (defaultValue.isPresent()) {
+					// replace the dense column writer by its sparse version
+					// unchecked is no danger since we copy from a previously checked writer
+					@SuppressWarnings("unchecked")
+					ComplexWriter newColumn = Int32CategoricalWriterSparse.ofRawIndices(writer.getColumnType(), defaultValue.get(),
+							writer.getIndexLookup(), writer.getValueLookup(), indexData, length);
+					columns[i] = newColumn;
+				}
+			} // else: object column without sparse representation or already sparse
+		}
+	}
+
+	/**
+	 * Estimates the default value for the given data inside of the range [0, length].
+	 */
+	private static Optional<Long> estimateDefaultValue(long[] data, int length) {
+		long[] sample = new long[NumericRowWriter.SPARSITY_SAMPLE_SIZE];
+		SplittableRandom random = new SplittableRandom();
+		for (int j = 0; j < NumericRowWriter.SPARSITY_SAMPLE_SIZE; j++) {
+			sample[j] = data[random.nextInt(length)];
+		}
+		return ColumnUtils.estimateDefaultValue(sample, NumericRowWriter.MIN_SPARSITY);
+	}
+
+	/**
+	 * Estimates the default value for the given data inside of the range [0, length].
+	 */
+	private static Optional<Integer> estimateDefaultValue(int[] data, int length) {
+		int[] sample = new int[NumericRowWriter.SPARSITY_SAMPLE_SIZE];
+		SplittableRandom random = new SplittableRandom();
+		for (int j = 0; j < NumericRowWriter.SPARSITY_SAMPLE_SIZE; j++) {
+			sample[j] = data[random.nextInt(length)];
+		}
+		return ColumnUtils.estimateDefaultValue(sample, NumericRowWriter.MIN_SPARSITY);
 	}
 }

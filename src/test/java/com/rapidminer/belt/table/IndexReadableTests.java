@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -46,7 +47,7 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
  * Tests functionality of columns that support filling {@code int} buffers, i.e., the functionality implemented by all
  * categorical columns.
  *
- * @author Michael Knopf, Gisa Meier
+ * @author Michael Knopf, Gisa Meier, Kevin Majchrzak
  */
 @RunWith(Enclosed.class)
 public class IndexReadableTests {
@@ -62,13 +63,49 @@ public class IndexReadableTests {
 				IndexReadableTests::categorical4BitColumn),
 		SIMPLE_CATEGORICAL_8BIT("SimpleCategorical8Bit",
 				(seed, n) -> randomIntegers(seed, 256, n),
-				IndexReadableTests::categorical8BitColumn),
+				IndexReadableTests::categoricalDense8BitColumn),
 		SIMPLE_CATEGORICAL_16BIT("SimpleCategorical16Bit",
 				(seed, n) -> randomIntegers(seed, 65536, n),
-				IndexReadableTests::categorical16BitColumn),
+				IndexReadableTests::categoricalDense16BitColumn),
 		SIMPLE_CATEGORICAL_32BIT("SimpleCategorical32Bit",
 				(seed, n) -> randomIntegers(seed, Integer.MAX_VALUE, n),
-				IndexReadableTests::categorical32BitColumn),
+				IndexReadableTests::categoricalDense32BitColumn),
+		CATEGORICAL_SPARSE_8BIT("CategoricalSparse8Bit",
+				(seed, n) -> sparseRandomInts(seed, 256, n, false, 0.9),
+				IndexReadableTests::categoricalSparse8BitColumn),
+		CATEGORICAL_SPARSE_16BIT("CategoricalSparse16Bit",
+				(seed, n) -> sparseRandomInts(seed, 65536, n, false, 0.8),
+				IndexReadableTests::categoricalSparse16BitColumn),
+		CATEGORICAL_SPARSE_32BIT("CategoricalSparse32Bit",
+				(seed, n) -> sparseRandomInts(seed, Integer.MAX_VALUE, n, false, 0.75),
+				IndexReadableTests::categoricalSparse32BitColumn),
+		CATEGORICAL_SPARSE_8BIT_DEFAULT_IS_MISSING("CategoricalSparse8Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> sparseRandomInts(seed, 256, n, true, 0.9),
+				IndexReadableTests::categoricalSparse8BitColumn),
+		CATEGORICAL_SPARSE_16BIT_DEFAULT_IS_MISSING("CategoricalSparse16Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> sparseRandomInts(seed, 65536, n, true, 0.8),
+				IndexReadableTests::categoricalSparse16BitColumn),
+		CATEGORICAL_SPARSE_32BIT_DEFAULT_IS_MISSING("CategoricalSparse32Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> sparseRandomInts(seed, Integer.MAX_VALUE, n, true, 0.75),
+				IndexReadableTests::categoricalSparse32BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_8BIT("REMAPPED_CategoricalSparse8Bit",
+				(seed, n) -> sparseRandomInts(seed, 256, n, false, 0.9),
+				IndexReadableTests::remappedCategoricalSparse8BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_16BIT("REMAPPED_CategoricalSparse16Bit",
+				(seed, n) -> sparseRandomInts(seed, 655, n, false, 0.8),
+				IndexReadableTests::remappedCategoricalSparse16BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_32BIT("REMAPPED_CategoricalSparse32Bit",
+				(seed, n) -> sparseRandomInts(seed, 713, n, false, 0.75),
+				IndexReadableTests::remappedCategoricalSparse32BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_8BIT_DEFAULT_IS_MISSING("REMAPPED_CategoricalSparse8Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> sparseRandomInts(seed, 256, n, true, 0.9),
+				IndexReadableTests::remappedCategoricalSparse8BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_16BIT_DEFAULT_IS_MISSING("REMAPPED_CategoricalSparse16Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> sparseRandomInts(seed, 655, n, true, 0.8),
+				IndexReadableTests::remappedCategoricalSparse16BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_32BIT_DEFAULT_IS_MISSING("REMAPPED_CategoricalSparse32Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> sparseRandomInts(seed, 713, n, true, 0.75),
+				IndexReadableTests::remappedCategoricalSparse32BitColumn),
 		MAPPED_CATEGORICAL_2BIT("MappedCategorical2Bit",
 				(seed, n) -> randomIntegers(seed, 4, n),
 				IndexReadableTests::mappedCategorical2BitColumn),
@@ -92,13 +129,13 @@ public class IndexReadableTests {
 				IndexReadableTests::remappedCategorical4BitColumn),
 		REMAPPED_CATEGORICAL_8BIT("RemappedCategorical8Bit",
 				(seed, n) -> randomIntegers(seed, 256, n),
-				IndexReadableTests::remappedCategorical8BitColumn),
+				IndexReadableTests::remappedCategoricalDense8BitColumn),
 		REMAPPED_CATEGORICAL_16BIT("RemappedCategorical16Bit",
 				(seed, n) -> randomIntegers(seed, 655, n),
-				IndexReadableTests::remappedCategorical16BitColumn),
+				IndexReadableTests::remappedCategoricalDense16BitColumn),
 		REMAPPED_CATEGORICAL_32BIT("RemappedCategorical32Bit",
 				(seed, n) -> randomIntegers(seed, 713, n),
-				IndexReadableTests::remappedCategorical32BitColumn),
+				IndexReadableTests::remappedCategoricalDense32BitColumn),
 		REMAPPED_MAPPED_CATEGORICAL_2BIT("RemappedMappedCategorical2Bit",
 				(seed, n) -> randomIntegers(seed, 4, n),
 				IndexReadableTests::remappedMappedCategorical2BitColumn),
@@ -158,6 +195,30 @@ public class IndexReadableTests {
 		return data;
 	}
 
+	/**
+	 * Returns an array with sparse random integer values.
+	 *
+	 * @param seed
+	 * 		a seed for the random number generator.
+	 * @param bound
+	 * 		the upper bound for the random numbers.
+	 * @param n
+	 * 		the number of random numbers to generate.
+	 * @param defaultIsMissing
+	 * 		iff this value is set to {@code true}, the default value will be set to {@link
+	 *        com.rapidminer.belt.reader.CategoricalReader#MISSING_CATEGORY}.
+	 * @param sparsity
+	 * 		the approximate sparsity of the resulting data.
+	 * @return an array with sparse random integer values.
+	 */
+	private static int[] sparseRandomInts(long seed, int bound, int n, boolean defaultIsMissing,
+										  double sparsity) {
+		SplittableRandom random = new SplittableRandom(seed);
+		int defaultValue = defaultIsMissing ? 0 : 1 + random.nextInt(bound - 1);
+		return Arrays.stream(ColumnTestUtils.sparseRandomLongs(random, bound, n, defaultValue, sparsity)).
+				mapToInt(i -> (int) i).toArray();
+	}
+
 	private static final ColumnType<Void> VOID_TYPE = ColumnTypes.categoricalType(
 			"com.rapidminer.belt.column.test.voidcolumn", Void.class, null);
 
@@ -207,16 +268,26 @@ public class IndexReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping);
 	}
 
-	private static Column categorical8BitColumn(int[] data) {
+	private static Column categoricalDense8BitColumn(int[] data) {
 		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
 			byteData[i] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY);
+		return ColumnTestUtils.getSimpleCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY);
 	}
 
-	private static Column remappedCategorical8BitColumn(int[] data) {
+	private static Column categoricalSparse8BitColumn(int[] data) {
+		byte[] byteData = new byte[data.length];
+		for (int i = 0; i < data.length; i++) {
+			byteData[i] = (byte) data[i];
+		}
+		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
+		return ColumnTestUtils.getSparseCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY,
+				ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+	}
+
+	private static Column remappedCategoricalDense8BitColumn(int[] data) {
 		int max = -1;
 		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
@@ -230,15 +301,39 @@ public class IndexReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping);
 	}
 
-	private static Column categorical16BitColumn(int[] data) {
+	private static Column remappedCategoricalSparse8BitColumn(int[] data) {
+		int max = -1;
+		byte[] byteData = new byte[data.length];
+		for (int i = 0; i < data.length; i++) {
+			int value = data[i];
+			max = Math.max(max, value);
+			byteData[i] = (byte) value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping,
+				ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+	}
+
+	private static Column categoricalDense16BitColumn(int[] data) {
 		short[] shortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
 			shortData[i] = (short) data[i];
 		}
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY);
+		return ColumnTestUtils.getSimpleCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY);
 	}
 
-	private static Column remappedCategorical16BitColumn(int[] data) {
+	private static Column categoricalSparse16BitColumn(int[] data) {
+		short[] shortData = new short[data.length];
+		for (int i = 0; i < data.length; i++) {
+			shortData[i] = (short) data[i];
+		}
+		return ColumnTestUtils.getSparseCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY,
+				ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
+	}
+
+	private static Column remappedCategoricalDense16BitColumn(int[] data) {
 		int max = -1;
 		short[] shortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
@@ -251,11 +346,30 @@ public class IndexReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY, remapping);
 	}
 
-	private static Column categorical32BitColumn(int[] data) {
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, data, EMPTY_DICTIONARY);
+	private static Column remappedCategoricalSparse16BitColumn(int[] data) {
+		int max = -1;
+		short[] shortData = new short[data.length];
+		for (int i = 0; i < data.length; i++) {
+			int value = data[i];
+			max = Math.max(max, value);
+			shortData[i] = (short) value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY, remapping,
+				ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
 	}
 
-	private static Column remappedCategorical32BitColumn(int[] data) {
+	private static Column categoricalDense32BitColumn(int[] data) {
+		return ColumnTestUtils.getSimpleCategoricalColumn(VOID_TYPE, data, EMPTY_DICTIONARY);
+	}
+
+	private static Column categoricalSparse32BitColumn(int[] data) {
+		return ColumnTestUtils.getSparseCategoricalColumn(VOID_TYPE, data, EMPTY_DICTIONARY,
+				ColumnTestUtils.getMostFrequentValue(data, 0));
+	}
+
+	private static Column remappedCategoricalDense32BitColumn(int[] data) {
 		int max = -1;
 		int[] intData = new int[data.length];
 		for (int i = 0; i < data.length; i++) {
@@ -266,6 +380,20 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, intData, EMPTY_DICTIONARY, remapping);
+	}
+
+	private static Column remappedCategoricalSparse32BitColumn(int[] data) {
+		int max = -1;
+		int[] intData = new int[data.length];
+		for (int i = 0; i < data.length; i++) {
+			int value = data[i];
+			max = Math.max(max, value);
+			intData[i] = value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, intData, EMPTY_DICTIONARY, remapping,
+				ColumnTestUtils.getMostFrequentValue(data, 0));
 	}
 
 	private static int[] permutation(int n) {
@@ -439,29 +567,33 @@ public class IndexReadableTests {
 			int end = nValues + start;
 
 			int[] data = impl.getGenerator().generate(56120220L, nValues);
-			int[] expected = Arrays.copyOfRange(data, start, end);
+
+			// ignore the part that is out of bounds because it is undefined (see javadoc of fill)
+			int[] expected = Arrays.copyOfRange(data, start, data.length);
 
 			Column column = impl.getBuilder().build(data);
 			int[] buffer = new int[end - start];
 			column.fill(buffer, start);
 
-			assertArrayEquals(expected, buffer);
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, buffer.length - start));
 		}
 
 		@Test
 		public void testOutOfBoundsContinuous() {
 			int nValues = 1703;
-			int start = nValues + 69;
-			int end = start + 110;
+			int start = nValues - 10;
+			int end = nValues + 10;
 
 			int[] data = impl.getGenerator().generate(43534871L, nValues);
-			int[] expected = new int[end - start];
+			int[] expected = Arrays.copyOfRange(data, start, data.length);
 
 			Column column = impl.getBuilder().build(data);
 			int[] buffer = new int[end - start];
 			column.fill(buffer, start);
 
-			assertArrayEquals(expected, buffer);
+			// The first 10 elements that have been read should be equal to the last 10 elements of data.
+			// The rest of the read elements is undefined (see javadoc of fill).
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, 10));
 		}
 
 		@Test
@@ -626,30 +758,34 @@ public class IndexReadableTests {
 
 			int[] data = impl.getGenerator().generate(51022682L, nValues);
 
-			int[] expected = new int[nValues];
+			int[] expected = new int[nValues / 2];
 			System.arraycopy(data, nValues / 2, expected, 0, nValues / 2);
 
 			int[] buffer = new int[nValues];
 			Column column = impl.getBuilder().build(data);
 			column.fill(buffer, nValues / 2, 0, 1);
 
-			assertArrayEquals(expected, buffer);
+			// The values that are out of range are undefined (see javadoc of fill).
+			// Therefore, we only check the first half of the arrays.
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, nValues / 2));
 		}
 
 		@Test
 		public void testOutOfBoundsInterleaved() {
 			int nValues = 1703;
-			int start = nValues + 69;
-			int end = start + 110;
+			int start = nValues - 10;
+			int end = nValues + 10;
 
 			int[] data = impl.getGenerator().generate(39223391L, nValues);
-			int[] expected = new int[end - start];
+			int[] expected = Arrays.copyOfRange(data, start, data.length);
 
 			Column column = impl.getBuilder().build(data);
 			int[] buffer = new int[end - start];
 			column.fill(buffer, start, 0, 1);
 
-			assertArrayEquals(expected, buffer);
+			// The first 10 elements that have been read should be equal to the last 10 elements of data.
+			// The rest of the read elements is undefined (see javadoc of fill).
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, 10));
 		}
 
 		@Test
@@ -747,12 +883,11 @@ public class IndexReadableTests {
 			int[] mapping = new int[nSubsetValues];
 			Arrays.setAll(mapping, i -> i);
 
-			// Use buffer larger than mapped column to test bounds of subset.
-			int[] expected = new int[nValues];
+			int[] expected = new int[nSubsetValues];
 			System.arraycopy(data, 0, expected, 0, nSubsetValues);
 
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
-			int[] mapped = new int[nValues];
+			int[] mapped = new int[nSubsetValues];
 			mappedColumn.fill(mapped, 0);
 
 			assertEquals(nSubsetValues, mappedColumn.size());
@@ -1067,8 +1202,8 @@ public class IndexReadableTests {
 			int[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
 			int[] array = new int[10];
-			column.fill(array, nValues + 1);
-			assertArrayEquals(new int[10], array);
+			column.fill(array, nValues - 1);
+			assertEquals(data[nValues - 1], array[0]);
 		}
 
 		@Test
@@ -1082,10 +1217,10 @@ public class IndexReadableTests {
 
 			int[] all = new int[nValues];
 			column.fill(all, 0);
-			int[] expected = new int[10];
+			int[] expected = new int[4];
 			System.arraycopy(all, nValues - 4, expected, 0, 4);
 
-			assertArrayEquals(expected, array);
+			assertArrayEquals(expected, Arrays.copyOfRange(array, 0, 4));
 		}
 
 		@Test(expected = NullPointerException.class)

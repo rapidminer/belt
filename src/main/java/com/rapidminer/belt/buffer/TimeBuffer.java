@@ -25,15 +25,15 @@ import com.rapidminer.belt.column.TimeColumn;
 
 
 /**
- * A buffer for time instances with nanosecond precision. Wraps a primitive double array.
+ * A buffer for time instances with nanosecond precision. Wraps a primitive long array.
  *
  * @author Gisa Meier
  * @see Buffers
  */
 public final class TimeBuffer {
 
-	private static final long MIN_NANO = LocalTime.MIN.toNanoOfDay();
-	private static final long MAX_NANO = LocalTime.MAX.toNanoOfDay();
+	static final long MIN_NANO = LocalTime.MIN.toNanoOfDay();
+	static final long MAX_NANO = LocalTime.MAX.toNanoOfDay();
 
 	private final long[] nanoData;
 	private boolean frozen = false;

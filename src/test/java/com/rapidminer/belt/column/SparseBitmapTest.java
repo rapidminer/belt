@@ -36,7 +36,7 @@ public class SparseBitmapTest {
 		int size = 1023;
 		int[] nonDefaultIndices = new int[size];
 		Arrays.setAll(nonDefaultIndices, i -> i);
-		SparseBitmap bitmap = new SparseBitmap(0.1d, nonDefaultIndices, size);
+		SparseBitmap bitmap = new SparseBitmap(false, nonDefaultIndices, size);
 		// assert that there are "size" non-default indices
 		assertEquals(size, bitmap.countNonDefaultIndices(nonDefaultIndices));
 		// assert that get always returns the original index (because the non-defaults are actually 0,1,2..,size-1)
@@ -52,7 +52,7 @@ public class SparseBitmapTest {
 	@Test
 	public void testOnlyDefaultValues() {
 		int size = 1025;
-		SparseBitmap bitmap = new SparseBitmap(-1.3d, new int[0], size);
+		SparseBitmap bitmap = new SparseBitmap(false, new int[0], size);
 		int[] allIndices = new int[size];
 		Arrays.setAll(allIndices, i -> i);
 		// assert that there are no non-default indices
@@ -69,7 +69,7 @@ public class SparseBitmapTest {
 
 	@Test
 	public void testOnlyOneDefaultValue() {
-		SparseBitmap bitmap = new SparseBitmap(1.7d, new int[0], 1);
+		SparseBitmap bitmap = new SparseBitmap(false, new int[0], 1);
 		assertTrue(bitmap.isDefaultIndex(0));
 		assertFalse(bitmap.isDefaultIndex(1));
 		assertFalse(bitmap.isDefaultIndex(-1));
@@ -80,7 +80,7 @@ public class SparseBitmapTest {
 
 	@Test
 	public void testOnlyOneNonDefaultValue() {
-		SparseBitmap bitmap = new SparseBitmap(1.7d, new int[]{0}, 1);
+		SparseBitmap bitmap = new SparseBitmap(false, new int[]{0}, 1);
 		assertFalse(bitmap.isDefaultIndex(0));
 		assertFalse(bitmap.isDefaultIndex(1));
 		assertFalse(bitmap.isDefaultIndex(-1));
@@ -91,12 +91,12 @@ public class SparseBitmapTest {
 
 	@Test
 	public void testEmpty() {
-		SparseBitmap bitmap = new SparseBitmap(-1d, new int[0], 0);
+		SparseBitmap bitmap = new SparseBitmap(false, new int[0], 0);
 		assertFalse(bitmap.isDefaultIndex(0));
 		assertFalse(bitmap.isDefaultIndex(1));
 		assertFalse(bitmap.isDefaultIndex(-1));
 
-		SparseBitmap nanBitmap = new SparseBitmap(Double.NaN, new int[0], 0);
+		SparseBitmap nanBitmap = new SparseBitmap(true, new int[0], 0);
 		assertTrue(nanBitmap.isDefaultIndex(0));
 		assertTrue(nanBitmap.isDefaultIndex(1));
 		assertTrue(nanBitmap.isDefaultIndex(-1));
@@ -122,7 +122,7 @@ public class SparseBitmapTest {
 
 	@Test
 	public void testOneDefaultAndOneNonDefaultValue() {
-		SparseBitmap bitmap = new SparseBitmap(-1, new int[]{1}, 2);
+		SparseBitmap bitmap = new SparseBitmap(false, new int[]{1}, 2);
 		assertTrue(bitmap.isDefaultIndex(0));
 		assertFalse(bitmap.isDefaultIndex(1));
 		assertFalse(bitmap.isDefaultIndex(2));
@@ -141,7 +141,7 @@ public class SparseBitmapTest {
 		int size = 16384;
 		Arrays.setAll(nonDefaultIndices, i -> rand.nextInt(maxNumberOfNonDefaults));
 		nonDefaultIndices = Arrays.stream(nonDefaultIndices).distinct().sorted().toArray();
-		SparseBitmap bitmap = new SparseBitmap(Math.random() - 0.5d, nonDefaultIndices, size);
+		SparseBitmap bitmap = new SparseBitmap(Double.isNaN(Math.random() - 0.5d), nonDefaultIndices, size);
 
 		assertEquals(nonDefaultIndices.length, bitmap.countNonDefaultIndices(nonDefaultIndices));
 
@@ -165,7 +165,7 @@ public class SparseBitmapTest {
 		int size = 16384;
 		Arrays.setAll(nonDefaultIndices, i -> rand.nextInt(maxNumberOfNonDefaults));
 		nonDefaultIndices = Arrays.stream(nonDefaultIndices).distinct().sorted().toArray();
-		SparseBitmap bitmap = new SparseBitmap(Double.NaN, nonDefaultIndices, size);
+		SparseBitmap bitmap = new SparseBitmap(true, nonDefaultIndices, size);
 
 		assertEquals(nonDefaultIndices.length, bitmap.countNonDefaultIndices(nonDefaultIndices));
 
@@ -182,14 +182,14 @@ public class SparseBitmapTest {
 	}
 
 	@Test
-	public void testDefaultIsZero() {
+	public void testDefaultIsNotNaN() {
 		int maxNumberOfNonDefaults = 1024;
 		int[] nonDefaultIndices = new int[maxNumberOfNonDefaults];
 		Random rand = new Random();
 		int size = 16384;
 		Arrays.setAll(nonDefaultIndices, i -> rand.nextInt(maxNumberOfNonDefaults));
 		nonDefaultIndices = Arrays.stream(nonDefaultIndices).distinct().sorted().toArray();
-		SparseBitmap bitmap = new SparseBitmap(0d, nonDefaultIndices, size);
+		SparseBitmap bitmap = new SparseBitmap(false, nonDefaultIndices, size);
 
 		assertEquals(nonDefaultIndices.length, bitmap.countNonDefaultIndices(nonDefaultIndices));
 

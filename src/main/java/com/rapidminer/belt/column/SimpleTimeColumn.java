@@ -17,11 +17,10 @@
 package com.rapidminer.belt.column;
 
 import java.time.LocalTime;
-import java.util.Comparator;
 
 import com.rapidminer.belt.util.Mapping;
 import com.rapidminer.belt.util.Order;
-import com.rapidminer.belt.util.Sorting;
+import com.rapidminer.belt.util.SortingLong;
 
 
 /**
@@ -117,7 +116,7 @@ class SimpleTimeColumn extends TimeColumn {
 
 	@Override
 	public int[] sort(Order order) {
-		return Sorting.sort(size(), Comparator.comparingLong(a -> nanoOfDay[a]), order);
+		return SortingLong.sort(nanoOfDay, order);
 	}
 
 	private LocalTime lookupLocalTime(int i) {

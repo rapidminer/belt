@@ -1,6 +1,5 @@
 /**
- * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -10,7 +9,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Affero General Public License along with this program. If not, see 
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see
  * https://www.gnu.org/licenses/.
  */
 
@@ -27,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -34,26 +34,34 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.rapidminer.belt.reader.NumericReader;
-import com.rapidminer.belt.reader.ObjectReader;
-import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.buffer.BufferTestUtils;
 import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
 import com.rapidminer.belt.buffer.NumericBuffer;
 import com.rapidminer.belt.buffer.ObjectBuffer;
+import com.rapidminer.belt.reader.NumericReader;
+import com.rapidminer.belt.reader.ObjectReader;
+import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.IntegerFormats.Format;
 import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 
 /**
- * @author Michael Knopf
+ * @author Michael Knopf, Kevin Majchrzak
  */
 @RunWith(Enclosed.class)
 public class CategoricalColumnTests {
 
 	private static final String IMPL_SIMPLE_CATEGORICAL_STRING = "SimpleCategoricalColumn_String";
+
+	private static final String IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING = "SimpleCategoricalSparseColumn_String";
+
+	private static final String IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING = "SimpleCategoricalSparseColumn_DefaultIsMissing_String";
+
+	private static final String IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING = "RemappedCategoricalSparseColumn_String";
+
+	private static final String IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING = "RemappedCategoricalSparseColumn_DefaultIsMissing_String";
 
 	private static final String IMPL_MAPPED_CATEGORICAL_STRING = "MappedCategoricalColumn_String";
 
@@ -67,6 +75,18 @@ public class CategoricalColumnTests {
 			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.UNSIGNED_INT8},
 			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.UNSIGNED_INT16},
 			new Object[]{IMPL_SIMPLE_CATEGORICAL_STRING, Format.SIGNED_INT32},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING, Format.UNSIGNED_INT8},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING, Format.UNSIGNED_INT16},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING, Format.SIGNED_INT32},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, Format.UNSIGNED_INT8},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, Format.UNSIGNED_INT16},
+			new Object[]{IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, Format.SIGNED_INT32},
+			new Object[]{IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING, Format.UNSIGNED_INT8},
+			new Object[]{IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING, Format.UNSIGNED_INT16},
+			new Object[]{IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING, Format.SIGNED_INT32},
+			new Object[]{IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, Format.UNSIGNED_INT8},
+			new Object[]{IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, Format.UNSIGNED_INT16},
+			new Object[]{IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, Format.SIGNED_INT32},
 			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT2},
 			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT4},
 			new Object[]{IMPL_MAPPED_CATEGORICAL_STRING, Format.UNSIGNED_INT8},
@@ -121,7 +141,7 @@ public class CategoricalColumnTests {
 		for (int i = 0; i < n; i++) {
 			int a = (int) (Math.random() * n);
 			int b = (int) (Math.random() * n);
-			if(a != 0 && b!= 0) {
+			if (a != 0 && b != 0) {
 				int tmp = indices[a];
 				indices[a] = indices[b];
 				indices[b] = tmp;
@@ -212,6 +232,88 @@ public class CategoricalColumnTests {
 		Dictionary<String> mappingList = booleanMapping ? new BooleanDictionary<>(getBooleanMappingList(),
 				positiveIndex) : new Dictionary<>(getMappingList());
 		switch (columnImplementation) {
+			case IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING:
+				switch (format) {
+					case UNSIGNED_INT2:
+						Assert.fail("Test case INT2 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT4:
+						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT8:
+						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
+						return new CategoricalSparseColumn<>(TYPE, packed, mappingList, packed.data().length > 0 ? packed.data()[0] : 0);
+					case UNSIGNED_INT16:
+						return new CategoricalSparseColumn<>(TYPE, toShortArray(data), mappingList, data.length > 0 ? (short) data[0] : 0);
+					case SIGNED_INT32:
+					default:
+						return new CategoricalSparseColumn<>(TYPE, data, mappingList, data.length > 0 ? data[0] : 0);
+				}
+			case IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING:
+				switch (format) {
+					case UNSIGNED_INT2:
+						Assert.fail("Test case INT2 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT4:
+						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT8:
+						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
+						return new CategoricalSparseColumn<>(TYPE, packed, mappingList, (byte) 0);
+					case UNSIGNED_INT16:
+						return new CategoricalSparseColumn<>(TYPE, toShortArray(data), mappingList, (short) 0);
+					case SIGNED_INT32:
+					default:
+						return new CategoricalSparseColumn<>(TYPE, data, mappingList, 0);
+				}
+			case IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING: {
+				// Create random dictionary mapping and apply the inverse such that the values returned by the
+				// remapped column match the input data.
+				List<String> dictList = mappingList.getValueList();
+				int[] remapping = zeroFixPermutation(dictList.size());
+				List<String> remappedDictionary = new ArrayList<>(dictList);
+				for (int i = 1; i < remapping.length; i++) {
+					remappedDictionary.set(remapping[i], dictList.get(i));
+				}
+				Dictionary<String> remappedDic = booleanMapping ? new BooleanDictionary<>(remappedDictionary,
+						positiveIndex) : new Dictionary<>(remappedDictionary);
+				switch (format) {
+					case UNSIGNED_INT2:
+						Assert.fail("Test case INT2 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT4:
+						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT8:
+						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
+						return new RemappedCategoricalSparseColumn<>(TYPE, packed, remappedDic, remapping, packed.data().length > 0 ? packed.data()[0] : 0);
+					case UNSIGNED_INT16:
+						return new RemappedCategoricalSparseColumn<>(TYPE, toShortArray(data), remappedDic, remapping, data.length > 0 ? (short) data[0] : 0);
+					case SIGNED_INT32:
+					default:
+						return new RemappedCategoricalSparseColumn<>(TYPE, data, remappedDic, remapping, data.length > 0 ? data[0] : 0);
+				}
+			}
+			case IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING: {
+				// Create random dictionary mapping and apply the inverse such that the values returned by the
+				// remapped column match the input data.
+				List<String> dictList = mappingList.getValueList();
+				int[] remapping = zeroFixPermutation(dictList.size());
+				List<String> remappedDictionary = new ArrayList<>(dictList);
+				for (int i = 1; i < remapping.length; i++) {
+					remappedDictionary.set(remapping[i], dictList.get(i));
+				}
+				Dictionary<String> remappedDic = booleanMapping ? new BooleanDictionary<>(remappedDictionary,
+						positiveIndex) : new Dictionary<>(remappedDictionary);
+				switch (format) {
+					case UNSIGNED_INT2:
+						Assert.fail("Test case INT2 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT4:
+						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
+					case UNSIGNED_INT8:
+						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
+						return new RemappedCategoricalSparseColumn<>(TYPE, packed, remappedDic, remapping, (byte) 0);
+					case UNSIGNED_INT16:
+						return new RemappedCategoricalSparseColumn<>(TYPE, toShortArray(data), remappedDic, remapping, (short) 0);
+					case SIGNED_INT32:
+					default:
+						return new RemappedCategoricalSparseColumn<>(TYPE, data, remappedDic, remapping, 0);
+				}
+			}
 			case IMPL_SIMPLE_CATEGORICAL_STRING:
 				switch (format) {
 					case UNSIGNED_INT2:
@@ -335,7 +437,7 @@ public class CategoricalColumnTests {
 		@Test
 		public void testStripProperties() {
 			int nValues = 1605;
-			int[] data = random(nValues, format);
+			int[] data = random(nValues);
 			Column column = column(data);
 
 			Column stripped = column.stripData();
@@ -347,10 +449,10 @@ public class CategoricalColumnTests {
 		@Test
 		public void testAfterMap() {
 			int nValues = 1325;
-			int[] data = random(nValues, format);
+			int[] data = random(nValues);
 			Column column = column(data);
 
-			Column stripped = column.map(new int[]{5,3,17}, true).stripData();
+			Column stripped = column.map(new int[]{5, 3, 17}, true).stripData();
 			assertEquals(0, stripped.size());
 			assertEquals(column.type(), stripped.type());
 			assertEquals(column.getDictionary(String.class), stripped.getDictionary(String.class));
@@ -379,7 +481,7 @@ public class CategoricalColumnTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongType() {
 			int nValues = 1605;
-			int[] data = random(nValues, format);
+			int[] data = random(nValues);
 			Column column = column(data);
 			column.getDictionary(int[].class);
 		}
@@ -387,7 +489,7 @@ public class CategoricalColumnTests {
 		@Test
 		public void testSuperType() {
 			int nValues = 1325;
-			int[] data = random(nValues, format);
+			int[] data = random(nValues);
 			Column column = column(data);
 			Dictionary<Object> superMapping = column.getDictionary(Object.class);
 			Dictionary<String> stringMapping = column.getDictionary(String.class);
@@ -663,7 +765,6 @@ public class CategoricalColumnTests {
 		}
 
 
-
 		@Test
 		public void testChained() {
 			int nValues = 3237;
@@ -704,7 +805,7 @@ public class CategoricalColumnTests {
 			mapping[52] = -1;
 
 			Column mappedRemapped = column.remap(new Dictionary<>(remappedDictionary), permutation).map(mapping, true);
-			CategoricalColumn<String> map =(CategoricalColumn<String>) column.map(mapping, true);
+			CategoricalColumn<String> map = (CategoricalColumn<String>) column.map(mapping, true);
 			Column remappedMapped = map.remap(new Dictionary<>(remappedDictionary), permutation);
 
 			int[] expected = new int[nValues];
@@ -731,7 +832,9 @@ public class CategoricalColumnTests {
 
 		@Parameters(name = "{0}")
 		public static Iterable<String> columnImplementations() {
-			return Arrays.asList(IMPL_SIMPLE_CATEGORICAL_STRING, IMPL_MAPPED_CATEGORICAL_STRING,
+			return Arrays.asList(IMPL_SIMPLE_CATEGORICAL_STRING, IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING,
+					IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING,
+					IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING, IMPL_MAPPED_CATEGORICAL_STRING,
 					IMPL_REMAPPED_CATEGORICAL_STRING, IMPL_REMAPPED_MAPPED_CATEGORICAL_STRING);
 		}
 
@@ -856,7 +959,7 @@ public class CategoricalColumnTests {
 			dictionary.set(1, dictionary.get(2));
 			dictionary.set(2, pos1);
 
-			Column remapped = column.remap(new BooleanDictionary<>(dictionary,1));
+			Column remapped = column.remap(new BooleanDictionary<>(dictionary, 1));
 			assertTrue(remapped.getDictionary(Object.class).isBoolean());
 			assertEquals(1, remapped.getDictionary(String.class).getPositiveIndex());
 		}

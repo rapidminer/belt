@@ -31,10 +31,10 @@ public abstract class DateTimeColumn extends Column {
 	protected static final double MAPPING_THRESHOLD = 0.1;
 
 	/**
-	 * Java's {@link Instant} implementation does not utilize {@link Long#MIN_VALUE}. Thus, we can use it to encode
-	 * missing entries.
+	 * Java's {@link Instant} implementation does not utilize {@link Long#MAX_VALUE} (see {@link Instant#MAX}). Thus, we
+	 * can use it to encode missing entries.
 	 */
-	public static final long MISSING_VALUE = Long.MIN_VALUE;
+	public static final long MISSING_VALUE = Long.MAX_VALUE;
 
 	DateTimeColumn(int size) {
 		super(size);

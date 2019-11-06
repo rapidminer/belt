@@ -225,6 +225,8 @@ public abstract class Column {
 	/**
 	 * Fills the given array with column data starting with the given row index. Throws an {@link
 	 * UnsupportedOperationException} if the category of this column is not {@link Category#CATEGORICAL}.
+	 * <p>
+	 * Please note that accessing rows outside of the columns bounds will lead to undefined results.
 	 *
 	 * @param array
 	 * 		the target array
@@ -243,8 +245,10 @@ public abstract class Column {
 	 * Fills the given array with column data starting with the given row index and using the given array offset and
 	 * step size. For instance, given the row index {@code 256}, the array offset {@code 4} and a step size of {@code
 	 * 8}, the method writes the values at index {@code 256, 257, 268, ...} to array positions {@code array[4],
-	 * array[12], array[20], ...} respectively. Throws an {@link UnsupportedOperationException} if the category of
-	 * this column is not {@link Category#CATEGORICAL}.
+	 * array[12], array[20], ...} respectively. Throws an {@link UnsupportedOperationException} if the category of this
+	 * column is not {@link Category#CATEGORICAL}.
+	 * <p>
+	 * Please note that accessing rows outside of the columns bounds will lead to undefined results.
 	 *
 	 * @param array
 	 * 		the target array

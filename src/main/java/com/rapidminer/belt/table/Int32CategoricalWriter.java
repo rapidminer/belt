@@ -65,6 +65,57 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 		this.columnType = columnType;
 	}
 
+	@Override
+	public CategoricalColumn<T> toColumn() {
+		freeze();
+		return ColumnAccessor.get().newCategoricalColumn(columnType, data, valueLookup);
+	}
+
+	@Override
+	public void fill(Object[] buffer, int startIndex, int bufferOffset, int bufferStepSize, int height) {
+		resize(height);
+		int remainder = buffer.length % bufferStepSize > bufferOffset ? 1 : 0;
+		int max = Math.min(startIndex + buffer.length / bufferStepSize + remainder, height);
+		int copyIndex = startIndex;
+		int bufferIndex = bufferOffset;
+		while (copyIndex < max) {
+			// the cast is safe because we check the data that is put into the buffer
+			@SuppressWarnings("unchecked")
+			T value = (T) buffer[bufferIndex];
+			set(copyIndex, value);
+			bufferIndex += bufferStepSize;
+			copyIndex++;
+		}
+	}
+
+	/**
+	 * Return the writers data. Used e.g. for checking the data's sparsity.
+	 */
+	int[] getData() {
+		return data;
+	}
+
+	/**
+	 * Used internally to create sparse categorical writers.
+	 */
+	Map<T, Integer> getIndexLookup() {
+		return indexLookup;
+	}
+
+	/**
+	 * Used internally to create sparse categorical writers.
+	 */
+	List<T> getValueLookup() {
+		return valueLookup;
+	}
+
+	/**
+	 * Used internally to create sparse categorical writers.
+	 */
+	ColumnType<T> getColumnType() {
+		return columnType;
+	}
+
 	private void set(int index, T value) {
 		if (value == null) {
 			//set NaN
@@ -92,13 +143,6 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 		}
 	}
 
-
-	@Override
-	public CategoricalColumn<T> toColumn() {
-		freeze();
-		return ColumnAccessor.get().newCategoricalColumn(columnType, data, valueLookup);
-	}
-
 	/**
 	 * Ensures that the buffer has the capacity for the given length.
 	 */
@@ -115,20 +159,4 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 		data = Arrays.copyOf(data, newLength);
 	}
 
-	@Override
-	public void fill(Object[] buffer, int startIndex, int bufferOffset, int bufferStepSize, int height) {
-		resize(height);
-		int remainder = buffer.length % bufferStepSize > bufferOffset ? 1 : 0;
-		int max = Math.min(startIndex + buffer.length / bufferStepSize + remainder, height);
-		int copyIndex = startIndex;
-		int bufferIndex = bufferOffset;
-		while (copyIndex < max) {
-			// the cast is safe because we check the data that is put into the buffer
-			@SuppressWarnings("unchecked")
-			T value = (T) buffer[bufferIndex];
-			set(copyIndex, value);
-			bufferIndex += bufferStepSize;
-			copyIndex++;
-		}
-	}
 }

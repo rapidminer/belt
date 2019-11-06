@@ -347,11 +347,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, size());
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = remapping[readUInt2(byteData.data(), j)];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -360,11 +356,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, size());
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = remapping[readUInt4(byteData.data(), j)];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -373,11 +365,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, byteData.size());
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = remapping[Byte.toUnsignedInt(byteData.data()[j])];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -386,11 +374,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, shortData.length);
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = remapping[Short.toUnsignedInt(shortData[j])];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -399,11 +383,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, intData.length);
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = remapping[intData[j]];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -414,11 +394,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = remapping[readUInt2(byteData.data(), rowIndex)];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -431,11 +407,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = remapping[readUInt4(byteData.data(), rowIndex)];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -448,11 +420,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = remapping[Byte.toUnsignedInt(byteData.data()[rowIndex])];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -465,11 +433,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = remapping[Short.toUnsignedInt(shortData[rowIndex])];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -482,11 +446,7 @@ class RemappedCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = remapping[intData[rowIndex]];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}

@@ -16,15 +16,17 @@
 package com.rapidminer.belt.column;
 
 /**
- * Immutable bitmap used by {@link DoubleSparseColumn} to store non-default indices. Logically this data structure
- * represents a set of non-default indices in the range of {@code [0,size]}. All indices in this range that are not
- * explicitly specified as non-default are regarded as default.
+ * Immutable bitmap used by sparse column implementations like {@link DoubleSparseColumn} or {@link
+ * TimeSparseColumn} to store non-default indices. Logically this data structure represents a set of non-default
+ * indices in the range of {@code [0,size]}. All indices in this range that are not explicitly specified as non-default
+ * are regarded as default.
  * <p>
  * The data structure uses {@code 1.5} bits of memory per entry and its {@link #get(int)} method takes {@code O(1)}
  * time.
  *
  * @author Kevin Majchrzak
  * @see DoubleSparseColumn
+ * @see TimeSparseColumn
  */
 class SparseBitmap {
 
@@ -39,12 +41,20 @@ class SparseBitmap {
 	 * {@code bucket = index / BUCKET_SIZE = index >> INDEX_TO_BUCKET_MASK}
 	 */
 	private static final int INDEX_TO_BUCKET_MASK = 6;
+
+	/**
+	 * This index represents the default value.
+	 */
 	static final int DEFAULT_INDEX = -1;
+
+	/**
+	 * This index represents indices that are out of bounds.
+	 */
 	static final int OUT_OF_BOUNDS_INDEX = -2;
 
 	/**
-	 * 64 bit per bucket and 1 bit per bucket entry. If the bit is 0 the entry is a default index. Otherwise
-	 * it is one of the non-default indices.
+	 * 64 bit per bucket and 1 bit per bucket entry. If the bit is 0 the entry is a default index. Otherwise it is one
+	 * of the non-default indices.
 	 */
 	private final long[] bitMap;
 
@@ -59,22 +69,27 @@ class SparseBitmap {
 	 */
 	private final int size;
 
-	private final boolean defaultIsNaN;
+	/**
+	 * True iff the default value is the missing value (e.g. {@link Double#NaN} for double values or {@link
+	 * TimeColumn#MISSING_VALUE} for time values).
+	 */
+	private final boolean defaultIsMissing;
 
 	/**
-	 * Takes the the size of the original data and the non-default indices. It then constructs a new
-	 * immutable sparse bitmap.
+	 * Takes the the size of the original data and the non-default indices. It then constructs a new immutable sparse
+	 * bitmap.
 	 *
-	 * @param defaultValue
-	 * 		The default value in the original data.
+	 * @param defaultIsMissing
+	 * 		Should be set to true iff the default value is the missing value (e.g. {@link Double#NaN} for double values or
+	 *        {@link TimeColumn#MISSING_VALUE} for time values).
 	 * @param nonDefaultIndices
 	 * 		Indices of all values that do not equal the default value.
 	 * @param size
 	 * 		The number of elements in the original data.
 	 */
-	SparseBitmap(double defaultValue, int[] nonDefaultIndices, int size) {
+	SparseBitmap(boolean defaultIsMissing, int[] nonDefaultIndices, int size) {
 		this.size = size;
-		defaultIsNaN = Double.isNaN(defaultValue);
+		this.defaultIsMissing = defaultIsMissing;
 		bitMap = new long[size / BUCKET_SIZE + 1];
 		initializeBitMap(nonDefaultIndices);
 		bucketOffsets = new int[bitMap.length];
@@ -92,7 +107,7 @@ class SparseBitmap {
 	 */
 	int get(int index) {
 		if (index < 0 || index >= size) {
-			if (defaultIsNaN) {
+			if (defaultIsMissing) {
 				return DEFAULT_INDEX;
 			}
 			return OUT_OF_BOUNDS_INDEX;
@@ -108,7 +123,8 @@ class SparseBitmap {
 
 	/**
 	 * Counts the number of non-default indices in the given array. Indices that are outside of the arrays bounds are
-	 * also counted as non-defaults iff the default value is not {@link Double#NaN}.
+	 * also counted as non-defaults iff the default value is not the missing value (e.g. {@link Double#NaN} for double
+	 * values or {@link TimeColumn#MISSING_VALUE} for time values).
 	 *
 	 * @param indices
 	 * 		Array with indices.
@@ -118,7 +134,7 @@ class SparseBitmap {
 		int count = 0;
 		for (int i : indices) {
 			if (i < 0 || i >= size) {
-				if (!defaultIsNaN) {
+				if (!defaultIsMissing) {
 					count++;
 				}
 			} else {
@@ -140,11 +156,12 @@ class SparseBitmap {
 
 	/**
 	 * Returns true iff the given index is a default index. Indices out of the bounds are also regarded as default if
-	 * and only if the default value is {@link Double#NaN}.
+	 * and only if the default value is the missing value (e.g. {@link Double#NaN} for double values or {@link
+	 * TimeColumn#MISSING_VALUE} for time values).
 	 */
 	boolean isDefaultIndex(int index) {
 		if (index < 0 || index >= size) {
-			return defaultIsNaN;
+			return defaultIsMissing;
 		} else {
 			int bucket = index >> INDEX_TO_BUCKET_MASK;
 			return (bitMap[bucket] & (1L << index)) == 0;

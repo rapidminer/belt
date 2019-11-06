@@ -23,7 +23,9 @@ import static java.util.Arrays.setAll;
 import static java.util.Arrays.sort;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,11 +34,13 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.reader.NumericReader;
+import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
-import com.rapidminer.belt.table.Builders;
-import com.rapidminer.belt.table.Table;
 import com.rapidminer.belt.util.Belt;
 import com.rapidminer.belt.util.Order;
 
@@ -60,7 +64,15 @@ public class TableSortingTests {
 
 	private static double[] readColumnToArray(Table table, int column) {
 		double[] data = new double[table.height()];
-		NumericReader reader = Readers.numericReader(table.column(column));
+		Column col = table.column(column);
+		if (col.type().id() == Column.TypeId.DATE_TIME) {
+			ObjectReader<Instant> reader = Readers.objectReader(col, Instant.class);
+			for (int j = 0; j < table.height(); j++) {
+				data[j] = reader.read().getEpochSecond();
+			}
+			return data;
+		}
+		NumericReader reader = Readers.numericReader(col);
 		for (int j = 0; j < table.height(); j++) {
 			data[j] = reader.read();
 		}
@@ -234,6 +246,63 @@ public class TableSortingTests {
 
 			assertArrayEquals(new double[][]{first, second, first}, readTableToArray(table));
 			assertArrayEquals(new double[][]{expectedFirst, expectedSecond, expectedFirst}, readTableToArray(sorted));
+		}
+
+	}
+
+
+	public static class DifferentTypes {
+
+		@Test
+		public void testSortingByMultipleColumns() {
+			double[] first = {0, 1, 2, 3, 4, 5, 6, 7};
+			double[] second = {1, 2, 1, 2, 1, 2, 1, 2};
+			double[] third = {4, 2, 3, 1, 2, 3, 4, 4};
+
+			double[] expectedFirst = {0, 6, 7, 2, 5, 4, 1, 3};
+			double[] expectedSecond = {1, 1, 2, 1, 2, 1, 2, 2};
+			double[] expectedThird = {4, 4, 4, 3, 3, 2, 2, 1};
+
+			Table table = Builders.newTableBuilder(8)
+					.addReal("a", i -> first[i])
+					.addNominal("b", i -> "val" + second[i])
+					.addDateTime("c", i -> Instant.ofEpochSecond((long) third[i]))
+					.build(CTX);
+
+			Table sorted = table.sort(Arrays.asList("c", "b"), asList(Order.DESCENDING, Order.ASCENDING), CTX);
+
+			assertArrayEquals(new double[][]{first, second, third}, readTableToArray(table));
+			assertArrayEquals(new double[][]{expectedFirst, expectedSecond, expectedThird}, readTableToArray(sorted));
+		}
+
+		@Test
+		public void testSortingRepeatedlyBySingleColumn() {
+			double[] first = {0, 1, 2, 3, 4, 5, 6, 7};
+			double[] second = {0, 1, 2, 3, 0, 1, 2, 3};
+
+			double[] expectedFirst = {3, 7, 2, 6, 1, 5, 0, 4};
+			double[] expectedSecond = {3, 3, 2, 2, 1, 1, 0, 0};
+
+			Table table = Builders.newTableBuilder(8)
+					.addDateTime("a", i -> Instant.ofEpochSecond((long) first[i]))
+					.addDateTime("b", i -> Instant.ofEpochSecond((long) second[i]))
+					.addDateTime("c", i -> Instant.ofEpochSecond((long) first[i]))
+					.build(CTX);
+
+			Table sorted = table.sort(Arrays.asList("b", "b", "b"),
+					asList(Order.DESCENDING, Order.ASCENDING, Order.DESCENDING),
+					CTX);
+
+			assertArrayEquals(new double[][]{first, second, first}, readTableToArray(table));
+			assertArrayEquals(new double[][]{expectedFirst, expectedSecond, expectedFirst}, readTableToArray(sorted));
+		}
+
+		@Test
+		public void testStandardTypesAreSortable() {
+			for (ColumnType type : new ColumnType[]{ColumnTypes.REAL, ColumnTypes.INTEGER, ColumnTypes.NOMINAL,
+					ColumnTypes.TIME, ColumnTypes.DATETIME}) {
+				assertTrue(type.hasCapability(Column.Capability.SORTABLE));
+			}
 		}
 
 	}

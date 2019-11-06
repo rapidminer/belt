@@ -10,7 +10,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Affero General Public License along with this program. If not, see 
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see
  * https://www.gnu.org/licenses/.
  */
 
@@ -64,7 +64,7 @@ final class IntegerBuffer extends NumericBuffer {
 			// must round if underlying data was not rounded already
 			for (int i = 0; i < data.length; i++) {
 				double value = data[i];
-				if (!Double.isNaN(value)) {
+				if (Double.isFinite(value)) {
 					data[i] = Math.round(value);
 				}
 			}

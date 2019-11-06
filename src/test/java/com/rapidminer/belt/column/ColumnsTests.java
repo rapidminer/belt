@@ -24,12 +24,18 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -41,6 +47,8 @@ import com.rapidminer.belt.reader.CategoricalReader;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.table.Builders;
+import com.rapidminer.belt.transform.NumericColumnFiltererTests;
+import com.rapidminer.belt.table.ColumnAccessor;
 import com.rapidminer.belt.util.Belt;
 
 
@@ -642,6 +650,261 @@ public class ColumnsTests {
 			assertEquals(booleanColumn.getDictionary(Object.class).get(booleanColumn.getDictionary(String.class).getPositiveIndex()),
 					withoutGaps.getDictionary(Object.class).get(withoutGaps.getDictionary(String.class).getPositiveIndex()));
 		}
+
+
+		@Test
+		public void testOneValueColumn() {
+			int size = 42;
+			CategoricalColumn column = new InternalColumnsImpl().newSingleValueCategoricalColumn(ColumnTypes.NOMINAL,
+					"blabla", size);
+			assertTrue(ColumnTestUtils.isSparse(column));
+			Object[] values = new Object[size];
+			column.fill(values, 0);
+			Object[] expected = new Object[size];
+			Arrays.fill(expected, "blabla");
+			assertArrayEquals(expected, values);
+		}
+	}
+
+	public static class ReplaceInDictionary {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullColumn() {
+			Columns.replaceSingleInDictionary(null, "green", "yellow");
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullOld() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Columns.replaceSingleInDictionary(column, null, "yellow");
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullNew() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Columns.replaceSingleInDictionary(column, "green", null);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testNotCategorical() {
+			Column column = new SimpleObjectColumn<>(ColumnTypes.objectType("bla", String.class, null), new Object[2]);
+			Columns.replaceSingleInDictionary(column, "green", "yellow");
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testIncompatibleType() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Columns.replaceSingleInDictionary(column, Integer.MAX_VALUE, Integer.MIN_VALUE);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testIncompatibleSecond() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Columns.replaceSingleInDictionary(column, "black", Integer.MIN_VALUE);
+		}
+
+		@Test
+		public void testSubtype() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.categoricalType("blup", Number.class, null),
+					new int[0],
+					new Dictionary<>(Arrays.asList(12.4, Double.MAX_VALUE, 11)));
+			Column replaced = Columns.replaceSingleInDictionary(column, Double.MAX_VALUE, Integer.MIN_VALUE);
+			assertEquals(Arrays.asList(12.4, Integer.MIN_VALUE, 11),
+					replaced.getDictionary(Number.class).getValueList());
+		}
+
+		@Test
+		public void testSimpleReplace() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Column replaced = Columns.replaceSingleInDictionary(column, "green", "yellow");
+			assertEquals(Arrays.asList(null, "blue", "yellow", "red"),
+					replaced.getDictionary(String.class).getValueList());
+		}
+
+		@Test
+		public void testSimpleReplaceBoolean() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new BooleanDictionary<>(Arrays.asList(null, "red", "green"), 2));
+			Column replaced = Columns.replaceSingleInDictionary(column, "green", "yellow");
+			assertEquals(Arrays.asList(null, "red", "yellow"), replaced.getDictionary(String.class).getValueList());
+			assertEquals(column.getDictionary(Object.class).getPositiveIndex(),
+					replaced.getDictionary(Object.class).getPositiveIndex());
+		}
+
+		@Test
+		public void testReplaceNotPresent() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Column replaced = Columns.replaceSingleInDictionary(column, "pink", "yellow");
+			assertEquals(column.getDictionary(String.class).getValueList(),
+					replaced.getDictionary(String.class).getValueList());
+		}
+
+		@Test(expected = Columns.IllegalReplacementException.class)
+		public void testReplaceAlreadyPresent() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Columns.replaceSingleInDictionary(column, "green", "blue");
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullOldInMap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = Stream.of(new AbstractMap.SimpleEntry<>("green", "pink"),
+					new AbstractMap.SimpleEntry<>((String) null, "yellow"))
+					.collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+			Columns.replaceInDictionary(column, oldToNew, String.class);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullNewInMap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", null);
+			Columns.replaceInDictionary(column, oldToNew, String.class);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullColumnInMap() {
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "yellow");
+			Columns.replaceInDictionary(null, oldToNew, String.class);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullType() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "yellow");
+			Columns.replaceInDictionary(column, oldToNew, null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullMap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Columns.replaceInDictionary(column, null, String.class);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testNotCategoricalMap() {
+			Column column = new SimpleObjectColumn<>(ColumnTypes.objectType("bla", String.class, null), new Object[2]);
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "yellow");
+			Columns.replaceInDictionary(column, oldToNew, String.class);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testIncompatibleTypeMap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<Integer, Integer> oldToNew = new HashMap<>();
+			oldToNew.put(3, 4);
+			oldToNew.put(5, 6);
+			Columns.replaceInDictionary(column, oldToNew, Integer.class);
+		}
+
+		@Test
+		public void testMap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "yellow");
+			Column replaced = Columns.replaceInDictionary(column, oldToNew, String.class);
+			assertEquals(Arrays.asList(null, "yellow", "pink", "red"),
+					replaced.getDictionary(String.class).getValueList());
+		}
+
+		@Test(expected = Columns.IllegalReplacementException.class)
+		public void testMapAlreadyPresent() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "pink");
+			Columns.replaceInDictionary(column, oldToNew, String.class);
+		}
+
+		@Test(expected = Columns.IllegalReplacementException.class)
+		public void testMapAlreadyPresentOld() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "red");
+			Columns.replaceInDictionary(column, oldToNew, String.class);
+		}
+
+
+		@Test
+		public void testSingleVsMap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Column replaced = Columns.replaceSingleInDictionary(column, "green", "yellow");
+			Map<String, String> oldToNew = new HashMap<>();
+			oldToNew.put("green", "yellow");
+			Column replaced2 = Columns.replaceInDictionary(column, oldToNew, String.class);
+			assertEquals(replaced.getDictionary(String.class).getValueList(),
+					replaced2.getDictionary(String.class).getValueList());
+		}
+
+		@Test
+		public void testMapOrderDoesNotMatter() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new LinkedHashMap<>();
+			oldToNew.put("green", "pink");
+			oldToNew.put("blue", "green");
+			Column replaced = Columns.replaceInDictionary(column, oldToNew, String.class);
+			assertEquals(Arrays.asList(null, "green", "pink", "red"),
+					replaced.getDictionary(String.class).getValueList());
+			oldToNew = new LinkedHashMap<>();
+			oldToNew.put("blue", "green");
+			oldToNew.put("green", "pink");
+			replaced = Columns.replaceInDictionary(column, oldToNew, String.class);
+			assertEquals(Arrays.asList(null, "green", "pink", "red"),
+					replaced.getDictionary(String.class).getValueList());
+		}
+
+		@Test
+		public void testMapSwap() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new LinkedHashMap<>();
+			oldToNew.put("green", "blue");
+			oldToNew.put("blue", "green");
+			Column replaced = Columns.replaceInDictionary(column, oldToNew, String.class);
+			assertEquals(Arrays.asList(null, "green", "blue", "red"),
+					replaced.getDictionary(String.class).getValueList());
+		}
+
+		@Test
+		public void testMapCyclic() {
+			Column column = new SimpleCategoricalColumn<>(ColumnTypes.NOMINAL, new int[0],
+					new Dictionary<>(Arrays.asList(null, "blue", "green", "red")));
+			Map<String, String> oldToNew = new LinkedHashMap<>();
+			oldToNew.put("blue", "green");
+			oldToNew.put("green", "red");
+			oldToNew.put("red", "blue");
+			Column replaced = Columns.replaceInDictionary(column, oldToNew, String.class);
+			assertEquals(Arrays.asList(null, "green", "red", "blue"),
+					replaced.getDictionary(String.class).getValueList());
+		}
+
+
 	}
 
 	private static String[] readAllToArray(Column column) {

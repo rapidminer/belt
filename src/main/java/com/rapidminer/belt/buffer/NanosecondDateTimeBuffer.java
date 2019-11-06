@@ -32,8 +32,8 @@ import com.rapidminer.belt.column.DateTimeColumn;
  */
 final class NanosecondDateTimeBuffer extends DateTimeBuffer {
 
-	private static final int MIN_NANO = Instant.MIN.getNano();
-	private static final int MAX_NANO = Instant.MAX.getNano();
+	static final int MIN_NANO = Instant.MIN.getNano();
+	static final int MAX_NANO = Instant.MAX.getNano();
 
 	private final long[] secondsData;
 	private final int[] nanosData;
@@ -108,6 +108,7 @@ final class NanosecondDateTimeBuffer extends DateTimeBuffer {
 		}
 		if (instant == null) {
 			secondsData[index] = DateTimeColumn.MISSING_VALUE;
+			nanosData[index] = 0;
 		} else {
 			secondsData[index] = instant.getEpochSecond();
 			nanosData[index] = instant.getNano();

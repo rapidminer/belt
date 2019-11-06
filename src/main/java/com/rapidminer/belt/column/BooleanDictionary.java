@@ -56,8 +56,7 @@ public class BooleanDictionary<T> extends Dictionary<T> {
 	}
 
 	/**
-	 * Checks that the dictionary has 2 non-null values plus {@code null} at the start and that every non-null value
-	 * is either positive or negative.
+	 * Checks that the dictionary has a sensible positive value and a valid size.
 	 */
 	private static <T> void sanityCheck(List<T> dictionary, int positiveIndex) {
 		if (dictionary.size() > MAXIMAL_RAW_SIZE) {

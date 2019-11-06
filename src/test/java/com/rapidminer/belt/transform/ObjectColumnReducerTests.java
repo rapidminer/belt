@@ -68,7 +68,7 @@ public class ObjectColumnReducerTests {
 		mapping.add(0, null);
 		int[] categories = new int[data.length];
 		Arrays.setAll(categories, i -> i + 1);
-		return ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
+		return ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
 	}
 
 	private static Column getFree() {

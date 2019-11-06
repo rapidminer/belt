@@ -19,15 +19,19 @@ package com.rapidminer.belt.table;
 import static com.rapidminer.belt.util.IntegerFormats.Format;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -35,6 +39,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import com.rapidminer.belt.column.CacheMappedColumn;
+import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
@@ -50,7 +55,7 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
  * Tests functionality of columns with capability {@link Column.Capability#OBJECT_READABLE}. In particular, the
  * corresponding methods to fill the buffers of {@link ObjectReader}s.
  *
- * @author Michael Knopf, Gisa Meier
+ * @author Michael Knopf, Gisa Meier, Kevin Majchrzak
  */
 @RunWith(Enclosed.class)
 public class ObjectReadableTests {
@@ -69,15 +74,63 @@ public class ObjectReadableTests {
 		SIMPLE_CATEGORICAL_8BIT("SimpleCategorical8Bit",
 				(seed, n) -> randomIntegers(seed, 256, n),
 				() -> identityMapping(256),
-				ObjectReadableTests::categorical8BitColumn),
+				ObjectReadableTests::denseCategorical8BitColumn),
 		SIMPLE_CATEGORICAL_16BIT("SimpleCategorical16Bit",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> identityMapping(MAX_MAPPING),
-				ObjectReadableTests::categorical16BitColumn),
+				ObjectReadableTests::denseCategorical16BitColumn),
 		SIMPLE_CATEGORICAL_32BIT("SimpleCategorical32Bit",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> identityMapping(MAX_MAPPING),
-				ObjectReadableTests::categorical32BitColumn),
+				ObjectReadableTests::denseCategorical32BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_8BIT("SimpleCategoricalSparse8Bit",
+				(seed, n) -> sparseTimeRandomIntegers(seed, 256, n, 0.9d, false),
+				() -> identityMapping(256),
+				ObjectReadableTests::sparseCategorical8BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_16BIT("SimpleCategoricalSparse16Bit",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING,  n, 0.8, false),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseCategorical16BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_32BIT("SimpleCategoricalSparse32Bit",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75, false),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseCategorical32BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_8BIT_DEFAULT_IS_MISSING("SimpleCategoricalSparse8BitDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, 256, n, 0.9d, true),
+				() -> identityMapping(256),
+				ObjectReadableTests::sparseCategorical8BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_16BIT_DEFAULT_IS_MISSING("SimpleCategoricalSparse16BitDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING,  n, 0.8, true),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseCategorical16BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_32BIT_DEFAULT_IS_MISSING("SimpleCategoricalSparse32BitDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75, true),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseCategorical32BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_8BIT("RemappedCategoricalSparse8Bit",
+				(seed, n) -> sparseTimeRandomIntegers(seed, 256, n, 0.9d, false),
+				() -> identityMapping(256),
+				ObjectReadableTests::remappedCategoricalSparse8BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_16BIT("RemappedCategoricalSparse16Bit",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING,  n, 0.8, false),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::remappedCategoricalSparse16BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_32BIT("RemappedCategoricalSparse32Bit",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75, false),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::remappedCategoricalSparse32BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_8BIT_DEFAULT_IS_MISSING("RemappedCategoricalSparse8BitDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, 256, n, 0.9d, true),
+				() -> identityMapping(256),
+				ObjectReadableTests::remappedCategoricalSparse8BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_16BIT_DEFAULT_IS_MISSING("RemappedCategoricalSparse16BitDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING,  n, 0.8, true),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::remappedCategoricalSparse16BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_32BIT_DEFAULT_IS_MISSING("RemappedCategoricalSparse32BitDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75, true),
+				() -> identityMapping(MAX_MAPPING),
+				ObjectReadableTests::remappedCategoricalSparse32BitColumn),
 		MAPPED_CATEGORICAL_2BIT("MappedCategorical2Bit",
 				(seed, n) -> randomIntegers(seed, 4, n),
 				() -> identityMapping(4),
@@ -149,11 +202,27 @@ public class ObjectReadableTests {
 		DATE_TIME_LOW_PRECISION("DateTimeLowPrecision",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> lowPrecisionDateTimeMapping(MAX_MAPPING),
-				ObjectReadableTests::dateTimeLowPrecision),
+				ObjectReadableTests::denseDateTimeLowPrecision),
 		DATE_TIME_HIGH_PRECISION("DateTimeHighPrecision",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> highPrecisionDateTimeMapping(MAX_MAPPING),
-				ObjectReadableTests::dateTimeHighPrecision),
+				ObjectReadableTests::denseDateTimeHighPrecision),
+		SPARSE_DATE_TIME_LOW_PRECISION("SparseDateTimeLowPrecision",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, false),
+				() -> lowPrecisionDateTimeMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseDateTimeLowPrecision),
+		SPARSE_DATE_TIME_HIGH_PRECISION("SparseDateTimeHighPrecision",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, false),
+				() -> highPrecisionDateTimeMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseDateTimeHighPrecision),
+		SPARSE_DATE_TIME_LOW_PRECISION_DEFAULT_IS_MISSING("SparseDateTimeLowPrecisionDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, true),
+				() -> lowPrecisionDateTimeMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseDateTimeLowPrecision),
+		SPARSE_DATE_TIME_HIGH_PRECISION_DEFAULT_IS_MISSING("SparseDateTimeHighPrecisionDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, true),
+				() -> highPrecisionDateTimeMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseDateTimeHighPrecision),
 		MAPPED_DATE_TIME_LOW_PRECISION("MappedDateTimeLowPrecision",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> lowPrecisionDateTimeMapping(MAX_MAPPING),
@@ -165,7 +234,15 @@ public class ObjectReadableTests {
 		TIME("Time",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> timeMapping(MAX_MAPPING),
-				ObjectReadableTests::time),
+				ObjectReadableTests::denseTime),
+		SPARSE_TIME("SparseTime",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, false),
+				() -> timeMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseTime),
+		SPARSE_TIME_DEFAULT_IS_MISSING("SparseTimeDefaultIsMissing",
+				(seed, n) -> sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, true),
+				() -> timeMapping(MAX_MAPPING),
+				ObjectReadableTests::sparseTime),
 		MAPPED_TIME("MappedTime",
 				(seed, n) -> randomIntegers(seed, MAX_MAPPING, n),
 				() -> timeMapping(MAX_MAPPING),
@@ -218,10 +295,21 @@ public class ObjectReadableTests {
 	}
 
 	private static int[] randomIntegers(long seed, int bound, int n) {
-		Random rng = new Random(seed);
+		SplittableRandom rng = new SplittableRandom(seed);
 		int[] data = new int[n];
 		for (int i = 0; i < n; i++) {
 			data[i] = rng.nextInt(bound);
+		}
+		return data;
+	}
+
+	private static int[] sparseTimeRandomIntegers(long seed, int bound, int n, double sparsity, boolean defaultIsMissing) {
+		SplittableRandom rng = new SplittableRandom(seed);
+		int[] data = new int[n];
+		// 0 ist the index of the missing value in the time mapping (see timeMapping(int n))
+		int defaultValue = defaultIsMissing ? 0 : 1 + rng.nextInt(bound - 1);
+		for (int i = 0; i < n; i++) {
+			data[i] = rng.nextDouble() < sparsity ? defaultValue : rng.nextInt(bound);
 		}
 		return data;
 	}
@@ -239,7 +327,7 @@ public class ObjectReadableTests {
 		List<Object> mapping = new ArrayList<>(n);
 		mapping.add(null);
 		for (int i = 1; i < n; i++) {
-			mapping.add(Instant.ofEpochSecond(1526287027 + i));
+			mapping.add(Instant.ofEpochSecond(29854120540790L + 10_101_000_111L * i));
 		}
 		return mapping;
 	}
@@ -248,7 +336,7 @@ public class ObjectReadableTests {
 		List<Object> mapping = new ArrayList<>(n);
 		mapping.add(null);
 		for (int i = 1; i < n; i++) {
-			mapping.add(Instant.ofEpochSecond(1526287027 + i, 10 * i));
+			mapping.add(Instant.ofEpochSecond(29854120540790L + 10_101_000_111L * i, 10 * i));
 		}
 		return mapping;
 	}
@@ -314,13 +402,87 @@ public class ObjectReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, packed, reMapping, remapping);
 	}
 
-	private static Column categorical8BitColumn(int[] data, List<Object> mapping) {
+	private static Column sparseCategorical8BitColumn(int[] data, List<Object> mapping) {
+		CategoricalColumn column = categorical8BitColumn(data, mapping);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseCategorical8BitColumn(int[] data, List<Object> mapping) {
+		CategoricalColumn column = categorical8BitColumn(data, mapping);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseCategorical16BitColumn(int[] data, List<Object> mapping) {
+		CategoricalColumn column = categorical16BitColumn(data, mapping);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseCategorical16BitColumn(int[] data, List<Object> mapping) {
+		CategoricalColumn column = categorical16BitColumn(data, mapping);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseCategorical32BitColumn(int[] data, List<Object> mapping) {
+		CategoricalColumn column = categorical32BitColumn(data, mapping);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseCategorical32BitColumn(int[] data, List<Object> mapping) {
+		CategoricalColumn column = categorical32BitColumn(data, mapping);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column remappedCategoricalSparse16BitColumn(int[] data, List<Object> mapping) {
+		int max = -1;
+		short[] shortData = new short[data.length];
+		for (int i = 0; i < data.length; i++) {
+			long value = Math.round(data[i]);
+			max = Math.max(max, (int) value);
+			shortData[i] = (short) value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(OBJECT_TYPE, shortData, mapping, remapping, ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
+	}
+
+	private static Column remappedCategoricalSparse8BitColumn(int[] data, List<Object> mapping) {
+		int max = -1;
+		byte[] byteData = new byte[data.length];
+		for (int i = 0; i < data.length; i++) {
+			long value = Math.round(data[i]);
+			max = Math.max(max, (int) value);
+			byteData[i] = (byte) value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(OBJECT_TYPE, packed, mapping, remapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+	}
+
+	private static Column remappedCategoricalSparse32BitColumn(int[] data, List<Object> mapping) {
+		int max = -1;
+		for (int i = 0; i < data.length; i++) {
+			max = Math.max(max, i);
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(OBJECT_TYPE, data, mapping, remapping, ColumnTestUtils.getMostFrequentValue(data, 0));
+	}
+
+	private static CategoricalColumn categorical8BitColumn(int[] data, List<Object> mapping) {
 		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
 			byteData[i] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(OBJECT_TYPE, packed, mapping);
+		long seed = 7704491377044913L;
+		return ColumnTestUtils.getCategoricalColumn(seed, OBJECT_TYPE, packed, mapping);
 	}
 
 	private static Column remappedCategorical8BitColumn(int[] data, List<Object> mapping) {
@@ -334,12 +496,13 @@ public class ObjectReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, packed, reMapping, remapping);
 	}
 
-	private static Column categorical16BitColumn(int[] data, List<Object> mapping) {
+	private static CategoricalColumn categorical16BitColumn(int[] data, List<Object> mapping) {
 		short[] shortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
 			shortData[i] = (short) data[i];
 		}
-		return ColumnAccessor.get().newCategoricalColumn(OBJECT_TYPE, shortData, mapping);
+		long seed = 7704491377044913L;
+		return ColumnTestUtils.getCategoricalColumn(seed, OBJECT_TYPE, shortData, mapping);
 	}
 
 	private static Column remappedCategorical16BitColumn(int[] data, List<Object> mapping) {
@@ -352,8 +515,9 @@ public class ObjectReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, shortData, reMapping, remapping);
 	}
 
-	private static Column categorical32BitColumn(int[] data, List<Object> mapping) {
-		return ColumnAccessor.get().newCategoricalColumn(OBJECT_TYPE, data, mapping);
+	private static CategoricalColumn categorical32BitColumn(int[] data, List<Object> mapping) {
+		long seed = 7704491377044913L;
+		return ColumnTestUtils.getCategoricalColumn(seed, OBJECT_TYPE, data, mapping);
 	}
 
 	private static Column remappedCategorical32BitColumn(int[] data, List<Object> mapping) {
@@ -519,7 +683,7 @@ public class ObjectReadableTests {
 				mappedObjectData, mapping);
 	}
 
-	private static Column dateTimeLowPrecision(int[] data, List<Object> categoricalMapping) {
+	private static DateTimeColumn dateTimeLowPrecision(int[] data, List<Object> categoricalMapping) {
 		long[] seconds = new long[data.length];
 		for (int i = 0; i < data.length; i++) {
 			Instant instant = (Instant) categoricalMapping.get(data[i]);
@@ -529,10 +693,35 @@ public class ObjectReadableTests {
 				seconds[i] = DateTimeColumn.MISSING_VALUE;
 			}
 		}
-		return ColumnAccessor.get().newDateTimeColumn(seconds, null);
+		long seed = 556750021571630234L;
+		return ColumnTestUtils.getDateTimeColumn(seed, seconds, null);
 	}
 
-	private static Column dateTimeHighPrecision(int[] data, List<Object> categoricalMapping) {
+	private static Column denseDateTimeLowPrecision(int[] data, List<Object> categoricalMapping) {
+		DateTimeColumn column = dateTimeLowPrecision(data, categoricalMapping);
+		assertFalse("Expected dense column but was sparse!", ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseDateTimeHighPrecision(int[] data, List<Object> categoricalMapping) {
+		DateTimeColumn column = dateTimeHighPrecision(data, categoricalMapping);
+		assertFalse("Expected dense column but was sparse!", ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseDateTimeLowPrecision(int[] data, List<Object> categoricalMapping) {
+		DateTimeColumn column = dateTimeLowPrecision(data, categoricalMapping);
+		assertTrue(ColumnTestUtils.isSparseLowPrecisionDateTime(column));
+		return column;
+	}
+
+	private static Column sparseDateTimeHighPrecision(int[] data, List<Object> categoricalMapping) {
+		DateTimeColumn column = dateTimeHighPrecision(data, categoricalMapping);
+		assertTrue(ColumnTestUtils.isSparseHighPrecisionDateTime(column));
+		return column;
+	}
+
+	private static DateTimeColumn dateTimeHighPrecision(int[] data, List<Object> categoricalMapping) {
 		long[] seconds = new long[data.length];
 		int[] nanos = new int[data.length];
 		for (int i = 0; i < data.length; i++) {
@@ -544,7 +733,8 @@ public class ObjectReadableTests {
 				seconds[i] = DateTimeColumn.MISSING_VALUE;
 			}
 		}
-		return ColumnAccessor.get().newDateTimeColumn(seconds, nanos);
+		long seed = 738485315248003629L;
+		return ColumnTestUtils.getDateTimeColumn(seed, seconds, nanos);
 	}
 
 	private static Column time(int[] data, List<Object> categoricalMapping) {
@@ -557,7 +747,20 @@ public class ObjectReadableTests {
 				nanos[i] = TimeColumn.MISSING_VALUE;
 			}
 		}
-		return ColumnAccessor.get().newTimeColumn(nanos);
+		long seed = 452597057738839021L;
+		return ColumnTestUtils.getTimeColumn(seed, nanos);
+	}
+
+	private static Column denseTime(int[] data, List<Object> categoricalMapping) {
+		TimeColumn column = (TimeColumn) time(data, categoricalMapping);
+		assertFalse("Expected dense column but was sparse!", ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseTime(int[] data, List<Object> categoricalMapping) {
+		TimeColumn column = (TimeColumn) time(data, categoricalMapping);
+		assertTrue("Expected sparse column but was dense!", ColumnTestUtils.isSparse(column));
+		return column;
 	}
 
 	private static Column mappedDateTimeLowPrecision(int[] data, List<Object> categoricalMapping) {
@@ -626,7 +829,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testContinuous() {
-			int nValues = 1605;
+			int nValues = 4504;
 			int end = 1214;
 
 			int[] indices = impl.getGenerator().generate(75699122L, nValues);
@@ -642,42 +845,46 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testPartialContinuous() {
-			int nValues = 1605;
+			int nValues = 4504;
 			int start = 80;
 			int end = nValues + start;
 
 			int[] indices = impl.getGenerator().generate(30093219L, nValues);
 			List<Object> mapping = impl.getMapping().generate();
-			Object[] expected = Arrays.copyOfRange(fill(indices, mapping), start, end);
+			// ignore the part that is out of bounds because it is undefined (see javadoc of fill)
+			Object[] expected = Arrays.copyOfRange(fill(indices, mapping), start, nValues);
 
 			Column column = impl.getBuilder().build(indices, mapping);
 			Object[] buffer = new Object[end - start];
 			column.fill(buffer, start);
 
-			assertArrayEquals(expected, buffer);
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, buffer.length - start));
 		}
 
 		@Test
 		public void testOutOfBoundsContinuous() {
-			int nValues = 1703;
-			int start = nValues + 69;
-			int end = start + 110;
+			int nValues = 4704;
+			int start = nValues - 10;
+			int end = start + 10;
 
 			int[] indices = impl.getGenerator().generate(48710914L, nValues);
 			List<Object> mapping = impl.getMapping().generate();
-			Object[] expected = new Object[end - start];
+			Object[] expected = Arrays.stream(Arrays.copyOfRange(indices, start, indices.length))
+					.mapToObj(i -> mapping.get(i)).toArray();
 
 			Column column = impl.getBuilder().build(indices, mapping);
 			Object[] buffer = new Object[end - start];
 			column.fill(buffer, start);
 
+			// The first 10 elements that have been read should be equal to the last 10 elements of data.
+			// The rest of the read elements is undefined (see javadoc of fill).
 			assertArrayEquals(expected, buffer);
 		}
 
 		@Test
 		public void testContinuousIdempotence() {
 			int nReads = 3;
-			int nValues = 2043;
+			int nValues = 5504;
 			int start = 83;
 			int end = nValues - start;
 
@@ -696,7 +903,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testContinuousWithEmptyBuffer() {
-			int nValues = 1332;
+			int nValues = 3904;
 			int[] indices = impl.getGenerator().generate(43953429L, nValues);
 			List<Object> mapping = impl.getMapping().generate();
 			Column column = impl.getBuilder().build(indices, mapping);
@@ -737,7 +944,7 @@ public class ObjectReadableTests {
 		@Test
 		public void testInterleavedOfCompleteRowsFromStart() {
 			int nColumns = 4;
-			int nRows = 2012;
+			int nRows = 4504;
 			int bufferSize = 128;
 
 			int[][] table = generateTable(41376101L, nColumns, nRows);
@@ -754,9 +961,73 @@ public class ObjectReadableTests {
 		}
 
 		@Test
+		public void testAllValuesEqual() {
+			// Buffer size is not a multiple of number of columns: last row is incomplete!
+			int nColumns = 3;
+			int nRows = 4504;
+			int bufferSize = 128;
+
+			int[] columnData = new int[nRows];
+			// set all entries to one single value
+			Arrays.fill(columnData, impl.getGenerator().generate(41376101L, 1)[0]);
+			int[][] table = new int[nColumns][];
+			Arrays.fill(table, columnData);
+			List<Object> mapping = impl.getMapping().generate();
+			Object expected[] = Arrays.copyOf(flattenAndFillTable(table, mapping), bufferSize);
+
+			Object[] buffer = new Object[bufferSize];
+			try {
+				for (int i = 0; i < nColumns; i++) {
+					Column column = impl.getBuilder().build(table[i], mapping);
+					column.fill(buffer, 0, i, nColumns);
+				}
+			} catch (AssertionError e) {
+				// The data is sparse in this test regardless of the implementation's generator which will always
+				// lead to sparse columns.
+				// Therefore, the test would fail for non-sparse columns at this point.
+				// We do not care about these cases as we want to test the sparse columns with this test.
+				return;
+			}
+
+			assertArrayEquals(expected, buffer);
+		}
+
+		@Test
+		public void testAllValuesInOneColumnEqual() {
+			// Buffer size is not a multiple of number of columns: last row is incomplete!
+			int nColumns = 3;
+			int nRows = 4504;
+			int bufferSize = 128;
+
+			int[] columnData = new int[nRows];
+			// set all entries to one single value for this special column
+			Arrays.fill(columnData, impl.getGenerator().generate(41376101L, 1)[0]);
+			int[][] table = generateTable(415865227689485L, nColumns, nRows);
+			table[nColumns/2] = columnData; // add the special column to the table
+			List<Object> mapping = impl.getMapping().generate();
+			Object expected[] = Arrays.copyOf(flattenAndFillTable(table, mapping), bufferSize);
+
+			Object[] buffer = new Object[bufferSize];
+			try {
+				for (int i = 0; i < nColumns; i++) {
+					Column column = impl.getBuilder().build(table[i], mapping);
+					column.fill(buffer, 0, i, nColumns);
+				}
+			} catch (AssertionError e) {
+				// The data is sparse in this test regardless of the implementation's generator which will always
+				// lead to sparse columns.
+				// Therefore, the test would fail for non-sparse columns at this point.
+				// We do not care about these cases as we want to test the sparse columns with this test.
+				return;
+			}
+
+			assertArrayEquals(expected, buffer);
+		}
+
+		@Test
 		public void testInterleavedOfCompleteRows() {
 			int nColumns = 4;
-			int nRows = 2012;
+			int nRows = 4504;
 			int bufferSize = 128;
 			int startIndex = 256;
 
@@ -778,7 +1049,7 @@ public class ObjectReadableTests {
 		public void testInterleavedOfIncompleteRowsFromStart() {
 			// Buffer size is not a multiple of number of columns: last row is incomplete!
 			int nColumns = 3;
-			int nRows = 2012;
+			int nRows = 4504;
 			int bufferSize = 128;
 
 			int[][] table = generateTable(77492141L, nColumns, nRows);
@@ -798,7 +1069,7 @@ public class ObjectReadableTests {
 		public void testInterleavedOfIncompleteRows() {
 			// Buffer size is not a multiple of number of columns: last row is incomplete!
 			int nColumns = 3;
-			int nRows = 2012;
+			int nRows = 4504;
 			int bufferSize = 128;
 			int startIndex = 384;
 
@@ -819,7 +1090,7 @@ public class ObjectReadableTests {
 		@Test
 		public void testInterleavedIdempotence() {
 			int nColumns = 4;
-			int nRows = 2012;
+			int nRows = 4504;
 			int bufferSize = 128;
 			int nRuns = 3;
 
@@ -839,43 +1110,48 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testPartialInterleaved() {
-			int nValues = 2048;
+			int nValues = 4504;
 
 			int[][] table = generateTable(68720420L, 1, nValues);
 			List<Object> mapping = impl.getMapping().generate();
 			Object[] data = flattenAndFillTable(table, mapping);
 
-			Object[] expected = new Object[nValues];
+			Object[] expected = new Object[nValues / 2];
 			System.arraycopy(data, nValues / 2, expected, 0, nValues / 2);
 
 			Object[] buffer = new Object[nValues];
 			Column column = impl.getBuilder().build(table[0], mapping);
 			column.fill(buffer, nValues / 2, 0, 1);
 
-			assertArrayEquals(expected, buffer);
+			// The values that are out of range are undefined (see javadoc of fill).
+			// Therefore, we only check the values that are in bounds.
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, nValues / 2));
 		}
 
 		@Test
 		public void testOutOfBoundsInterleaved() {
-			int nValues = 1703;
-			int start = nValues + 69;
-			int end = start + 110;
+			int nValues = 4504;
+			int start = nValues - 10;
+			int end = nValues + 10;
 
 			int[][] table = generateTable(14208233L, 1, nValues);
 			List<Object> mapping = impl.getMapping().generate();
 
-			Object[] expected = new Object[end - start];
+			Object[] expected = Arrays.stream(Arrays.copyOfRange(table[0], start, table[0].length))
+					.mapToObj(i -> mapping.get(i)).toArray();
 
 			Column column = impl.getBuilder().build(table[0], mapping);
 			Object[] buffer = new Object[end - start];
 			column.fill(buffer, start, 0, 1);
 
-			assertArrayEquals(expected, buffer);
+			// The values that are out of range are undefined (see javadoc of fill).
+			// Therefore, we only check the values that are in bounds.
+			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, 10));
 		}
 
 		@Test
 		public void testInterleavedWithEmptyBuffer() {
-			int nValues = 1332;
+			int nValues = 4504;
 			int[] data = impl.generator.generate(49262564L, nValues);
 			List<Object> mapping = impl.getMapping().generate();
 			Column column = impl.getBuilder().build(data, mapping);
@@ -898,7 +1174,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testStripProperties() {
-			int nValues = 1605;
+			int nValues = 4504;
 			int[] indices = impl.generator.generate(59795422L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
 			Column column = impl.builder.build(indices, categoricalMapping);
@@ -910,7 +1186,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testAfterMap() {
-			int nValues = 1325;
+			int nValues = 4504;
 			int[] indices = impl.generator.generate(59195422L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
 			Column column = impl.builder.build(indices, categoricalMapping);
@@ -943,7 +1219,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testConstant() {
-			int nValues = 1172;
+			int nValues = 4504;
 			int constant = 78;
 
 			int[] indices = impl.generator.generate(59795422L, nValues);
@@ -984,7 +1260,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testReverse() {
-			int nValues = 1883;
+			int nValues = 4504;
 
 			int[] indices = impl.generator.generate(11258146L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1005,7 +1281,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testRandom() {
-			int nValues = 1289;
+			int nValues = 4504;
 
 			int[] indices = impl.generator.generate(75148415L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1026,7 +1302,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testSubset() {
-			int nValues = 2375;
+			int nValues = 7504;
 			int nSubsetValues = 25;
 
 			int[] indices = impl.generator.generate(74584365L, nValues);
@@ -1036,12 +1312,12 @@ public class ObjectReadableTests {
 			int[] mapping = new int[nSubsetValues];
 			Arrays.setAll(mapping, i -> i);
 
-			// Use buffer larger than mapped column to test bounds of subset.
-			Object[] expected = new Object[nValues];
+			// The values that are out of bounds are undefined. Therefore we do not care about them.
+			Object[] expected = new Object[nSubsetValues];
 			System.arraycopy(data, 0, expected, 0, nSubsetValues);
 
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(indices, categoricalMapping), mapping, false);
-			Object[] mapped = new Object[nValues];
+			Object[] mapped = new Object[nSubsetValues];
 			mappedColumn.fill(mapped, 0);
 
 			assertEquals(nSubsetValues, mappedColumn.size());
@@ -1050,8 +1326,8 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testSuperset() {
-			int nValues = 1243;
-			int nSupersetValues = 2465;
+			int nValues = 4504;
+			int nSupersetValues = 10465;
 
 			int[] indices = impl.generator.generate(24186771L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1073,8 +1349,8 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testMissingForNegative() {
-			int nValues = 124;
-			int nSupersetValues = 1465;
+			int nValues = 4504;
+			int nSupersetValues = 10465;
 
 			int[] indices = impl.generator.generate(23690049L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1096,8 +1372,8 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testMissingForOutOfBounds() {
-			int nValues = 124;
-			int nSupersetValues = 1465;
+			int nValues = 4504;
+			int nSupersetValues = 10465;
 
 			int[] indices = impl.generator.generate(66098955L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1120,8 +1396,8 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testMissingForOutOfBoundsInterleaved() {
-			int nValues = 124;
-			int nSupersetValues = 1465;
+			int nValues = 4504;
+			int nSupersetValues = 10465;
 
 			int[] indices = impl.generator.generate(49302245L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1144,7 +1420,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testEmpty() {
-			int nValues = 1243;
+			int nValues = 4504;
 
 			int[] indices = impl.generator.generate(15643113L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1249,7 +1525,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testMappedType() {
-			int nValues = 12;
+			int nValues = 4504;
 
 			int[] indices = impl.generator.generate(29020070L, nValues);
 			List<Object> categoricalMapping = impl.getMapping().generate();
@@ -1289,7 +1565,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testCache() {
-			int nValues = 1238;
+			int nValues = 4504;
 
 			int[] indices = impl.generator.generate(62455892L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1319,7 +1595,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testCachePreferView() {
-			int nValues = 1238;
+			int nValues = 4504;
 
 			int[] indices = impl.generator.generate(83991112L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1362,7 +1638,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullArray() {
-			int nValues = 1238;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1373,7 +1649,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testEmptyArray() {
-			int nValues = 1238;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1384,7 +1660,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeRow() {
-			int nValues = 1238;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1395,19 +1671,19 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testTooBigRow() {
-			int nValues = 12;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
 			Column column = impl.builder.build(data, categoricalMapping);
 			Object[] array = new Object[10];
-			column.fill(array, nValues + 1);
-			assertArrayEquals(new Object[10], array);
+			column.fill(array, nValues - 1);
+			assertEquals(categoricalMapping.get(data[nValues - 1]), array[0]);
 		}
 
 		@Test
 		public void testAlmostTooBigRow() {
-			int nValues = 32;
+			int nValues = 7504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1417,15 +1693,15 @@ public class ObjectReadableTests {
 
 			Object[] all = new Object[nValues];
 			column.fill(all, 0);
-			Object[] expected = new Object[10];
+			Object[] expected = new Object[4];
 			System.arraycopy(all, nValues - 4, expected, 0, 4);
 
-			assertArrayEquals(expected, array);
+			assertArrayEquals(expected, Arrays.copyOfRange(array, 0, 4));
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullArrayInterleaved() {
-			int nValues = 1238;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1436,7 +1712,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testEmptyArrayInterleaved() {
-			int nValues = 123;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1447,7 +1723,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNullStepSizeInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1458,7 +1734,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeRowInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1469,7 +1745,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeRowInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1480,7 +1756,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeOffsetInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1491,7 +1767,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeOffsetInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1502,7 +1778,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeStepSizeInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1513,7 +1789,7 @@ public class ObjectReadableTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeStepSizeBiggerInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1524,7 +1800,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testOffsetInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1541,7 +1817,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testOffsetInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1557,7 +1833,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testOffsetBiggerSizeInterleaved() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();
@@ -1569,7 +1845,7 @@ public class ObjectReadableTests {
 
 		@Test
 		public void testOffsetBiggerSizeInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 4504;
 
 			int[] data = impl.generator.generate(82375234L, nValues);
 			List<Object> categoricalMapping = impl.mapping.generate();

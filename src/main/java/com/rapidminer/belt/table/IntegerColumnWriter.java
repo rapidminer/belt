@@ -105,6 +105,13 @@ final class IntegerColumnWriter implements NumericColumnWriter {
 	}
 
 	/**
+	 * Return the writers data. Used e.g. for checking the data's sparsity.
+	 */
+	double[] getData() {
+		return data;
+	}
+
+	/**
 	 * Freezes this column buffer and copies the data to the final size.
 	 */
 	private void freeze() {

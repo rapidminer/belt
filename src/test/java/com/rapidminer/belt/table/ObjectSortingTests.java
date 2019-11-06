@@ -17,14 +17,19 @@
 package com.rapidminer.belt.table;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
+import java.util.SplittableRandom;
+import java.util.function.LongFunction;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -44,7 +49,7 @@ import com.rapidminer.belt.util.Order;
 
 
 /**
- * @author Michael Knopf
+ * @author Michael Knopf, Kevin Majchrzak
  */
 @RunWith(Enclosed.class)
 public class ObjectSortingTests {
@@ -72,7 +77,7 @@ public class ObjectSortingTests {
 		List<Object> mapping = new ArrayList<>(n);
 		mapping.add(null);
 		for (int i = 1; i < n; i++) {
-			mapping.add(Instant.ofEpochSecond(1526287027 + i));
+			mapping.add(Instant.ofEpochSecond(29854120540790L + 10_101_000_111L * i));
 		}
 		return mapping;
 	}
@@ -81,7 +86,7 @@ public class ObjectSortingTests {
 		List<Object> mapping = new ArrayList<>(n);
 		mapping.add(null);
 		for (int i = 1; i < n; i++) {
-			mapping.add(Instant.ofEpochSecond(1526287027 + i, 10 * i));
+			mapping.add(Instant.ofEpochSecond(29854120540790L + 10_101_000_111L * i, 10 * i));
 		}
 		return mapping;
 	}
@@ -152,6 +157,30 @@ public class ObjectSortingTests {
 					() -> identityMapping(MAX_MAPPING),
 					INTEGER_COMPARATOR,
 					WithComparator::categorical32BitColumn),
+			SIMPLE_CATEGORICAL_SPARSE_8BIT("SimpleCategoricalSparse8Bit",
+					() -> identityMapping(256),
+					INTEGER_COMPARATOR,
+					WithComparator::categoricalSparse8BitColumn),
+			SIMPLE_CATEGORICAL_SPARSE_16BIT("SimpleCategoricalSparse16Bit",
+					() -> identityMapping(MAX_MAPPING),
+					INTEGER_COMPARATOR,
+					WithComparator::categoricalSparse16BitColumn),
+			SIMPLE_CATEGORICAL_SPARSE_32BIT("SimpleCategoricalSparse32Bit",
+					() -> identityMapping(MAX_MAPPING),
+					INTEGER_COMPARATOR,
+					WithComparator::categoricalSparse32BitColumn),
+			REMAPPED_CATEGORICAL_SPARSE_8BIT("RemappedCategoricalSparse8Bit",
+					() -> identityMapping(256),
+					INTEGER_COMPARATOR,
+					WithComparator::remappedCategoricalSparse8BitColumn),
+			REMAPPED_CATEGORICAL_SPARSE_16BIT("RemappedCategoricalSparse16Bit",
+					() -> identityMapping(MAX_MAPPING),
+					INTEGER_COMPARATOR,
+					WithComparator::remappedCategoricalSparse16BitColumn),
+			REMAPPED_CATEGORICAL_SPARSE_32BIT("RemappedCategoricalSparse32Bit",
+					() -> identityMapping(MAX_MAPPING),
+					INTEGER_COMPARATOR,
+					WithComparator::remappedCategoricalSparse32BitColumn),
 			MAPPED_CATEGORICAL_2BIT("MappedCategorical2Bit",
 					() -> identityMapping(4),
 					INTEGER_COMPARATOR,
@@ -228,6 +257,22 @@ public class ObjectSortingTests {
 					() -> highPrecisionInstants(MAX_MAPPING),
 					INSTANT_COMPARATOR,
 					WithComparator::dateTimeHighPrecision),
+			SPARSE_DATE_TIME_LOW_PRECISION("SparseDateTimeLowPrecision",
+					() -> lowPrecisionInstants(MAX_MAPPING),
+					INSTANT_COMPARATOR,
+					(seed, mapping, n) -> sparseDateTimeLowPrecision(seed, mapping, n, false)),
+			SPARSE_DATE_TIME_HIGH_PRECISION("SparseDateTimeHighPrecision",
+					() -> highPrecisionInstants(MAX_MAPPING),
+					INSTANT_COMPARATOR,
+					(seed, mapping, n) -> sparseDateTimeHighPrecision(seed, mapping, n, false)),
+			SPARSE_DATE_TIME_LOW_PRECISION_DEFAULT_IS_NAN("SparseDateTimeLowPrecisionDefaultIsNan",
+					() -> lowPrecisionInstants(MAX_MAPPING),
+					INSTANT_COMPARATOR,
+					(seed, mapping, n) -> sparseDateTimeLowPrecision(seed, mapping, n, true)),
+			SPARSE_DATE_TIME_HIGH_PRECISION_DEFAULT_IS_NAN("SparseDateTimeHighPrecisionDefaultIsNan",
+					() -> highPrecisionInstants(MAX_MAPPING),
+					INSTANT_COMPARATOR,
+					(seed, mapping, n) -> sparseDateTimeHighPrecision(seed, mapping, n, true)),
 			MAPPED_DATE_TIME_LOW_PRECISION("MappedDateTimeLowPrecision",
 					() -> lowPrecisionInstants(MAX_MAPPING),
 					INSTANT_COMPARATOR,
@@ -240,6 +285,14 @@ public class ObjectSortingTests {
 					() -> times(MAX_MAPPING),
 					TIME_COMPARATOR,
 					WithComparator::time),
+			SPARSE_TIME("SparseTime",
+					Collections::emptyList, // mapping is not used
+					TIME_COMPARATOR,
+					WithComparator::sparseTime),
+			SPARSE_TIME_DEFAULT_IS_MISSING("SparseTimeDefaultIsMissing",
+					Collections::emptyList, // mapping is not used
+					TIME_COMPARATOR,
+					WithComparator::sparseTimeDefaultIsMissing),
 			MAPPED_TIME("MappedTime",
 					() -> times(MAX_MAPPING),
 					TIME_COMPARATOR,
@@ -353,7 +406,34 @@ public class ObjectSortingTests {
 				byteData[i] = (byte) indices[i];
 			}
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
-			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, data, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, data, mapping);
+		}
+
+		private static Column categoricalSparse8BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, 16, n, random.nextInt(16), 0.9);
+			byte[] byteData = new byte[n];
+			for (int i = 0; i < n; i++) {
+				byteData[i] = (byte) indices[i];
+			}
+			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+		}
+
+		private static Column categoricalSparse16BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
+			short[] data = new short[n];
+			for (int i = 0; i < n; i++) {
+				data[i] = (short) indices[i];
+			}
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, (short) 0));
+		}
+
+		private static Column categoricalSparse32BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] data = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, 0));
 		}
 
 		private static Column remappedCategorical8BitColumn(long seed, List<Object> mapping, int n) {
@@ -368,13 +448,27 @@ public class ObjectSortingTests {
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, data, reDictionary, remapping);
 		}
 
+		private static Column remappedCategoricalSparse8BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, 16, n, random.nextInt(16), 0.9);
+			byte[] byteData = new byte[n];
+			for (int i = 0; i < n; i++) {
+				byteData[i] = (byte) indices[i];
+			}
+			int[] remapping = zeroFixPermutation(mapping.size());
+			List<Object> reDictionary = reDictionary(mapping, remapping);
+			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
+			return ColumnTestUtils.getRemappedCategoricalSparseColumn(HIDDEN_INT_TYPE, data, reDictionary, remapping,
+					ColumnTestUtils.getMostFrequentValue(byteData, (byte)0));
+		}
+
 		private static Column categorical16BitColumn(long seed, List<Object> mapping, int n) {
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
 			short[] shortData = new short[n];
 			for (int i = 0; i < n; i++) {
 				shortData[i] = (short) indices[i];
 			}
-			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, shortData, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, shortData, mapping);
 		}
 
 		private static Column remappedCategorical16BitColumn(long seed, List<Object> mapping, int n) {
@@ -389,9 +483,22 @@ public class ObjectSortingTests {
 					remapping);
 		}
 
+		private static Column remappedCategoricalSparse16BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
+			short[] shortData = new short[n];
+			for (int i = 0; i < n; i++) {
+				shortData[i] = (short) indices[i];
+			}
+			int[] remapping = zeroFixPermutation(mapping.size());
+			List<Object> reDictionary = reDictionary(mapping, remapping);
+			return ColumnTestUtils.getRemappedCategoricalSparseColumn(HIDDEN_INT_TYPE, shortData, reDictionary,
+					remapping, ColumnTestUtils.getMostFrequentValue(shortData, (short)0));
+		}
+
 		private static Column categorical32BitColumn(long seed, List<Object> mapping, int n) {
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
-			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, indices, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, indices, mapping);
 		}
 
 		private static Column remappedCategorical32BitColumn(long seed, List<Object> mapping, int n) {
@@ -400,6 +507,15 @@ public class ObjectSortingTests {
 			List<Object> reDictionary = reDictionary(mapping, remapping);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, indices, reDictionary,
 					remapping);
+		}
+
+		private static Column remappedCategoricalSparse32BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
+			int[] remapping = zeroFixPermutation(mapping.size());
+			List<Object> reDictionary = reDictionary(mapping, remapping);
+			return ColumnTestUtils.getRemappedCategoricalSparseColumn(HIDDEN_INT_TYPE, indices, reDictionary,
+					remapping, ColumnTestUtils.getMostFrequentValue(indices, 0));
 		}
 
 		private static Column mappedCategorical2BitColumn(long seed, List<Object> dictionary, int n) {
@@ -560,7 +676,54 @@ public class ObjectSortingTests {
 					seconds[i] = DateTimeColumn.MISSING_VALUE;
 				}
 			}
-			return ColumnAccessor.get().newDateTimeColumn(seconds, null);
+			DateTimeColumn column = ColumnTestUtils.getDateTimeColumn(seed, seconds, null);
+			assertFalse(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static Column sparseDateTimeLowPrecision(long seed, List<Object> categoricalMapping, int n, boolean defaultIsMissing) {
+			int[] data = sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, defaultIsMissing);
+			long[] seconds = new long[data.length];
+			for (int i = 0; i < data.length; i++) {
+				Instant instant = (Instant) categoricalMapping.get(data[i]);
+				if (instant != null) {
+					seconds[i] = instant.getEpochSecond();
+				} else {
+					seconds[i] = DateTimeColumn.MISSING_VALUE;
+				}
+			}
+			DateTimeColumn column = ColumnTestUtils.getDateTimeColumn(seed, seconds, null);
+			assertTrue(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static Column sparseDateTimeHighPrecision(long seed, List<Object> categoricalMapping, int n, boolean defaultIsMissing) {
+			int[] data = sparseTimeRandomIntegers(seed, MAX_MAPPING, n, 0.75d, defaultIsMissing);
+			long[] seconds = new long[data.length];
+			int[] nanos = new int[data.length];
+			for (int i = 0; i < data.length; i++) {
+				Instant instant = (Instant) categoricalMapping.get(data[i]);
+				if (instant != null) {
+					seconds[i] = instant.getEpochSecond();
+					nanos[i] = instant.getNano();
+				} else {
+					seconds[i] = DateTimeColumn.MISSING_VALUE;
+				}
+			}
+			DateTimeColumn column = ColumnTestUtils.getDateTimeColumn(seed, seconds, nanos);
+			assertTrue(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static int[] sparseTimeRandomIntegers(long seed, int bound, int n, double sparsity, boolean defaultIsMissing) {
+			SplittableRandom rng = new SplittableRandom(seed);
+			int[] data = new int[n];
+			// 0 ist the index of the missing value in the time mapping (see timeMapping(int n))
+			int defaultValue = defaultIsMissing ? 0 : 1 + rng.nextInt(bound - 1);
+			for (int i = 0; i < n; i++) {
+				data[i] = rng.nextDouble() < sparsity ? defaultValue : rng.nextInt(bound);
+			}
+			return data;
 		}
 
 		private static Column dateTimeHighPrecision(long seed, List<Object> categoricalMapping, int n) {
@@ -576,7 +739,9 @@ public class ObjectSortingTests {
 					seconds[i] = DateTimeColumn.MISSING_VALUE;
 				}
 			}
-			return ColumnAccessor.get().newDateTimeColumn(seconds, nanos);
+			DateTimeColumn column = ColumnTestUtils.getDateTimeColumn(seed, seconds, nanos);
+			assertFalse(ColumnTestUtils.isSparse(column));
+			return column;
 		}
 
 		private static Column time(long seed, List<Object> categoricalMapping, int n) {
@@ -590,7 +755,27 @@ public class ObjectSortingTests {
 					nanos[i] = TimeColumn.MISSING_VALUE;
 				}
 			}
-			return ColumnAccessor.get().newTimeColumn(nanos);
+			TimeColumn column = ColumnTestUtils.getTimeColumn(seed, nanos);
+			assertFalse(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static Column sparseTime(long seed, List<Object> categoricalMapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			long defaultValue = random.nextLong(LocalTime.MAX.toNanoOfDay());
+			long[] data = ColumnTestUtils.sparseRandomLongs(random, LocalTime.MAX.toNanoOfDay(), n, defaultValue, 0.75d);
+			TimeColumn column = ColumnTestUtils.getTimeColumn(seed, data);
+			assertTrue(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static Column sparseTimeDefaultIsMissing(long seed, List<Object> categoricalMapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			long defaultValue = TimeColumn.MISSING_VALUE;
+			long[] data = ColumnTestUtils.sparseRandomLongs(random, LocalTime.MAX.toNanoOfDay(), n, defaultValue, 0.75d);
+			TimeColumn column = ColumnTestUtils.getTimeColumn(seed, data);
+			assertTrue(ColumnTestUtils.isSparse(column));
+			return column;
 		}
 
 		private static Column mappedDateTimeLowPrecision(long seed, List<Object> categoricalMapping, int n) {
@@ -665,7 +850,7 @@ public class ObjectSortingTests {
 		@Test
 		public void ascending() {
 			List<Object> mapping = impl.getMapping().generate();
-			Column column = impl.getBuilder().build(123, mapping, 32);
+			Column column = impl.getBuilder().build(123, mapping, 16204);
 			Comparator<Object> comparator = impl.getComparator();
 
 			Object[] expected = fill(column);
@@ -680,7 +865,7 @@ public class ObjectSortingTests {
 		@Test
 		public void descending() {
 			List<Object> mapping = impl.getMapping().generate();
-			Column column = impl.getBuilder().build(123, mapping, 32);
+			Column column = impl.getBuilder().build(123, mapping, 16204);
 			Comparator<Object> comparator = impl.getComparator();
 
 			Object[] expected = fill(column);
@@ -690,7 +875,6 @@ public class ObjectSortingTests {
 				expected[i] = expected[expected.length - 1 - i];
 				expected[expected.length - 1 - i] = tmp;
 			}
-
 
 			Column sortedColumn = ColumnAccessor.get().map(column,column.sort(Order.DESCENDING), false);
 			Object[] sorted = fill(sortedColumn);
@@ -707,6 +891,15 @@ public class ObjectSortingTests {
 			SIMPLE_CATEGORICAL_32BIT("SimpleCategorical32Bit",
 					() -> identityMapping(MAX_MAPPING),
 					WithoutComparator::categorical32BitColumn),
+			SPARSE_CATEGORICAL_32BIT("SparseCategorical32Bit",
+					() -> identityMapping(MAX_MAPPING),
+					WithoutComparator::categoricalSparse32BitColumn),
+			SPARSE_CATEGORICAL_16BIT("SparseCategorical16Bit",
+					() -> identityMapping(MAX_MAPPING),
+					WithoutComparator::categoricalSparse16BitColumn),
+			SPARSE_CATEGORICAL_8BIT("SparseCategorical8Bit",
+					() -> identityMapping(MAX_MAPPING),
+					WithoutComparator::categoricalSparse8BitColumn),
 			MAPPED_CATEGORICAL_32BIT("MappedCategorical32Bit",
 					() -> identityMapping(MAX_MAPPING),
 					WithoutComparator::mappedCategorical32BitColumn),
@@ -754,6 +947,33 @@ public class ObjectSortingTests {
 		private static Column categorical32BitColumn(long seed, List<Object> mapping, int n) {
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
 			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, indices, mapping);
+		}
+
+		private static Column categoricalSparse32BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] data = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, 0));
+		}
+
+		private static Column categoricalSparse8BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, 16, n, random.nextInt(16), 0.9);
+			byte[] byteData = new byte[n];
+			for (int i = 0; i < n; i++) {
+				byteData[i] = (byte) indices[i];
+			}
+			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+		}
+
+		private static Column categoricalSparse16BitColumn(long seed, List<Object> mapping, int n) {
+			SplittableRandom random = new SplittableRandom(seed);
+			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
+			short[] data = new short[n];
+			for (int i = 0; i < n; i++) {
+				data[i] = (short) indices[i];
+			}
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, (short) 0));
 		}
 
 		private static Column remappedCategorical32BitColumn(long seed, List<Object> dictionary, int n) {
@@ -821,9 +1041,498 @@ public class ObjectSortingTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupported() {
 			List<Object> mapping = impl.getMapping().generate();
-			Column column = impl.getBuilder().build(123, mapping, 11);
+			Column column = impl.getBuilder().build(123, mapping, 16204);
 			column.sort(Order.ASCENDING);
 		}
 	}
+
+	@RunWith(Parameterized.class)
+	public static class TimeTests {
+
+		private static final Comparator<Object> TIME_COMPARATOR = Comparator.nullsLast(
+				Comparator.comparing(x -> (LocalTime) x));
+
+		@FunctionalInterface
+		private interface LongColumnBuilder {
+			Column build(long[] data);
+		}
+
+		enum Implementation {
+			TIME("Time",
+					LocalTime::ofNanoOfDay,
+					TIME_COMPARATOR,
+					TimeTests::time,
+					LocalTime.MIN.toNanoOfDay(),
+					LocalTime.MAX.toNanoOfDay()),
+			SPARSE_TIME("SparseTime",
+					LocalTime::ofNanoOfDay,
+					TIME_COMPARATOR,
+					TimeTests::sparseTime,
+					LocalTime.MIN.toNanoOfDay(),
+					LocalTime.MAX.toNanoOfDay());
+
+			private final String name;
+			private final LongFunction map;
+			private final LongColumnBuilder builder;
+			private final Comparator<Object> comparator;
+			private final long maxValue;
+			private final long minValue;
+
+			Implementation(String name, LongFunction map, Comparator<Object> comparator, LongColumnBuilder builder, long minValue, long maxValue) {
+				this.name = name;
+				this.map = map;
+				this.builder = builder;
+				this.comparator = comparator;
+				this.minValue = minValue;
+				this.maxValue = maxValue;
+			}
+
+			@Override
+			public String toString() {
+				return name;
+			}
+
+			public LongFunction getMap() {
+				return map;
+			}
+
+			public LongColumnBuilder getBuilder() {
+				return builder;
+			}
+
+			public Comparator<Object> getComparator() {
+				return comparator;
+			}
+
+		}
+
+		private static Column sparseTime(long[] data) {
+			TimeColumn column = ColumnTestUtils.getSparseTimeColumn(data);
+			assertTrue(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static Column time(long[] data) {
+			TimeColumn column = ColumnTestUtils.getDenseTimeColumn(data);
+			assertFalse(ColumnTestUtils.isSparse(column));
+			return column;
+		}
+
+		private static long[] sparseRandomLongs(long minValue, long maxValue, int n, double sparsity, long defaultValue) {
+			return Arrays.stream(ColumnTestUtils.sparseRandomLongs(new SplittableRandom(),
+					maxValue - minValue, n, defaultValue, sparsity)).map(x -> x != defaultValue ? x + minValue : x).toArray();
+		}
+
+		@Parameterized.Parameter
+		public Implementation impl;
+
+		@Parameterized.Parameters(name = "{0}")
+		public static Iterable<Implementation> columnImplementations() {
+			return Arrays.asList(Implementation.values());
+		}
+
+		@Test
+		public void testAllValuesEqual() {
+			long[] data = new long[4563];
+			SplittableRandom random = new SplittableRandom();
+			Arrays.fill(data, impl.minValue + random.nextLong(impl.maxValue - impl.minValue));
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testSparseAscending() {
+			int nValues = 4342;
+			long defaultValue = impl.minValue + new SplittableRandom().nextLong(impl.maxValue - impl.minValue);
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, defaultValue);
+
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMinValueAscending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.minValue);
+
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMaxValueAscending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.maxValue);
+
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testSparseDescending() {
+			int nValues = 4342;
+			long defaultValue = impl.minValue + new SplittableRandom().nextLong(impl.maxValue - impl.minValue);
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, defaultValue);
+
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator().reversed());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.DESCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMinValueDescending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.minValue);
+
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator().reversed());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.DESCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMaxValueDescending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.maxValue);
+
+			Object[] objectData = Arrays.stream(data).mapToObj(x -> impl.getMap().apply(x)).toArray();
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator().reversed());
+
+			Column column = impl.getBuilder().build(data);
+			int[] order = column.sort(Order.DESCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+	}
+
+	@RunWith(Parameterized.class)
+	public static class DateTimeTests {
+
+		private static final Comparator<Object> INSTANT_COMPARATOR = Comparator.nullsLast(
+				Comparator.comparing(x -> (Instant) x));
+
+		@FunctionalInterface
+		private interface LongIntColumnBuilder {
+			Column build(long[] dataOne, int[] dataTwo);
+		}
+
+		@FunctionalInterface
+		private interface LongIntFunction {
+			Object build(long valueOne, int valueTwo);
+		}
+
+		enum Implementation {
+			DATE_TIME_HIGH_PREC("DateTimeHighPrec",
+					Instant::ofEpochSecond,
+					INSTANT_COMPARATOR,
+					ColumnTestUtils::getDenseHighPrecDateTimeColumn,
+					Instant.MIN.getEpochSecond(),
+					Instant.MAX.getEpochSecond()),
+			DATE_TIME_LOW_PREC("DateTimeLowPrec",
+					(a,b) -> Instant.ofEpochSecond(a),
+					INSTANT_COMPARATOR,
+					(a, b) -> ColumnTestUtils.getDenseLowPrecDateTimeColumn(a),
+					Instant.MIN.getEpochSecond(),
+					Instant.MAX.getEpochSecond()),
+			SPARSE_DATE_TIME_LOW_PREC("SparseDateTimeLowPrec",
+					(a,b) -> Instant.ofEpochSecond(a),
+					INSTANT_COMPARATOR,
+					(a, b) -> ColumnTestUtils.getSparseLowPrecDateTimeColumn(a),
+					Instant.MIN.getEpochSecond(),
+					Instant.MAX.getEpochSecond()),
+			SPARSE_DATE_TIME_HIGH_PREC("SparseDateTimeHighPrec",
+					Instant::ofEpochSecond,
+					INSTANT_COMPARATOR,
+					ColumnTestUtils::getSparseHighPrecDateTimeColumn,
+					Instant.MIN.getEpochSecond(),
+					Instant.MAX.getEpochSecond());
+
+			private final String name;
+			private final LongIntFunction map;
+			private final LongIntColumnBuilder builder;
+			private final Comparator<Object> comparator;
+			private final long maxValue;
+			private final long minValue;
+
+			Implementation(String name, LongIntFunction map, Comparator<Object> comparator, LongIntColumnBuilder builder, long minValue, long maxValue) {
+				this.name = name;
+				this.map = map;
+				this.builder = builder;
+				this.comparator = comparator;
+				this.minValue = minValue;
+				this.maxValue = maxValue;
+			}
+
+			@Override
+			public String toString() {
+				return name;
+			}
+
+			public LongIntFunction getMap() {
+				return map;
+			}
+
+			public LongIntColumnBuilder getBuilder() {
+				return builder;
+			}
+
+			public Comparator<Object> getComparator() {
+				return comparator;
+			}
+
+		}
+
+		private static long[] sparseRandomLongs(long minValue, long maxValue, int n, double sparsity, long defaultValue) {
+			return Arrays.stream(ColumnTestUtils.sparseRandomLongs(new SplittableRandom(),
+					maxValue - minValue, n, defaultValue, sparsity)).map(x -> x != defaultValue ? x + minValue : x).toArray();
+		}
+
+		@Parameterized.Parameter
+		public Implementation impl;
+
+		@Parameterized.Parameters(name = "{0}")
+		public static Iterable<Implementation> columnImplementations() {
+			return Arrays.asList(Implementation.values());
+		}
+
+		@Test
+		public void testAllValuesEqual() {
+			long[] data = new long[4563];
+			SplittableRandom random = new SplittableRandom();
+			Arrays.fill(data, impl.minValue + random.nextLong(impl.maxValue - impl.minValue));
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testSparseAscending() {
+			int nValues = 4342;
+			long defaultValue = impl.minValue + new SplittableRandom().nextLong(impl.maxValue - impl.minValue);
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, defaultValue);
+			SplittableRandom random = new SplittableRandom();
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMinValueAscending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.minValue);
+
+			SplittableRandom random = new SplittableRandom();
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMaxValueAscending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.maxValue);
+
+			SplittableRandom random = new SplittableRandom();
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.ASCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testSparseDescending() {
+			int nValues = 4342;
+			long defaultValue = impl.minValue + new SplittableRandom().nextLong(impl.maxValue - impl.minValue);
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, defaultValue);
+
+			SplittableRandom random = new SplittableRandom();
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator().reversed());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.DESCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMinValueDescending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.minValue);
+
+			SplittableRandom random = new SplittableRandom();
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator().reversed());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.DESCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+
+		@Test
+		public void testDefaultIsMaxValueDescending() {
+			int nValues = 4342;
+			long[] data = sparseRandomLongs(impl.minValue, impl.maxValue, nValues, 0.75, impl.maxValue);
+
+			SplittableRandom random = new SplittableRandom();
+			int[] dataTwo = new int[data.length];
+			Arrays.setAll(dataTwo, i -> random.nextInt(1_000_000));
+			Object[] objectData = new Object[data.length];
+			for (int i = 0; i < data.length; i++) {
+				objectData[i] = impl.getMap().build(data[i], dataTwo[i]);
+			}
+
+			Object[] jdkSorting = Arrays.copyOf(objectData, objectData.length);
+			Arrays.sort(jdkSorting, impl.getComparator().reversed());
+
+			Column column = impl.getBuilder().build(data, dataTwo);
+			int[] order = column.sort(Order.DESCENDING);
+			Column sortedColumn = column.rows(order, false);
+			Object[] customSorting = new Object[column.size()];
+			sortedColumn.fill(customSorting, 0);
+
+			assertArrayEquals(jdkSorting, customSorting);
+		}
+	}
+
+
 
 }

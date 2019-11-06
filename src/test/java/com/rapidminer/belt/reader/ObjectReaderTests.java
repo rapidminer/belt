@@ -81,7 +81,7 @@ public class ObjectReaderTests {
 				mapping.add(0, null);
 				int[] categories = new int[data.length];
 				Arrays.setAll(categories, i -> i + 1);
-				ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
+				ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
 			case OBJECT:
 				return ColumnTestUtils.getObjectColumn(ColumnTypes.objectType("com.rapidminer.belt.column.test" +
 								".stringcolumn",
@@ -105,14 +105,14 @@ public class ObjectReaderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			CategoricalColumn<String> column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL,
+			CategoricalColumn<String> column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
 					new int[0], EMPTY_DICTIONARY);
 			Readers.objectReader(column, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullTypeWithLength() {
-			CategoricalColumn<String> column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL,
+			CategoricalColumn<String> column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
 					new int[0],
 					EMPTY_DICTIONARY);
 			Readers.objectReader(column, null, 100);

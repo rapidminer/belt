@@ -1,6 +1,5 @@
 /**
- * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -10,7 +9,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Affero General Public License along with this program. If not, see 
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see
  * https://www.gnu.org/licenses/.
  */
 
@@ -19,7 +18,10 @@ package com.rapidminer.belt.table;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -36,6 +39,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.rapidminer.belt.column.CacheMappedColumn;
+import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
@@ -46,11 +50,12 @@ import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.IntegerFormats.Format;
 import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
+
 /**
  * Tests functionality of columns with capability {@link Column.Capability#NUMERIC_READABLE}. In particular, the
  * corresponding methods to fill the buffers of {@link NumericReader}s.
  *
- * @author Michael Knopf, Gisa Meier
+ * @author Michael Knopf, Gisa Meier, Kevin Majchrzak
  */
 @RunWith(Enclosed.class)
 public class NumericReadableTests {
@@ -66,7 +71,7 @@ public class NumericReadableTests {
 				a -> ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, a)),
 		SPARSE_DOUBLE_COLUMN("SparseDoubleColumn",
 				NumericReadableTests::randomDoubles,
-				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL,  ColumnTestUtils.getMostFrequentValue(a, -0.00001d), a)),
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, ColumnTestUtils.getMostFrequentValue(a, -0.00001d), a)),
 		SPARSE_INT_COLUMN("SparseIntColumn",
 				NumericReadableTests::random4BitIntegers,
 				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER, ColumnTestUtils.getMostFrequentValue(a, 17d), a)),
@@ -99,13 +104,61 @@ public class NumericReadableTests {
 				NumericReadableTests::categorical4BitColumn),
 		SIMPLE_CATEGORICAL_8BIT("SimpleCategorical8Bit",
 				NumericReadableTests::random8BitIntegers,
-				NumericReadableTests::categorical8BitColumn),
+				NumericReadableTests::denseCategorical8BitColumn),
 		SIMPLE_CATEGORICAL_16BIT("SimpleCategorical16Bit",
 				NumericReadableTests::random16BitIntegers,
-				NumericReadableTests::categorical16BitColumn),
+				NumericReadableTests::denseCategorical16BitColumn),
 		SIMPLE_CATEGORICAL_32BIT("SimpleCategorical32Bit",
 				NumericReadableTests::random32BitIntegers,
-				NumericReadableTests::categorical32BitColumn),
+				NumericReadableTests::denseCategorical32BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_8BIT("SimpleCategoricalSparse8Bit",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						255, n, false, 0.9d, 1),
+				NumericReadableTests::sparseCategorical8BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_16BIT("SimpleCategoricalSparse16Bit",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						Short.MAX_VALUE - 1, n, false, 0.8d, 1),
+				NumericReadableTests::sparseCategorical16BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_32BIT("SimpleCategoricalSparse32Bit",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						Integer.MAX_VALUE - 1, n, false, 0.75d, 1),
+				NumericReadableTests::sparseCategorical32BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_8BIT_DEFAULT_IS_MISSING("SimpleCategoricalSparse8Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						255 - 1, n, true, 0.9d, 1),
+				NumericReadableTests::sparseCategorical8BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_16BIT_DEFAULT_IS_MISSING("SimpleCategoricalSparse16Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						Short.MAX_VALUE - 1, n, true, 0.8d, 1),
+				NumericReadableTests::sparseCategorical16BitColumn),
+		SIMPLE_CATEGORICAL_SPARSE_32BIT_DEFAULT_IS_MISSING("SimpleCategoricalSparse32Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						Integer.MAX_VALUE - 1, n, true, 0.75d, 1),
+				NumericReadableTests::sparseCategorical32BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_8BIT("RemappedCategoricalSparse8Bit",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						255 - 1, n, false, 0.9d, 1),
+				NumericReadableTests::remappedCategoricalSparse8BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_16BIT("RemappedCategoricalSparse16Bit",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						1024 - 1, n, false, 0.8d, 1), //cannot use too big values because of remapping
+				NumericReadableTests::remappedCategoricalSparse16BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_32BIT("RemappedCategoricalSparse32Bit",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						1024 - 1, n, false, 0.75d, 1), //cannot use too big values because of remapping
+				NumericReadableTests::remappedCategoricalSparse32BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_8BIT_DEFAULT_IS_MISSING("RemappedCategoricalSparse8Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						255 - 1, n, true, 0.9d, 1),
+				NumericReadableTests::remappedCategoricalSparse8BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_16BIT_DEFAULT_IS_MISSING("RemappedCategoricalSparse16Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						1024 - 1, n, true, 0.8d, 1), //cannot use too big values because of remapping
+				NumericReadableTests::remappedCategoricalSparse16BitColumn),
+		REMAPPED_CATEGORICAL_SPARSE_32BIT_DEFAULT_IS_MISSING("RemappedCategoricalSparse32Bit_DEFAULT_IS_MISSING",
+				(seed, n) -> NumericReadableTests.sparseRandomLongsWithMissings(new SplittableRandom(seed),
+						1024 - 1, n, true, 0.75d, 1), //cannot use too big values because of remapping
+				NumericReadableTests::remappedCategoricalSparse32BitColumn),
 		MAPPED_CATEGORICAL_2BIT("MappedCategorical2Bit",
 				NumericReadableTests::random2BitIntegers,
 				NumericReadableTests::mappedCategorical2BitColumn),
@@ -153,7 +206,15 @@ public class NumericReadableTests {
 				NumericReadableTests::remappedMappedCategorical32BitColumn),
 		TIME("Time",
 				NumericReadableTests::randomTimeLongs,
-				NumericReadableTests::timeColumn),
+				NumericReadableTests::denseTimeColumn),
+		SPARSE_TIME("SparseTime",
+				(seed, n) -> NumericReadableTests.sparseRandomLongs(new SplittableRandom(seed),
+						LocalTime.MAX.toNanoOfDay(), n, false, 0.75d),
+				NumericReadableTests::sparseTimeColumn),
+		SPARSE_TIME_DEFAULT_IS_MISSING("SparseTimeDefaultIsMissing",
+				(seed, n) -> NumericReadableTests.sparseRandomLongs(new SplittableRandom(seed),
+						LocalTime.MAX.toNanoOfDay(), n, true, 0.75d),
+				NumericReadableTests::sparseTimeColumn),
 		MAPPED_TIME("MappedTime",
 				NumericReadableTests::randomTimeLongs,
 				NumericReadableTests::mappedTimeColumn);
@@ -254,6 +315,43 @@ public class NumericReadableTests {
 					.nextInt();
 		}
 		return data;
+	}
+
+	/**
+	 * Randomly creates sparse long data (represented by a double array).
+	 *
+	 * @param rng
+	 * 		Random number generator.
+	 * @param bound
+	 * 		The upper bound for the random longs.
+	 * @param n
+	 * 		The number of random longs (length of the resulting array).
+	 * @param defaultIsMissing
+	 * 		Iff true the default value is {@link Double#NaN}.
+	 * @param sparsity
+	 * 		The required (approximate) frequency of the default value in the generated data.
+	 * @return n random longs (represented by doubles) with the approximately the given sparsity.
+	 */
+	private static double[] sparseRandomLongs(SplittableRandom rng, long bound, int n, boolean defaultIsMissing, double sparsity) {
+		return ColumnTestUtils.sparseRandomLongs(rng, bound, n, defaultIsMissing ? Double.NaN : rng.nextLong(bound), sparsity);
+	}
+
+	/**
+	 * Similar to {@link #sparseRandomLongs(SplittableRandom, long, int, boolean, double)} but adds an offset to the
+	 * results and adds some missing values.
+	 */
+	private static double[] sparseRandomLongsWithMissings(SplittableRandom rng, long bound, int n, boolean defaultIsMissing,
+														  double sparsity, long offset) {
+		double defaultValue = defaultIsMissing ? Double.NaN : rng.nextLong(bound);
+		double[] result = ColumnTestUtils.sparseRandomLongs(rng, bound, n, defaultValue, sparsity, offset);
+		for (int i = 0; i < result.length; i++) {
+			if (rng.nextDouble() < MISSING_FREQUENCY) {
+				if(result[i] != defaultValue + offset) {
+					result[i] = Double.NaN;
+				}
+			}
+		}
+		return result;
 	}
 
 	private static int[] permutation(int n) {
@@ -359,15 +457,6 @@ public class NumericReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, Collections.emptyList(), remapping);
 	}
 
-	private static Column categorical8BitColumn(double[] data) {
-		byte[] byteData = new byte[data.length];
-		for (int i = 0; i < data.length; i++) {
-			byteData[i] = (byte) Math.round(data[i]);
-		}
-		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY);
-	}
-
 	private static Column remappedCategorical8BitColumn(double[] data) {
 		int max = -1;
 		byte[] byteData = new byte[data.length];
@@ -382,12 +471,18 @@ public class NumericReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, Collections.emptyList(), remapping);
 	}
 
-	private static Column categorical16BitColumn(double[] data) {
-		short[] shortData = new short[data.length];
+	private static Column remappedCategoricalSparse8BitColumn(double[] data) {
+		int max = -1;
+		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
-			shortData[i] = (short) Math.round(data[i]);
+			long value = Math.round(data[i]);
+			max = Math.max(max, (int) value);
+			byteData[i] = (byte) value;
 		}
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY);
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, packed, Collections.emptyList(), remapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
 	}
 
 	private static Column remappedCategorical16BitColumn(double[] data) {
@@ -403,12 +498,81 @@ public class NumericReadableTests {
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, shortData, Collections.emptyList(), remapping);
 	}
 
-	private static Column categorical32BitColumn(double[] data) {
+	private static Column remappedCategoricalSparse16BitColumn(double[] data) {
+		int max = -1;
+		short[] shortData = new short[data.length];
+		for (int i = 0; i < data.length; i++) {
+			long value = Math.round(data[i]);
+			max = Math.max(max, (int) value);
+			shortData[i] = (short) value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, shortData, Collections.emptyList(), remapping, ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
+	}
+
+	private static Column sparseCategorical8BitColumn(double[] data) {
+		CategoricalColumn column = categorical8BitColumn(data);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseCategorical8BitColumn(double[] data) {
+		CategoricalColumn column = categorical8BitColumn(data);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseCategorical16BitColumn(double[] data) {
+		CategoricalColumn column = categorical16BitColumn(data);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseCategorical16BitColumn(double[] data) {
+		CategoricalColumn column = categorical16BitColumn(data);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseCategorical32BitColumn(double[] data) {
+		CategoricalColumn column = categorical32BitColumn(data);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column denseCategorical32BitColumn(double[] data) {
+		CategoricalColumn column = categorical32BitColumn(data);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static CategoricalColumn categorical8BitColumn(double[] data) {
+		byte[] byteData = new byte[data.length];
+		for (int i = 0; i < data.length; i++) {
+			byteData[i] = (byte) data[i];
+		}
+		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
+		long seed = 7704491377044913L;
+		return ColumnTestUtils.getCategoricalColumn(seed, VOID_TYPE, packed, EMPTY_DICTIONARY);
+	}
+
+	private static CategoricalColumn categorical16BitColumn(double[] data) {
+		short[] shortData = new short[data.length];
+		for (int i = 0; i < data.length; i++) {
+			shortData[i] = (short) data[i];
+		}
+		long seed = 7704491377044913L;
+		return ColumnTestUtils.getCategoricalColumn(seed, VOID_TYPE, shortData, EMPTY_DICTIONARY);
+	}
+
+	private static CategoricalColumn categorical32BitColumn(double[] data) {
 		int[] intData = new int[data.length];
 		for (int i = 0; i < data.length; i++) {
 			intData[i] = (int) Math.round(data[i]);
 		}
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, intData, EMPTY_DICTIONARY);
+		long seed = 7704491377044913L;
+		return ColumnTestUtils.getCategoricalColumn(seed, VOID_TYPE, intData, EMPTY_DICTIONARY);
 	}
 
 	private static Column remappedCategorical32BitColumn(double[] data) {
@@ -422,6 +586,19 @@ public class NumericReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, intData, Collections.emptyList(), remapping);
+	}
+
+	private static Column remappedCategoricalSparse32BitColumn(double[] data) {
+		int max = -1;
+		int[] intData = new int[data.length];
+		for (int i = 0; i < data.length; i++) {
+			int value = (int) Math.round(data[i]);
+			max = Math.max(max, value);
+			intData[i] = value;
+		}
+		int[] remapping = new int[max + 1];
+		Arrays.setAll(remapping, i -> i);
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, intData, Collections.emptyList(), remapping, ColumnTestUtils.getMostFrequentValue(intData, 0));
 	}
 
 	private static Column mappedCategorical2BitColumn(double[] data) {
@@ -551,16 +728,20 @@ public class NumericReadableTests {
 	}
 
 	private static Column timeColumn(double[] data) {
-		long[] longData = new long[data.length];
-		for (int i = 0; i < data.length; i++) {
-			double datum = data[i];
-			if (Double.isNaN(datum)) {
-				longData[i] = TimeColumn.MISSING_VALUE;
-			} else {
-				longData[i] = (long) datum;
-			}
-		}
-		return ColumnAccessor.get().newTimeColumn(longData);
+		long seed = 7606251904173538245L;
+		return ColumnTestUtils.getTimeColumn(seed, data);
+	}
+
+	private static Column denseTimeColumn(double[] data) {
+		TimeColumn column = (TimeColumn) timeColumn(data);
+		assertFalse(ColumnTestUtils.isSparse(column));
+		return column;
+	}
+
+	private static Column sparseTimeColumn(double[] data) {
+		TimeColumn column = (TimeColumn) timeColumn(data);
+		assertTrue(ColumnTestUtils.isSparse(column));
+		return column;
 	}
 
 	private static Column mappedTimeColumn(double[] data) {
@@ -590,7 +771,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testContinuous() {
-			int nValues = 1605;
+			int nValues = 16050;
 			int end = 1214;
 
 			double[] data = impl.getGenerator().generate(12573062L, nValues);
@@ -605,7 +786,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testPartialContinuous() {
-			int nValues = 1605;
+			int nValues = 16050;
 			int start = 80;
 			int end = nValues + start;
 
@@ -623,7 +804,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testOutOfBoundsContinuous() {
-			int nValues = 1703;
+			int nValues = 17030;
 			int start = nValues - 10;
 			int end = nValues + 10;
 
@@ -642,7 +823,7 @@ public class NumericReadableTests {
 		@Test
 		public void testContinuousIdempotence() {
 			int nReads = 3;
-			int nValues = 2043;
+			int nValues = 10430;
 			int start = 83;
 			int end = nValues - start;
 
@@ -660,7 +841,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testContinuousWithEmptyBuffer() {
-			int nValues = 1332;
+			int nValues = 13320;
 			double[] data = impl.getGenerator().generate(59174053L, nValues);
 			Column column = impl.getBuilder().build(data);
 			column.fill(new double[0], 0);
@@ -700,7 +881,7 @@ public class NumericReadableTests {
 		@Test
 		public void testInterleavedOfCompleteRowsFromStart() {
 			int nColumns = 4;
-			int nRows = 2012;
+			int nRows = 10120;
 			int bufferSize = 128;
 
 			double[][] table = generateTable(16120336L, nColumns, nRows);
@@ -718,7 +899,7 @@ public class NumericReadableTests {
 		@Test
 		public void testInterleavedOfCompleteRows() {
 			int nColumns = 4;
-			int nRows = 2012;
+			int nRows = 10120;
 			int bufferSize = 128;
 			int startIndex = 256;
 
@@ -739,7 +920,7 @@ public class NumericReadableTests {
 		public void testInterleavedOfIncompleteRowsFromStart() {
 			// Buffer size is not a multiple of number of columns: last row is incomplete!
 			int nColumns = 3;
-			int nRows = 2012;
+			int nRows = 10120;
 			int bufferSize = 128;
 
 			double[][] table = generateTable(55544997L, nColumns, nRows);
@@ -758,7 +939,7 @@ public class NumericReadableTests {
 		public void testInterleavedOfIncompleteRows() {
 			// Buffer size is not a multiple of number of columns: last row is incomplete!
 			int nColumns = 3;
-			int nRows = 2012;
+			int nRows = 10120;
 			int bufferSize = 128;
 			int startIndex = 384;
 
@@ -797,7 +978,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testPartialInterleaved() {
-			int nValues = 2048;
+			int nValues = 10480;
 
 			double[] data = impl.getGenerator().generate(93603515L, nValues);
 
@@ -815,7 +996,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testOutOfBoundsInterleaved() {
-			int nValues = 1703;
+			int nValues = 17030;
 			int start = nValues - 10;
 			int end = nValues + 10;
 
@@ -833,7 +1014,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testInterleavedWithEmptyBuffer() {
-			int nValues = 1332;
+			int nValues = 13320;
 			double[] data = impl.getGenerator().generate(39728324L, nValues);
 			Column column = impl.getBuilder().build(data);
 			column.fill(new double[0], 0, 0, 1);
@@ -854,7 +1035,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testConstant() {
-			int nValues = 1172;
+			int nValues = 11720;
 			int constant = 78;
 			double[] data = impl.generator.generate(65580975L, nValues);
 			int[] mapping = new int[nValues];
@@ -863,7 +1044,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nValues];
 			Arrays.fill(expected, data[constant]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -872,12 +1053,12 @@ public class NumericReadableTests {
 
 		@Test
 		public void testIdentity() {
-			int nValues = 2948;
+			int nValues = 11480;
 			double[] data = impl.generator.generate(72297556L, nValues);
 			int[] mapping = new int[nValues];
 			Arrays.setAll(mapping, i -> i);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -886,7 +1067,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testReverse() {
-			int nValues = 1883;
+			int nValues = 18830;
 			double[] data = impl.generator.generate(68533020L, nValues);
 			int[] mapping = new int[nValues];
 			Arrays.setAll(mapping, i -> nValues - i - 1);
@@ -894,7 +1075,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nValues];
 			Arrays.setAll(expected, i -> data[mapping[i]]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -903,7 +1084,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testRandom() {
-			int nValues = 1289;
+			int nValues = 12890;
 			double[] data = impl.generator.generate(61815550L, nValues);
 			int[] mapping = permutation(nValues);
 			Arrays.setAll(mapping, i -> nValues - i - 1);
@@ -911,7 +1092,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nValues];
 			Arrays.setAll(expected, i -> data[mapping[i]]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -920,7 +1101,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testSubset() {
-			int nValues = 2375;
+			int nValues = 10750;
 			int nSubsetValues = 25;
 			double[] data = impl.generator.generate(65490909L, nValues);
 			int[] mapping = new int[nSubsetValues];
@@ -929,7 +1110,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nSubsetValues];
 			System.arraycopy(data, 0, expected, 0, nSubsetValues);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nSubsetValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -939,8 +1120,8 @@ public class NumericReadableTests {
 
 		@Test
 		public void testSuperset() {
-			int nValues = 1243;
-			int nSupersetValues = 2465;
+			int nValues = 3430;
+			int nSupersetValues = 14650;
 			double[] data = impl.generator.generate(47717323L, nValues);
 			int[] mapping = new int[nSupersetValues];
 			Arrays.setAll(mapping, i -> i % nValues);
@@ -948,7 +1129,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nSupersetValues];
 			Arrays.setAll(expected, i -> data[mapping[i]]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nSupersetValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -958,8 +1139,8 @@ public class NumericReadableTests {
 
 		@Test
 		public void testMissingForNegative() {
-			int nValues = 124;
-			int nSupersetValues = 1465;
+			int nValues = 3400;
+			int nSupersetValues = 11650;
 			double[] data = impl.generator.generate(67172573L, nValues);
 			int[] mapping = new int[nSupersetValues];
 			Arrays.setAll(mapping, i -> i % (nValues + 1) - 1);
@@ -967,7 +1148,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nSupersetValues];
 			Arrays.setAll(expected, i -> mapping[i] < 0 ? Double.NaN : data[mapping[i]]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nSupersetValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -977,8 +1158,8 @@ public class NumericReadableTests {
 
 		@Test
 		public void testMissingForOutOfBounds() {
-			int nValues = 124;
-			int nSupersetValues = 1465;
+			int nValues = 3400;
+			int nSupersetValues = 14650;
 			double[] data = impl.generator.generate(14929440L, nValues);
 			int[] mapping = new int[nSupersetValues];
 			Random random = new Random();
@@ -987,7 +1168,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nSupersetValues];
 			Arrays.setAll(expected, i -> (mapping[i] < 0 || mapping[i] >= nValues) ? Double.NaN : data[mapping[i]]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nSupersetValues];
 			mappedColumn.fill(mapped, 0);
 
@@ -997,8 +1178,8 @@ public class NumericReadableTests {
 
 		@Test
 		public void testMissingForOutOfBoundsInterleaved() {
-			int nValues = 124;
-			int nSupersetValues = 1465;
+			int nValues = 3400;
+			int nSupersetValues = 14650;
 			double[] data = impl.generator.generate(84362221L, nValues);
 			int[] mapping = new int[nSupersetValues];
 			Random random = new Random();
@@ -1007,7 +1188,7 @@ public class NumericReadableTests {
 			double[] expected = new double[nSupersetValues];
 			Arrays.setAll(expected, i -> (mapping[i] < 0 || mapping[i] >= nValues) ? Double.NaN : data[mapping[i]]);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] mapped = new double[nSupersetValues];
 			mappedColumn.fill(mapped, 0, 0, 1);
 
@@ -1017,30 +1198,30 @@ public class NumericReadableTests {
 
 		@Test
 		public void testEmpty() {
-			int nValues = 1243;
+			int nValues = 12430;
 			double[] data = impl.generator.generate(51033485L, nValues);
 			int[] mapping = new int[0];
 			Arrays.setAll(mapping, i -> i % nValues);
 
-			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			assertEquals(0, mappedColumn.size());
 
-			mappedColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, true);
+			mappedColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, true);
 			assertEquals(0, mappedColumn.size());
 		}
 
 		@Test
 		public void testChained() {
-			int nValues = 3237;
+			int nValues = 10370;
 			double[] data = impl.generator.generate(59099926L, nValues);
 
 			// Apply reverse mapping four times
 			int[] mapping = new int[nValues];
 			Arrays.setAll(mapping, i -> nValues - i - 1);
-			Column mappedColumn = ColumnAccessor.get().map(ColumnAccessor.get().map(ColumnAccessor.get().map(ColumnAccessor.get().map(impl.builder.build(data),mapping, false)
-					,mapping, false)
-					,mapping, false)
-					,mapping, false);
+			Column mappedColumn = ColumnAccessor.get().map(ColumnAccessor.get().map(ColumnAccessor.get().map(ColumnAccessor.get().map(impl.builder.build(data), mapping, false)
+					, mapping, false)
+					, mapping, false)
+					, mapping, false);
 
 			double[] mapped = new double[nValues];
 			mappedColumn.fill(mapped, 0);
@@ -1050,16 +1231,16 @@ public class NumericReadableTests {
 
 		@Test
 		public void testViewHint() {
-			int nValues = 2248;
+			int nValues = 10480;
 			double[] data = impl.generator.generate(41400228L, nValues);
 			int[] mapping = new int[nValues];
 			Arrays.setAll(mapping, i -> i);
 
-			Column defaultMappingColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column defaultMappingColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] defaultMapping = new double[nValues];
 			defaultMappingColumn.fill(defaultMapping, 0);
 
-			Column viewHintColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, true);
+			Column viewHintColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, true);
 			double[] viewHintMapping = new double[nValues];
 			viewHintColumn.fill(viewHintMapping, 0);
 
@@ -1068,17 +1249,17 @@ public class NumericReadableTests {
 
 		@Test
 		public void testViewHintSuperset() {
-			int nValues = 2148;
+			int nValues = 11480;
 			double[] data = impl.generator.generate(63012879L, nValues);
 			int[] mapping = new int[nValues * 2];
 			Random random = new Random();
 			Arrays.setAll(mapping, i -> random.nextInt(nValues));
 
-			Column defaultMappingColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column defaultMappingColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] defaultMapping = new double[nValues];
 			defaultMappingColumn.fill(defaultMapping, 0);
 
-			Column viewHintColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, true);
+			Column viewHintColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, true);
 			double[] viewHintMapping = new double[nValues];
 			viewHintColumn.fill(viewHintMapping, 0);
 
@@ -1087,17 +1268,17 @@ public class NumericReadableTests {
 
 		@Test
 		public void testViewHintSubset() {
-			int nValues = 10 * 245;
+			int nValues = 10 * 1450;
 			double[] data = impl.generator.generate(59898639L, nValues);
 			int[] mapping = new int[nValues / 10];
 			Random random = new Random();
 			Arrays.setAll(mapping, i -> random.nextInt(nValues));
 
-			Column defaultMappingColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, false);
+			Column defaultMappingColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, false);
 			double[] defaultMapping = new double[nValues];
 			defaultMappingColumn.fill(defaultMapping, 0);
 
-			Column viewHintColumn = ColumnAccessor.get().map(impl.builder.build(data),mapping, true);
+			Column viewHintColumn = ColumnAccessor.get().map(impl.builder.build(data), mapping, true);
 			double[] viewHintMapping = new double[nValues];
 			viewHintColumn.fill(viewHintMapping, 0);
 
@@ -1106,11 +1287,11 @@ public class NumericReadableTests {
 
 		@Test
 		public void testMappedType() {
-			int nValues = 12;
+			int nValues = 12000;
 			double[] data = impl.generator.generate(63772273L, nValues);
 
 			Column column = impl.builder.build(data);
-			Column mappedColumn = ColumnAccessor.get().map(column,new int[]{2, 3, 4, 6, 7, 11}, false);
+			Column mappedColumn = ColumnAccessor.get().map(column, new int[]{2, 3, 4, 6, 7, 11}, false);
 
 			assertEquals(column.type(), mappedColumn.type());
 		}
@@ -1136,7 +1317,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testCache() {
-			int nValues = 1238;
+			int nValues = 12380;
 
 			double[] data = impl.generator.generate(28378892L, nValues);
 			Column column = impl.builder.build(data);
@@ -1166,7 +1347,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testCachePreferView() {
-			int nValues = 1238;
+			int nValues = 12380;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1209,7 +1390,7 @@ public class NumericReadableTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullArray() {
-			int nValues = 1238;
+			int nValues = 12380;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1219,7 +1400,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testEmptyArray() {
-			int nValues = 1238;
+			int nValues = 12380;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1229,7 +1410,7 @@ public class NumericReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeRow() {
-			int nValues = 1238;
+			int nValues = 12380;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1239,7 +1420,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testTooBigRow() {
-			int nValues = 12;
+			int nValues = 6000;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1250,7 +1431,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testAlmostTooBigRow() {
-			int nValues = 32;
+			int nValues = 3200;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1267,7 +1448,7 @@ public class NumericReadableTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullArrayInterleaved() {
-			int nValues = 1238;
+			int nValues = 12380;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1277,7 +1458,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testEmptyArrayInterleaved() {
-			int nValues = 123;
+			int nValues = 12300;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1287,7 +1468,7 @@ public class NumericReadableTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNullStepSizeInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1297,7 +1478,7 @@ public class NumericReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeRowInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1307,7 +1488,7 @@ public class NumericReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeRowInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1317,7 +1498,7 @@ public class NumericReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeOffsetInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1327,7 +1508,7 @@ public class NumericReadableTests {
 
 		@Test(expected = ArrayIndexOutOfBoundsException.class)
 		public void testNegativeOffsetInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1337,7 +1518,7 @@ public class NumericReadableTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeStepSizeInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1347,7 +1528,7 @@ public class NumericReadableTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeStepSizeBiggerInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1357,7 +1538,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testOffsetInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1373,7 +1554,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testOffsetInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1382,13 +1563,13 @@ public class NumericReadableTests {
 			double[] normal = new double[128];
 			column.fill(normal, 0);
 			double[] expected = new double[100];
-			Arrays.setAll(expected, i -> i < 50 ? 0 : (i%2==0 ? normal[(i - 50)/2] : 0));
+			Arrays.setAll(expected, i -> i < 50 ? 0 : (i % 2 == 0 ? normal[(i - 50) / 2] : 0));
 			assertArrayEquals(expected, array, 0);
 		}
 
 		@Test
 		public void testOffsetBiggerSizeInterleaved() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);
@@ -1399,7 +1580,7 @@ public class NumericReadableTests {
 
 		@Test
 		public void testOffsetBiggerSizeInterleavedStepSize() {
-			int nValues = 128;
+			int nValues = 12800;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
 			Column column = impl.builder.build(data);

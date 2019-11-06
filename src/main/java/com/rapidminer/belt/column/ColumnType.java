@@ -22,9 +22,9 @@ import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 
+import com.rapidminer.belt.buffer.CategoricalBuffer;
 import com.rapidminer.belt.column.Column.Category;
 import com.rapidminer.belt.column.Column.TypeId;
-import com.rapidminer.belt.buffer.CategoricalBuffer;
 
 
 /**
@@ -46,11 +46,14 @@ public final class ColumnType<T> {
 	private static final EnumSet<Column.Capability> OBJECT = EnumSet.of(Column.Capability.OBJECT_READABLE);
 
 	private static final EnumSet<Column.Capability> CATEGORICAL_SORTABLE =
-			EnumSet.of(Column.Capability.OBJECT_READABLE, Column.Capability.NUMERIC_READABLE);
+			EnumSet.of(Column.Capability.OBJECT_READABLE, Column.Capability.NUMERIC_READABLE,
+					Column.Capability.SORTABLE);
 
-	private static final EnumSet<Column.Capability> NUMERIC_SORTABLE = EnumSet.of(Column.Capability.NUMERIC_READABLE);
+	private static final EnumSet<Column.Capability> NUMERIC_SORTABLE = EnumSet.of(Column.Capability.NUMERIC_READABLE,
+			Column.Capability.SORTABLE);
 
-	private static final EnumSet<Column.Capability> OBJECT_SORTABLE = EnumSet.of(Column.Capability.OBJECT_READABLE);
+	private static final EnumSet<Column.Capability> OBJECT_SORTABLE = EnumSet.of(Column.Capability.OBJECT_READABLE,
+			Column.Capability.SORTABLE);
 
 
 	private final Column.TypeId id;

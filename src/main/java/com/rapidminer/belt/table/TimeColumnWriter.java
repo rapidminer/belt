@@ -26,7 +26,7 @@ import com.rapidminer.belt.column.TimeColumn;
 
 
 /**
- * A buffer for row-wise writing of time instances with nanosecond precision. Wraps a primitive double array.
+ * A buffer for row-wise writing of time instances with nanosecond precision. Wraps a primitive long array.
  *
  * @author Gisa Meier
  */
@@ -113,6 +113,13 @@ final class TimeColumnWriter implements ComplexWriter {
 		if (nanoData.length > size) {
 			nanoData = Arrays.copyOf(nanoData, size);
 		}
+	}
+
+	/**
+	 * Return the writers data. Used e.g. for checking the data's sparsity.
+	 */
+	long[] getData() {
+		return nanoData;
 	}
 
 	@Override

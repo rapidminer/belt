@@ -10,16 +10,22 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Affero General Public License along with this program. If not, see 
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see
  * https://www.gnu.org/licenses/.
  */
 
 package com.rapidminer.belt.column;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
+import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.Workload;
 import com.rapidminer.belt.transform.Transformer;
@@ -38,6 +44,16 @@ public final class Columns {
 		com.rapidminer.belt.buffer.ColumnAccessor.set(internalColumns);
 		com.rapidminer.belt.table.ColumnAccessor.set(internalColumns);
 	}
+
+	/**
+	 * Message in case a column is categorical but not a {@link CategoricalColumn}.
+	 */
+	private static final String MESSAGE_CATEGORICAL_IMPLEMENTATION = "Unknown categorical column implementation";
+
+	/**
+	 * Message in case of null column parameter.
+	 */
+	private static final String MESSAGE_NULL_COLUMN = "Column must not be null";
 
 	/**
 	 * Two non-null values dictionary size.
@@ -119,7 +135,7 @@ public final class Columns {
 			T positive = (T) positiveValue;
 			return categoricalColumn.toBoolean(positive);
 		} else {
-			throw new AssertionError("Unknown categorical column implementation.");
+			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
 		}
 	}
 
@@ -236,7 +252,7 @@ public final class Columns {
 	 * 		if one of the inputs is {@code null}
 	 */
 	public static Column removeUnusedDictionaryValues(Column column, CleanupOption option, Context context) {
-		Objects.requireNonNull(column, "Column must not be null");
+		Objects.requireNonNull(column, MESSAGE_NULL_COLUMN);
 		if (column.type().category() != Column.Category.CATEGORICAL) {
 			return column;
 		}
@@ -248,7 +264,7 @@ public final class Columns {
 				return replaceUnused(column, column.type().elementType(), context);
 			}
 		} else {
-			throw new AssertionError("Unknown categorical column implementation");
+			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
 		}
 	}
 
@@ -402,7 +418,7 @@ public final class Columns {
 	 * 		if the column is {@code null}
 	 */
 	public static Column compactDictionary(Column column) {
-		Objects.requireNonNull(column, "Column must not be null");
+		Objects.requireNonNull(column, MESSAGE_NULL_COLUMN);
 		if (column.type().category() != Column.Category.CATEGORICAL) {
 			return column;
 		}
@@ -414,7 +430,7 @@ public final class Columns {
 		if (column instanceof CategoricalColumn) {
 			return columnWithoutGaps(column, column.type().elementType());
 		} else {
-			throw new AssertionError("Unknown categorical column implementation");
+			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
 		}
 	}
 
@@ -452,6 +468,205 @@ public final class Columns {
 		@SuppressWarnings("unchecked")
 		CategoricalColumn<T> nominalColumn = (CategoricalColumn<T>) column;
 		return nominalColumn.remap(dictionary, remapping);
+	}
+
+
+	/**
+	 * Creates a new column with the oldValue replaced by the newValue in the dictionary. In case this is not possible
+	 * because the new value is already part of the dictionary, a {@link IllegalReplacementException} is thrown. In
+	 * that case, the column data needs to be changed, either via a buffer ({@link Buffers#categoricalBuffer(Column,
+	 * Class)}) or an apply function ({@link Transformer#applyObjectToCategorical(Class, Function, Context)}. If the
+	 * old value is not part of the dictionary, nothing is changed.
+	 * <p>
+	 * In case multiple values need to be replaced, use {@link #replaceInDictionary(Column, Map, Class)} instead.
+	 *
+	 * @param column
+	 * 		the categorical column in which to replace dictionary values
+	 * @param oldValue
+	 * 		the value to replace
+	 * @param newValue
+	 * 		the replacement value
+	 * @param <T>
+	 * 		the element type of the column
+	 * @return a new column with the same category indices but changed dictionary or the column if the old value is not
+	 * present in the dictionary
+	 * @throws NullPointerException
+	 * 		if one of the parameters is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if the column is not categorical or the old or new value not compatible with the type of the column
+	 * @throws IllegalReplacementException
+	 * 		if a replacement in the dictionary is not possible because the dictionary already contains the new value
+	 */
+	public static <T> Column replaceSingleInDictionary(Column column, T oldValue, T newValue) {
+		Objects.requireNonNull(column, MESSAGE_NULL_COLUMN);
+		if (oldValue == null || newValue == null) {
+			throw new NullPointerException("Replacement values must not be null");
+		}
+		if (!column.type().elementType().isInstance(oldValue)) {
+			throw new IllegalArgumentException("Old value of different type than dictionary entries");
+		}
+		if (!column.type().elementType().isInstance(newValue)) {
+			throw new IllegalArgumentException("Replacement value of different type than dictionary entries");
+		}
+		if (column.type().category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Column must be categorical");
+		}
+		return tryReplace(column, column.type().elementType(), oldValue, newValue);
+	}
+
+	/**
+	 * Creates a new column with the values in the dictionary replaced as specified by the map. In case this is not
+	 * possible because a new value is already part of the dictionary, a {@link IllegalReplacementException} is thrown.
+	 * In that case, the column data needs to be changed, either via a buffer ({@link Buffers#categoricalBuffer(Column,
+	 * Class)}) or an apply function ({@link Transformer#applyObjectToCategorical(Class, Function, Context)}. If the
+	 * old value is not part of the dictionary, the mapping is ignored.
+	 * <p>
+	 * In case only one value should be replaced use {@link #replaceSingleInDictionary(Column, Object, Object)} instead.
+	 *
+	 * @param column
+	 * 		the categorical column in which to replace dictionary values
+	 * @param oldToNewValue
+	 * 		a map from old to new value, the map order does not matter
+	 * @param type
+	 * 		the type of the replacement values
+	 * @param <T>
+	 * 		the element type of the column
+	 * @return a new column with the same category indices but the dictionary changed according to the map
+	 * @throws NullPointerException
+	 * 		if one of the parameters is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if the column is not categorical or the given type is not compatible with the element type of the column
+	 * @throws IllegalReplacementException
+	 * 		if a replacement in the dictionary is not possible because the dictionary already contains the new value
+	 */
+	public static <T> Column replaceInDictionary(Column column, Map<T, T> oldToNewValue, Class<T> type) {
+		Objects.requireNonNull(column, MESSAGE_NULL_COLUMN);
+		Objects.requireNonNull(type, "Type must not be null");
+		Objects.requireNonNull(oldToNewValue, "Map must not be null");
+		if (!column.type().elementType().equals(type)) {
+			throw new IllegalArgumentException("Type '" + type + "' of the replacement values not compatible with the " +
+					"column element type '" + column.type().elementType() + "'");
+		}
+		if (column.type().category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Column must be categorical");
+		}
+		if (column instanceof CategoricalColumn) {
+			//checked above that T is the element type
+			@SuppressWarnings("unchecked")
+			CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
+			Dictionary<T> dictionary = categoricalColumn.getDictionary();
+			Map<T, Integer> toReplace = createReplacementMap(oldToNewValue, dictionary);
+			List<T> newDictionaryValues = new ArrayList<>(dictionary.getValueList());
+			for (Map.Entry<T, Integer> entry : toReplace.entrySet()) {
+				newDictionaryValues.set(entry.getValue(), entry.getKey());
+			}
+			return replaceDictionaryWithValues(categoricalColumn, dictionary, newDictionaryValues);
+		} else {
+			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
+		}
+	}
+
+	/**
+	 * Exception thrown when a replacement in a dictionary is not possible since otherwise the same value would be at
+	 * two indices. In case of this exception, a replacement purely on dictionary level is not possible. The category
+	 * index data needs to be changed via a buffer (e.g. {@link Buffers#categoricalBuffer(Column, Class)}) or an apply
+	 * function (e.g. {@link Transformer#applyObjectToCategorical(Class, Function, Context)}.
+	 */
+	public static final class IllegalReplacementException extends IllegalArgumentException {
+
+		private static final long serialVersionUID = 5521597910473990747L;
+
+		private IllegalReplacementException() {
+			super("Replacement value already present in dictionary");
+		}
+
+	}
+
+	/**
+	 * Creates a new dictionary with the old value replaced by the new value and creates a new column with this new
+	 * dictionary and the same data.
+	 */
+	private static <T> Column tryReplace(Column column, Class<T> type, Object oldValue, Object newValue) {
+		if (column instanceof CategoricalColumn) {
+			//checked above that T is the element type and column is categorical
+			@SuppressWarnings("unchecked")
+			CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
+
+			Dictionary<T> dictionary = categoricalColumn.getDictionary();
+			List<T> dictionaryValues = dictionary.getValueList();
+			int indexOfOld = -1;
+			int i = 0;
+			for (T value : dictionaryValues) {
+				if (oldValue.equals(value)) {
+					indexOfOld = i;
+				}
+				i++;
+				if (newValue.equals(value)) {
+					throw new IllegalReplacementException();
+				}
+			}
+
+			if (indexOfOld < 0) {
+				return column;
+			}
+			List<T> newDictionaryValues = new ArrayList<>(dictionaryValues);
+			//save to cast since new value is compatible with element type
+			T typedNewValue = type.cast(newValue);
+			newDictionaryValues.set(indexOfOld, typedNewValue);
+			return replaceDictionaryWithValues(categoricalColumn, dictionary, newDictionaryValues);
+		} else {
+			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
+		}
+	}
+
+	/**
+	 * Swaps the dictionary of the column with a new dictionary created from the given values and keeps the positive
+	 * index if the dictionary is boolean.
+	 */
+	private static <T> Column replaceDictionaryWithValues(CategoricalColumn<T> categoricalColumn,
+														  Dictionary<T> dictionary, List<T> newDictionaryValues) {
+		Dictionary<T> newDictionary;
+		if (dictionary.isBoolean()) {
+			newDictionary = new BooleanDictionary<>(newDictionaryValues, dictionary.getPositiveIndex());
+		} else {
+			newDictionary = new Dictionary<>(newDictionaryValues);
+		}
+		return categoricalColumn.swapDictionary(newDictionary);
+	}
+
+
+
+	/**
+	 * Creates a map from target values of the oldToNewValue map to the indices the source values have in the
+	 * dictionary. Checks that when applying the replacement map to the dictionary, every value appears at only one
+	 * index.
+	 */
+	private static <T> Map<T, Integer> createReplacementMap(Map<T, T> oldToNewValue, Dictionary<T> dictionary) {
+		Map<T, Integer> inverse = dictionary.createInverse();
+		// Set used to check that no new value is the same as one of the remaining old values
+		Set<T> uniquenessCheck = new HashSet<>(inverse.keySet());
+		uniquenessCheck.removeAll(oldToNewValue.keySet());
+
+		Map<T, Integer> toReplace = new HashMap<>();
+		for (Map.Entry<T, T> entry : oldToNewValue.entrySet()) {
+			T oldValue = entry.getKey();
+			T newValue = entry.getValue();
+			if (oldValue == null || newValue == null) {
+				throw new NullPointerException("Replacement values must not be null");
+			}
+			Integer index = inverse.get(oldValue);
+			if (index != null) {
+				if (uniquenessCheck.contains(newValue)) {
+					throw new IllegalReplacementException();
+				}
+				if (toReplace.containsKey(newValue)) {
+					throw new IllegalReplacementException();
+				} else {
+					toReplace.put(newValue, index);
+				}
+			}
+		}
+		return toReplace;
 	}
 
 	private Columns() {
@@ -503,9 +718,57 @@ public final class Columns {
 																	  List<T> dictionary, int positiveIndex);
 
 		/**
+		 * Creates a new sparse categorical column from the given data.
+		 */
+		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
+																			int[] nonDefaultValues, List<T> dictionary,
+																			int defaultValue, int size);
+
+		/**
+		 * Creates a new sparse categorical column from the given data.
+		 */
+		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
+																			short[] nonDefaultValues, List<T> dictionary,
+																			short defaultValue, int size);
+
+		/**
+		 * Creates a new sparse categorical column from the given data.
+		 */
+		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
+																			byte[] nonDefaultValues, List<T> dictionary,
+																			byte defaultValue, int size);
+
+		/**
+		 * Creates a new sparse categorical column from the given data.
+		 */
+		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
+																			int[] nonDefaultValues, List<T> dictionary,
+																			int defaultValue, int size, int positiveIndex);
+
+		/**
+		 * Creates a new sparse categorical column from the given data.
+		 */
+		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
+																			short[] nonDefaultValues, List<T> dictionary,
+																			short defaultValue, int size, int positiveIndex);
+
+		/**
+		 * Creates a new sparse categorical column from the given data.
+		 */
+		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
+																			byte[] nonDefaultValues, List<T> dictionary,
+																			byte defaultValue, int size, int positiveIndex);
+
+		/**
 		 * Creates a new time column from the given data.
 		 */
 		public abstract TimeColumn newTimeColumn(long[] data);
+
+		/**
+		 * Creates a new sparse numeric column from the given sparse data.
+		 */
+		public abstract Column newSparseNumericColumn(Column.TypeId type, double defaultValue, int[] nonDefaultIndices,
+													  double[] nonDefaultValues, int size);
 
 		/**
 		 * Creates a new categorical column from the given data.
@@ -518,10 +781,28 @@ public final class Columns {
 		public abstract Column newNumericColumn(Column.TypeId type, double[] src);
 
 		/**
+		 * Creates a new sparse numeric column from the given sparse data.
+		 */
+		public abstract Column newSparseTimeColumn(long defaultValue, int[] nonDefaultIndices, long[] nonDefaultValues,
+												   int size);
+
+		/**
 		 * Creates a new date-time column from the given data. The second parameter can be {@code null} in case of no
 		 * subsecond precision.
 		 */
 		public abstract DateTimeColumn newDateTimeColumn(long[] seconds, int[] nanos);
+
+		/**
+		 * Creates a new sparse date-time column from the given data. The second parameter can be {@code null} in case
+		 * of no subsecond precision.
+		 */
+		public abstract DateTimeColumn newSparseDateTimeColumn(long defaultValue, int[] nonDefaultIndices,
+															   long[] nonDefaultSeconds, int[] nanos, int size);
+
+		/**
+		 * Creates a new categorical column of the given size that is constantly one value, represented as sparse column.
+		 */
+		public abstract <T> CategoricalColumn<T> newSingleValueCategoricalColumn(ColumnType<T> type, T value, int size);
 
 		/**
 		 * Returns a copy of the byte data of a categorical column.

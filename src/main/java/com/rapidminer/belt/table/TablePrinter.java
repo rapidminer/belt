@@ -82,13 +82,17 @@ final class TablePrinter {
 		boolean columnSubset = width > MAX_TABLE_COLUMNS;
 		int nColumns = columnSubset ? MAX_TABLE_COLUMNS - 1 : width;
 		int[] columnIndices = new int[nColumns];
-		Arrays.setAll(columnIndices, i -> i);
+		for (int i = 0; i < columnIndices.length; i++) {
+			columnIndices[i] = i;
+		}
 		if (columnSubset) {
 			columnIndices[columnIndices.length - 1] = width - 1;
 		}
 
 		String[] selectedLabels = new String[nColumns];
-		Arrays.setAll(selectedLabels, i -> labels[columnIndices[i]]);
+		for (int i = 0; i < selectedLabels.length; i++) {
+			selectedLabels[i] = labels[columnIndices[i]];
+		}
 		StringJoiner labelRow = new StringJoiner(COLUMN_DELIMITER);
 		int i = 0;
 		for (String label : selectedLabels) {
@@ -116,7 +120,9 @@ final class TablePrinter {
 		boolean columnSubset = width > MAX_TABLE_COLUMNS;
 		int nColumns = columnSubset ? MAX_TABLE_COLUMNS - 1 : width;
 		int[] columnIndices = new int[nColumns];
-		Arrays.setAll(columnIndices, i -> i);
+		for (int i = 0; i < columnIndices.length; i++) {
+			columnIndices[i] = i;
+		}
 		if (columnSubset) {
 			columnIndices[columnIndices.length - 1] = width - 1;
 		}
@@ -124,12 +130,18 @@ final class TablePrinter {
 		// Look-up labels
 		String[] allLabels = table.labelArray();
 		String[] labels = new String[nColumns];
-		Arrays.setAll(labels, i -> allLabels[columnIndices[i]]);
+		for (int i = 0; i < labels.length; i++) {
+			labels[i] = allLabels[columnIndices[i]];
+		}
 		List<Column> allColumns = table.columnList();
 		TypeId[] types = new TypeId[labels.length];
-		Arrays.setAll(types, i -> allColumns.get(columnIndices[i]).type().id());
+		for (int i = 0; i < types.length; i++) {
+			types[i] = allColumns.get(columnIndices[i]).type().id();
+		}
 		Column[] columns = new Column[labels.length];
-		Arrays.setAll(columns, i -> allColumns.get(columnIndices[i]));
+		for (int i = 0; i < columns.length; i++) {
+			columns[i] = allColumns.get(columnIndices[i]);
+		}
 
 		// Determine row set
 		boolean rowSubset = height > MAX_TABLE_ROWS;

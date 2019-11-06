@@ -339,11 +339,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, size());
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = readUInt2(byteData.data(), j);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -352,11 +348,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, size());
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = readUInt4(byteData.data(), j);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -365,11 +357,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, byteData.size());
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = Byte.toUnsignedInt(byteData.data()[j]);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -378,11 +366,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, shortData.length);
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = Short.toUnsignedInt(shortData[j]);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -391,11 +375,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int max = Math.min(rowIndex + array.length, intData.length);
 		for (int i = 0, j = rowIndex; j < max; i++, j++) {
 			int datum = intData[j];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[i] = null;
-			} else {
-				array[i] = dictionary.get(datum);
-			}
+			array[i] = dictionary.get(datum);
 		}
 	}
 
@@ -406,11 +386,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = readUInt2(byteData.data(), rowIndex);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -423,11 +399,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = readUInt4(byteData.data(), rowIndex);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -440,11 +412,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = Byte.toUnsignedInt(byteData.data()[rowIndex]);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -457,11 +425,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = Short.toUnsignedInt(shortData[rowIndex]);
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}
@@ -474,11 +438,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		int arrayIndex = arrayOffset;
 		while (rowIndex < max) {
 			int datum = intData[rowIndex];
-			if (datum == CategoricalReader.MISSING_CATEGORY) {
-				array[arrayIndex] = null;
-			} else {
-				array[arrayIndex] = dictionary.get(datum);
-			}
+			array[arrayIndex] = dictionary.get(datum);
 			arrayIndex += arrayStepSize;
 			rowIndex++;
 		}

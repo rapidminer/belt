@@ -1,6 +1,5 @@
 /**
- * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -28,7 +27,7 @@ interface NumericColumnWriter {
 
 	/**
 	 * Fills in the values from the given buffer starting with the given row index and using the given buffer offset and
-	 * step size until the given height is reached.
+	 * step size until the given height is reached. Integer data will be rounded.
 	 *
 	 * @param buffer
 	 * 		the source buffer

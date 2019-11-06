@@ -17,11 +17,11 @@
 package com.rapidminer.belt.column;
 
 import java.time.Instant;
-import java.util.Comparator;
 
 import com.rapidminer.belt.util.Mapping;
 import com.rapidminer.belt.util.Order;
-import com.rapidminer.belt.util.Sorting;
+import com.rapidminer.belt.util.SortingInt;
+import com.rapidminer.belt.util.SortingLong;
 
 
 /**
@@ -146,32 +146,10 @@ class SimpleDateTimeColumn extends DateTimeColumn {
 
 	@Override
 	public int[] sort(Order order) {
-		Comparator<Instant> comparator = ColumnTypes.DATETIME.comparator();
-		Comparator<Instant> comparatorWithNull = Comparator.nullsLast(comparator);
 		if (highPrecision) {
-			return Sorting.sort(size(), (a, b) -> comparatorWithNull.compare(lookupHighPrecision(a),
-					lookupHighPrecision(b)), order);
+			return sortHighPrecision(order);
 		} else {
-			return Sorting.sort(size(), (a, b) -> comparatorWithNull.compare(lookupLowPrecision(a),
-					lookupLowPrecision(b)), order);
-		}
-	}
-
-	private Instant lookupLowPrecision(int i) {
-		long s = seconds[i];
-		if (s == SimpleDateTimeColumn.MISSING_VALUE) {
-			return null;
-		} else {
-			return Instant.ofEpochSecond(s);
-		}
-	}
-
-	private Instant lookupHighPrecision(int i) {
-		long s = seconds[i];
-		if (s == SimpleDateTimeColumn.MISSING_VALUE) {
-			return null;
-		} else {
-			return Instant.ofEpochSecond(s, nanos[i]);
+			return SortingLong.sort(seconds, order);
 		}
 	}
 
@@ -194,6 +172,58 @@ class SimpleDateTimeColumn extends DateTimeColumn {
 		}
 		int length = Math.min(nanos.length, array.length - arrayStartIndex);
 		System.arraycopy(nanos, 0, array, arrayStartIndex, length);
+	}
+
+	private Instant lookupLowPrecision(int i) {
+		long s = seconds[i];
+		if (s == SimpleDateTimeColumn.MISSING_VALUE) {
+			return null;
+		} else {
+			return Instant.ofEpochSecond(s);
+		}
+	}
+
+	private Instant lookupHighPrecision(int i) {
+		long s = seconds[i];
+		if (s == SimpleDateTimeColumn.MISSING_VALUE) {
+			return null;
+		} else {
+			return Instant.ofEpochSecond(s, nanos[i]);
+		}
+	}
+
+	/**
+	 * Sorts first by seconds (long values). For equal long values we then call {@link SortingInt#sortPartially(int[],
+	 * int[], int, int, int[], Order)} to sort these subgroups.
+	 */
+	private int[] sortHighPrecision(Order order) {
+		// sort by seconds of epoch first
+		int[] sorting = SortingLong.sort(seconds, order);
+		// for equal seconds of epoch we want to sort by nanos
+		int marker = 0;
+		int[] buffer = null;
+		for (int position = 1; position < sorting.length; position++) {
+			if (seconds[sorting[position - 1]] != seconds[sorting[position]]) {
+				if (position - marker > 1) {
+					// The last two or more elements had the same value
+					if (buffer == null) {
+						// initialize buffer used for sorting
+						buffer = new int[sorting.length];
+					}
+					SortingInt.sortPartially(nanos, sorting, marker, position, buffer, order);
+				}
+				marker = position;
+			}
+		}
+		// Check whether last value was part of uniform interval
+		if (sorting.length - 1 - marker > 1) {
+			if (buffer == null) {
+				// initialize buffer used for sorting
+				buffer = new int[sorting.length];
+			}
+			SortingInt.sortPartially(nanos, sorting, marker, sorting.length, buffer, order);
+		}
+		return sorting;
 	}
 
 }

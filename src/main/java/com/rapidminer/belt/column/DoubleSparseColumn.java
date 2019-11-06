@@ -30,11 +30,6 @@ import com.rapidminer.belt.util.Sorting;
  */
 class DoubleSparseColumn extends NumericColumn {
 
-	/**
-	 * DoubleSparseColumn falls back to a dense column if its density is above this value.
-	 */
-	private static final double MAX_DENSITY = 0.25d;
-
 	private final ColumnType<Void> columnType;
 
 	/**
@@ -125,10 +120,14 @@ class DoubleSparseColumn extends NumericColumn {
 
 	@Override
 	public Column map(int[] mapping, boolean preferView) {
-		SparseBitmap bitMap = new SparseBitmap(defaultValue, nonDefaultIndices, size);
+		if (mapping.length == 0) {
+			return stripData();
+		}
+
+		SparseBitmap bitMap = new SparseBitmap(Double.isNaN(defaultValue), nonDefaultIndices, size);
 
 		int numberOfNonDefaults = bitMap.countNonDefaultIndices(mapping);
-		if (mapping.length * MAX_DENSITY < numberOfNonDefaults) {
+		if (mapping.length * ColumnUtils.MAX_DENSITY_DOUBLE_SPARSE_COLUMN < numberOfNonDefaults) {
 			// column is not sparse enough anymore
 			return makeDenseColumn(mapping);
 		}
@@ -164,13 +163,7 @@ class DoubleSparseColumn extends NumericColumn {
 		}
 
 		int maxRowIndex = Math.min(rowIndex + array.length, size);
-
-		// first non-default value whose position in the column is greater or equal to the given row index
-		int nonDefaultIndex = rowIndex == 0 ? 0 : Arrays.binarySearch(nonDefaultIndices, rowIndex);
-		if (nonDefaultIndex < 0) {
-			// see documentation of binary search
-			nonDefaultIndex = -nonDefaultIndex - 1;
-		}
+		int nonDefaultIndex = ColumnUtils.findNextIndex(nonDefaultIndices, rowIndex);
 
 		if (nonDefaultIndex < nonDefaultIndices.length) {
 			int nonDefaultPosition = nonDefaultIndices[nonDefaultIndex];
@@ -201,12 +194,7 @@ class DoubleSparseColumn extends NumericColumn {
 
 		int maxRowIndex = Math.min(rowIndex + (array.length - arrayOffset - 1) / arrayStepSize + 1, size);
 
-		// first non-default whose position in the column is greater or equal to the given row index
-		int nonDefaultIndex = Arrays.binarySearch(nonDefaultIndices, rowIndex);
-		if (nonDefaultIndex < 0) {
-			// see documentation of binary search
-			nonDefaultIndex = -nonDefaultIndex - 1;
-		}
+		int nonDefaultIndex = ColumnUtils.findNextIndex(nonDefaultIndices, rowIndex);
 
 		if (nonDefaultIndex < nonDefaultIndices.length) {
 			int nonDefaultPosition = nonDefaultIndices[nonDefaultIndex];

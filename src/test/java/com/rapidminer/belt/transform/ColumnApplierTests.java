@@ -1598,7 +1598,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToNumeric calculator = new ApplierCategoricalToNumeric(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i / 2, false);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i / 2, false);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
 		}
@@ -1609,7 +1609,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToNumeric calculator = new ApplierCategoricalToNumeric(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i * 2.5, false);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i * 2.5, false);
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
@@ -1629,7 +1629,7 @@ public class ColumnApplierTests {
 			int[] data = new int[123];
 			Arrays.setAll(data, i -> i);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
 							data, EMPTY_DICTIONARY)},
 							new String[]{"one"});
 			NumericBuffer buffer = table.transform(0).applyCategoricalToReal(v -> 2.5 * v, CTX);
@@ -1643,7 +1643,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			NumericBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0],
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0],
 									Arrays.asList(null, "bla")))
 							.applyCategoricalToReal(v -> v * 0.5, CTX);
 			assertEquals(0, buffer.size());
@@ -1658,7 +1658,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToNumeric calculator = new ApplierCategoricalToNumeric(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i, true);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i, true);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
 		}
@@ -1669,7 +1669,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToNumeric calculator = new ApplierCategoricalToNumeric(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i * 2, true);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i * 2, true);
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
@@ -1689,7 +1689,7 @@ public class ColumnApplierTests {
 			int[] data = new int[123];
 			Arrays.setAll(data, i -> i);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
 							data, EMPTY_DICTIONARY)},
 							new String[]{"one"});
 			NumericBuffer buffer = table.transform(0).applyCategoricalToInteger(v -> 2 * v, CTX);
@@ -1703,7 +1703,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			NumericBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0],
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0],
 									Arrays.asList(null, "bla")))
 							.applyCategoricalToInteger(v -> v * 0.5, CTX);
 			assertEquals(0, buffer.size());
@@ -1718,7 +1718,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToCategorical<String> calculator = new ApplierCategoricalToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i + "",
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i + "",
 					IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -1730,7 +1730,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToCategorical<String> calculator = new ApplierCategoricalToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					i -> i + "", IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			int start = 10;
@@ -1750,7 +1750,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(111);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
 							data, EMPTY_DICTIONARY)}
 							, new String[]{"one"});
 			Int32CategoricalBuffer<String> buffer = table.transform(0).applyCategoricalToCategorical(v -> v + "", CTX);
@@ -1763,7 +1763,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			CategoricalBuffer<String> buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0],
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0],
 									Arrays.asList(null, "bla")))
 							.applyCategoricalToCategorical(v -> v + "", CTX);
 			assertEquals(0, buffer.size());
@@ -1789,7 +1789,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToCategorical<String> calculator = new ApplierCategoricalToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					i -> i == 1 ? "True" : "False", format);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -1801,7 +1801,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToCategorical<String> calculator = new ApplierCategoricalToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					i -> i == 1 ? "True" : "False", format);
 			calculator.init(1);
 			int start = 10;
@@ -1822,7 +1822,7 @@ public class ColumnApplierTests {
 			int size = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			int[] data = randomInts(size);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
 							, new String[]{"one"});
 			CategoricalBuffer<String> buffer = table.transform(0).applyCategoricalToCategorical(v -> v == 0 ?
 							"Missing" : "Data",
@@ -1842,7 +1842,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToObject<String> calculator = new ApplierCategoricalToObject<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i + "");
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i + "");
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
 		}
@@ -1853,7 +1853,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToObject<String> calculator = new ApplierCategoricalToObject<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i + "");
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i + "");
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
@@ -1872,7 +1872,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(142);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
 							, new String[]{"one"});
 			ObjectBuffer<String> buffer = table.transform(0).applyCategoricalToObject(v -> v + "", CTX);
 			Object[] expected = new Object[buffer.size()];
@@ -1884,7 +1884,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			ObjectBuffer<String> buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyCategoricalToObject(v -> v + "", CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -1899,7 +1899,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToTime calculator = new ApplierCategoricalToTime(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					i -> LocalTime.of(i / 24, i % 60));
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -1911,7 +1911,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToTime calculator = new ApplierCategoricalToTime(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					i -> LocalTime.of(i / 24, i % 60));
 			calculator.init(1);
 			int start = 10;
@@ -1933,7 +1933,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(142);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
 							, new String[]{"one"});
 			TimeBuffer buffer =
 					table.transform(0).applyCategoricalToTime(i -> LocalTime.of(i / 24, i % 60), CTX);
@@ -1946,7 +1946,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			TimeBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyCategoricalToTime(v -> LocalTime.NOON, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -1962,7 +1962,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierCategoricalToDateTime calculator = new ApplierCategoricalToDateTime(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					Instant::ofEpochMilli);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -1974,7 +1974,7 @@ public class ColumnApplierTests {
 			int size = 75;
 			int[] data = randomInts(size);
 			ApplierCategoricalToDateTime calculator = new ApplierCategoricalToDateTime(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY),
 					i -> Instant.ofEpochMilli(i * 100_000));
 			calculator.init(1);
 			int start = 10;
@@ -1996,7 +1996,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(142);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}
 							, new String[]{"one"});
 			DateTimeBuffer buffer =
 					table.transform(0)
@@ -2010,7 +2010,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			DateTimeBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyCategoricalToDateTime(v -> Instant.EPOCH, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2025,7 +2025,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			CategoricalColumn<String> source =
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierObjectToNumeric<String> calculator = new ApplierObjectToNumeric<>(
 					source, String.class, v -> v.length() / 2.0, false);
 			calculator.init(1);
@@ -2039,7 +2039,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			CategoricalColumn<String> source =
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList);
 			ApplierObjectToNumeric<String> calculator = new ApplierObjectToNumeric<>(
 					source, String.class, v -> v.length() / 2.0, false);
 			calculator.init(1);
@@ -2060,7 +2060,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(123);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data,
 					mappingList)},
 					new String[]{"one"});
 			NumericBuffer buffer = table.transform(0).applyObjectToReal(String.class, v -> v.equals("value1") ? 0.5 :
@@ -2075,7 +2075,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			NumericBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyObjectToReal(String.class, v -> v.length(), CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2089,7 +2089,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			CategoricalColumn<String> source =
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierObjectToNumeric<String> calculator = new ApplierObjectToNumeric<>(
 					source, String.class, String::length, true);
 			calculator.init(1);
@@ -2103,7 +2103,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			CategoricalColumn<String> source =
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList);
 			ApplierObjectToNumeric<String> calculator = new ApplierObjectToNumeric<>(
 					source, String.class, String::length, true);
 			calculator.init(1);
@@ -2124,7 +2124,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(122);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data,
 					mappingList)},
 					new String[]{"one"});
 			NumericBuffer buffer = table.transform(0).applyObjectToInteger(String.class, v -> v.equals("value1") ? 1 :
@@ -2139,7 +2139,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			NumericBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyObjectToInteger(String.class, String::length, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2153,7 +2153,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierObjectToCategorical<String, Integer> calculator = new ApplierObjectToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					String::length, IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2166,7 +2166,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierObjectToCategorical<String, Integer> calculator = new ApplierObjectToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
 					String::length,
 					IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
@@ -2187,7 +2187,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(111);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(0).applyObjectToCategorical(String.class,
 					v -> v.equals("value1"), CTX);
@@ -2200,7 +2200,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			CategoricalBuffer<Object> buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyObjectToCategorical(String.class, v -> v, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2226,7 +2226,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierObjectToCategorical<String, Boolean> calculator = new ApplierObjectToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					v -> v.length() == 6, format);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2239,7 +2239,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierObjectToCategorical<String, Boolean> calculator = new ApplierObjectToCategorical<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					v -> v.length() == 6, format);
 			calculator.init(1);
 			int start = 10;
@@ -2260,7 +2260,7 @@ public class ColumnApplierTests {
 			int size = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data,
 					mappingList)},
 					new String[]{"one"});
 			CategoricalBuffer<Integer> buffer = table.transform(0).applyObjectToCategorical(String.class,
@@ -2280,7 +2280,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierObjectToObject<String, Integer> calculator = new ApplierObjectToObject<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					String::length);
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2293,7 +2293,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierObjectToObject<String, Integer> calculator = new ApplierObjectToObject<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
 					String::length);
 			calculator.init(1);
 			int start = 10;
@@ -2313,7 +2313,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(142);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
 			ObjectBuffer<Boolean> buffer = table.transform(0).applyObjectToObject(String.class, "value1"::equals,
 					CTX);
@@ -2326,7 +2326,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			ObjectBuffer<Integer> buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyObjectToObject(String.class, String::length, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2342,7 +2342,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierObjectToTime<String> calculator = new ApplierObjectToTime<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					v -> LocalTime.of(v.length(), 1));
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2355,7 +2355,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierObjectToTime<String> calculator = new ApplierObjectToTime<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
 					v -> LocalTime.of(v.length(), 1));
 			calculator.init(1);
 			int start = 10;
@@ -2377,7 +2377,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(142);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
 			TimeBuffer buffer =
 					table.transform(0).applyObjectToTime(String.class, v -> LocalTime.of(12, v.length()), CTX);
@@ -2390,7 +2390,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			TimeBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyObjectToTime(Object.class, v -> LocalTime.NOON, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2405,7 +2405,7 @@ public class ColumnApplierTests {
 			int size = random.nextInt(100);
 			int[] data = new int[size];
 			ApplierObjectToDateTime<String> calculator = new ApplierObjectToDateTime<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList()), String.class,
 					v -> Instant.ofEpochMilli(v.length()));
 			calculator.init(1);
 			assertEquals(size, calculator.getResult().size());
@@ -2418,7 +2418,7 @@ public class ColumnApplierTests {
 			int[] data = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierObjectToDateTime<String> calculator = new ApplierObjectToDateTime<>(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
 					v -> Instant.ofEpochMilli(v.length() * 100_000));
 			calculator.init(1);
 			int start = 10;
@@ -2440,7 +2440,7 @@ public class ColumnApplierTests {
 		public void testWhole() {
 			int[] data = randomInts(142);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}
 					, new String[]{"one"});
 			DateTimeBuffer buffer =
 					table.transform(0)
@@ -2454,7 +2454,7 @@ public class ColumnApplierTests {
 		public void testNullSize() {
 			DateTimeBuffer buffer =
 					new Transformer(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], Arrays.asList(null, "bla")))
 							.applyObjectToDateTime(Object.class, v -> Instant.EPOCH, CTX);
 			assertEquals(0, buffer.size());
 		}
@@ -2611,7 +2611,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(Arrays.asList(column,
 					column, column), row -> 0, false);
 			calculator.init(1);
@@ -2626,9 +2626,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
 					row -> row.get(2) + row.get(0) * 2.5, false);
 			calculator.init(1);
 			int start = 10;
@@ -2650,9 +2650,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 							EMPTY_DICTIONARY),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>())}
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>())}
 							, new String[]{"one", "two"});
 			double[] result = new double[table.height()];
 			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToReal(row -> row.get(0) + row.get
@@ -2668,7 +2668,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyCategoricalToReal(row -> row.get(0) + row.get
 							(1) * 2 + 0.1, CTX);
@@ -2684,7 +2684,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(Arrays.asList(column,
 					column, column), row -> 0, true);
 			calculator.init(1);
@@ -2699,9 +2699,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			ApplierNCategoricalToNumeric calculator = new ApplierNCategoricalToNumeric(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
 					row -> row.get(2) + row.get(0) * 2, true);
 			calculator.init(1);
 			int start = 10;
@@ -2722,9 +2722,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 							EMPTY_DICTIONARY),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>())}
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>())}
 							, new String[]{"one", "two"});
 			double[] result = new double[table.height()];
 			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToInteger(row -> row.get(0) + row
@@ -2740,7 +2740,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyCategoricalToInteger(row -> row.get(0) + row.get
 							(1) * 2, CTX);
@@ -2756,7 +2756,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToNumeric<Object> calculator = new ApplierNObjectToNumeric<>(Arrays.asList(column,
 					column, column), Object.class, row -> 0, false);
 			calculator.init(1);
@@ -2771,9 +2771,9 @@ public class ColumnApplierTests {
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToNumeric<String> calculator = new ApplierNObjectToNumeric<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 					row -> row.get(2).length() + row.get(0).length() * 2.5, false);
 			calculator.init(1);
 			int start = 10;
@@ -2795,9 +2795,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToReal(String.class,
 					row -> row.get(0).length() + row.get(1).length() * 2.5, CTX);
@@ -2810,7 +2810,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToReal(Object.class,row -> row.get(0).hashCode()*row.get(2).hashCode(), CTX);
 			assertEquals(0, buffer.size());
@@ -2825,7 +2825,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToNumeric<Object> calculator = new ApplierNObjectToNumeric<>(Arrays.asList(column,
 					column, column), Object.class, row -> 0, true);
 			calculator.init(1);
@@ -2841,9 +2841,9 @@ public class ColumnApplierTests {
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToNumeric<String> calculator = new ApplierNObjectToNumeric<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 					row -> row.get(2).length() + row.get(0).length() * 2, true);
 			calculator.init(1);
 			int start = 10;
@@ -2864,9 +2864,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			double[] result = new double[table.height()];
 			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToInteger(String.class,
@@ -2882,7 +2882,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToInteger(Object.class,row -> row.get(0).hashCode()*row.get(2).hashCode(), CTX);
 			assertEquals(0, buffer.size());
@@ -2898,7 +2898,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(Arrays.asList(column,
 					column, column), row -> 0, false);
 			calculator.init(1);
@@ -2913,8 +2913,8 @@ public class ColumnApplierTests {
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
 			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> row.getNumeric(2) + row.getIndex(0) * 2.5, false);
 			calculator.init(1);
@@ -2937,7 +2937,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			double[] second = random(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList), ColumnTestUtils.getNumericColumn(TypeId.REAL, second)}
 					, new String[]{"one", "two"});
 			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToReal(
@@ -2951,7 +2951,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToReal(row -> row.getObject(0).hashCode() * row.getNumeric(2), CTX);
 			assertEquals(0, buffer.size());
@@ -2966,7 +2966,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(Arrays.asList(column,
 					column, column), row -> 0, true);
 			calculator.init(1);
@@ -2982,8 +2982,8 @@ public class ColumnApplierTests {
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
 			ApplierMixedToNumeric calculator = new ApplierMixedToNumeric(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> row.getNumeric(2) + row.getIndex(0) * 2, true);
 			calculator.init(1);
@@ -3006,7 +3006,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			double[] second = random(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList), ColumnTestUtils.getNumericColumn(TypeId.REAL, second)}
 					, new String[]{"one", "two"});
 			NumericBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToInteger(
@@ -3020,7 +3020,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			NumericBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToInteger(row -> row.getObject(0).hashCode() * row.getNumeric(2), CTX);
 			assertEquals(0, buffer.size());
@@ -3036,7 +3036,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToCategorical<Object, Object> calculator =
 					new ApplierNObjectToCategorical<>(Arrays.asList(column,
 							column, column), Object.class, row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
@@ -3054,9 +3054,9 @@ public class ColumnApplierTests {
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToCategorical<String, Integer> calculator =
 					new ApplierNObjectToCategorical<>(Arrays.asList(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 							row -> row.get(2).length() + row.get(0).length() * 2, IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			int start = 10;
@@ -3077,9 +3077,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyObjectToCategorical(String
 							.class,
@@ -3091,7 +3091,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			CategoricalBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToCategorical(Object.class, row -> row.get(0)== row.get(2), CTX);
 			assertEquals(0, buffer.size());
@@ -3116,7 +3116,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToCategorical<Object, Integer> calculator =
 					new ApplierNObjectToCategorical<>(Arrays.asList(column,
 							column, column), Object.class, row -> 0, format);
@@ -3134,9 +3134,9 @@ public class ColumnApplierTests {
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToCategorical<String, Boolean> calculator =
 					new ApplierNObjectToCategorical<>(Arrays.asList(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 							row -> row.get(2).length() == row.get(0).length(), format);
 			calculator.init(1);
 			int start = 10;
@@ -3157,9 +3157,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyObjectToCategorical(String
 							.class,
@@ -3171,7 +3171,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			CategoricalBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToCategorical(Object.class, row -> row.get(0) == row.get(2), CTX);
 			assertEquals(0, buffer.size());
@@ -3187,7 +3187,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
 			ApplierNCategoricalToCategorical<Object> calculator =
 					new ApplierNCategoricalToCategorical<>(Arrays.asList(column,
 							column, column), row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
@@ -3204,11 +3204,11 @@ public class ColumnApplierTests {
 			int[] third = randomInts(size);
 			ApplierNCategoricalToCategorical<Integer> calculator =
 					new ApplierNCategoricalToCategorical<>(Arrays.asList(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 									new ArrayList<>()),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second,
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second,
 									new ArrayList<>()),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
 							row -> row.get(2) + row.get(0) * 2, IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
 			int start = 10;
@@ -3230,9 +3230,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 							EMPTY_DICTIONARY),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyCategoricalToCategorical(
 					v -> v.get(0) == v.get(1), CTX);
@@ -3243,7 +3243,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			CategoricalBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyCategoricalToCategorical(row -> row.get(0) == row.get(1) * 2, CTX);
 			assertEquals(0, buffer.size());
@@ -3269,7 +3269,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNCategoricalToCategorical<Object> calculator =
 					new ApplierNCategoricalToCategorical<>(Arrays.asList(column,
 							column, column), row -> 0, format);
@@ -3287,9 +3287,9 @@ public class ColumnApplierTests {
 			List<String> mappingList = getMappingList();
 			ApplierNCategoricalToCategorical<Boolean> calculator =
 					new ApplierNCategoricalToCategorical<>(Arrays.asList(
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)),
 							row -> row.get(2) + 2 == row.get(0), format);
 			calculator.init(1);
 			int start = 10;
@@ -3310,9 +3310,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyCategoricalToCategorical(
 					v -> v.get(0) == v.get(1) ? 1 : 0, format.maxValue(), CTX);
@@ -3330,7 +3330,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToCategorical<Object> calculator =
 					new ApplierMixedToCategorical<>(Arrays.asList(column,
 							column, column), row -> new Object(), IntegerFormats.Format.SIGNED_INT32);
@@ -3346,8 +3346,8 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			double[] third = random(size);
 			ApplierMixedToCategorical<Integer> calculator = new ApplierMixedToCategorical<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, getMappingList()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, getMappingList()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, getMappingList()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, getMappingList()),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> (int) (5 * row.getNumeric(2)) + row.getIndex(0), IntegerFormats.Format.SIGNED_INT32);
 			calculator.init(1);
@@ -3369,7 +3369,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			double[] second = random(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList), ColumnTestUtils.getNumericColumn(TypeId.REAL, second)}
 					, new String[]{"one", "two"});
 			Int32CategoricalBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyMixedToCategorical(
@@ -3388,7 +3388,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			CategoricalBuffer<String> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToCategorical(row -> row.getObject(0, String.class)+ row.getIndex(2), CTX);
 			assertEquals(0, buffer.size());
@@ -3413,7 +3413,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToCategorical<Object> calculator =
 					new ApplierMixedToCategorical<>(Arrays.asList(column,
 							column, column), row -> 0, format);
@@ -3430,8 +3430,8 @@ public class ColumnApplierTests {
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
 			ApplierMixedToCategorical<Boolean> calculator = new ApplierMixedToCategorical<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> row.getNumeric(2) + 2 < row.getIndex(0), format);
 			calculator.init(1);
@@ -3453,7 +3453,7 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			double[] second = random(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList), ColumnTestUtils.getNumericColumn(TypeId.REAL, second)}
 					, new String[]{"one", "two"});
 			CategoricalBuffer<Integer> buffer = table.transform(new int[]{0, 1}).applyMixedToCategorical(
@@ -3823,7 +3823,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
 			ApplierNCategoricalToObject<Object> calculator = new ApplierNCategoricalToObject<>(Arrays.asList(column,
 					column, column), row -> new Object());
 			calculator.init(1);
@@ -3838,9 +3838,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			ApplierNCategoricalToObject<Integer> calculator = new ApplierNCategoricalToObject<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
 					row -> row.get(2) + row.get(0) * 2);
 			calculator.init(1);
 			int start = 10;
@@ -3862,9 +3862,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 							EMPTY_DICTIONARY),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
 			ObjectBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyCategoricalToObject(
 					v -> v.get(0) == v.get(1), CTX);
@@ -3875,7 +3875,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			ObjectBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyCategoricalToObject(row -> row.get(0) == row.get(1), CTX);
 			assertEquals(0, buffer.size());
@@ -3890,7 +3890,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
 			ApplierNCategoricalToTime calculator = new ApplierNCategoricalToTime(Arrays.asList(column,
 					column, column), row -> LocalTime.NOON);
 			calculator.init(1);
@@ -3905,9 +3905,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			ApplierNCategoricalToTime calculator = new ApplierNCategoricalToTime(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
 					row -> LocalTime.of(row.get(2) % 24, row.get(0)));
 			calculator.init(1);
 			int start = 10;
@@ -3931,9 +3931,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 							EMPTY_DICTIONARY),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
 			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToTime(
 					v -> v.get(0) == v.get(1) ? LocalTime.NOON : LocalTime.MIDNIGHT, CTX);
@@ -3944,7 +3944,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			TimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyCategoricalToTime(row -> LocalTime.NOON, CTX);
 			assertEquals(0, buffer.size());
@@ -3960,7 +3960,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY);
 			ApplierNCategoricalToDateTime calculator = new ApplierNCategoricalToDateTime(Arrays.asList(column,
 					column, column), row -> Instant.MIN);
 			calculator.init(1);
@@ -3975,9 +3975,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			int[] third = randomInts(size);
 			ApplierNCategoricalToDateTime calculator = new ApplierNCategoricalToDateTime(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, new ArrayList<>())),
 					row -> Instant.ofEpochMilli(Math.round(Math.pow(row.get(2), row.get(0)))));
 			calculator.init(1);
 			int start = 10;
@@ -4001,9 +4001,9 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table =
-					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+					TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 							EMPTY_DICTIONARY),
-							ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+							ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 							, new String[]{"one", "two"});
 			DateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyCategoricalToDateTime(
 					v -> v.get(0) == v.get(1) ? Instant.MIN : Instant.MAX, CTX);
@@ -4014,7 +4014,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			DateTimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyCategoricalToDateTime(row -> Instant.EPOCH, CTX);
 			assertEquals(0, buffer.size());
@@ -4029,7 +4029,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToObject<Object, Object> calculator = new ApplierNObjectToObject<>(Arrays.asList(column,
 					column, column), Object.class, row -> new Object());
 			calculator.init(1);
@@ -4045,9 +4045,9 @@ public class ColumnApplierTests {
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToObject<String, Integer> calculator = new ApplierNObjectToObject<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 					row -> row.get(2).length() + row.get(0).length() * 2);
 			calculator.init(1);
 			int start = 10;
@@ -4068,9 +4068,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			ObjectBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyObjectToObject(String.class,
 					v -> v.get(0).equals(v.get(1)), CTX);
@@ -4081,7 +4081,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			ObjectBuffer<Boolean> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToObject(Object.class, row -> row.get(0)== row.get(2), CTX);
 			assertEquals(0, buffer.size());
@@ -4096,7 +4096,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToTime<Object> calculator = new ApplierNObjectToTime<>(Arrays.asList(column,
 					column, column), Object.class, row -> LocalTime.NOON);
 			calculator.init(1);
@@ -4112,9 +4112,9 @@ public class ColumnApplierTests {
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToTime<String> calculator = new ApplierNObjectToTime<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 					row -> LocalTime.of(row.get(2).length(), row.get(0).length() * 2));
 			calculator.init(1);
 			int start = 10;
@@ -4137,9 +4137,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToTime(String.class,
 					v -> v.get(0).equals(v.get(1)) ? LocalTime.NOON : LocalTime.MIDNIGHT, CTX);
@@ -4152,7 +4152,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			TimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToTime(String.class, row -> LocalTime.NOON, CTX);
 			assertEquals(0, buffer.size());
@@ -4167,7 +4167,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierNObjectToDateTime<Object> calculator = new ApplierNObjectToDateTime<>(Arrays.asList(column,
 					column, column), Object.class, row -> Instant.MAX);
 			calculator.init(1);
@@ -4183,9 +4183,9 @@ public class ColumnApplierTests {
 			int[] third = randomInts(size);
 			List<String> mappingList = getMappingList();
 			ApplierNObjectToDateTime<String> calculator = new ApplierNObjectToDateTime<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
 					row -> Instant.ofEpochMilli(row.get(2).length() * row.get(0).length() * 1_999_999));
 			calculator.init(1);
 			int start = 10;
@@ -4209,9 +4209,9 @@ public class ColumnApplierTests {
 			int[] first = randomInts(size);
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
-			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first,
+			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
 					mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			DateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyObjectToDateTime(String.class,
 					v -> v.get(0).equals(v.get(1)) ? Instant.MAX : Instant.MIN, CTX);
@@ -4223,7 +4223,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			DateTimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyObjectToDateTime(String.class, row -> Instant.EPOCH, CTX);
 			assertEquals(0, buffer.size());
@@ -4237,7 +4237,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToObject<Object> calculator = new ApplierMixedToObject<>(Arrays.asList(column,
 					column, column), row -> new Object());
 			calculator.init(1);
@@ -4253,8 +4253,8 @@ public class ColumnApplierTests {
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
 			ApplierMixedToObject<Double> calculator = new ApplierMixedToObject<>(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> row.getNumeric(2) + row.getIndex(0) * 2);
 			calculator.init(1);
@@ -4277,7 +4277,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getNumericColumn(TypeId.REAL, first),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			ObjectBuffer<Boolean> buffer = table.transform(new int[]{0, 1}).applyMixedToObject(
 					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0, CTX);
@@ -4288,7 +4288,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			ObjectBuffer<String> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToObject(row -> row.getObject(0, String.class)+row.getNumeric(1), CTX);
 			assertEquals(0, buffer.size());
@@ -4304,7 +4304,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToTime calculator = new ApplierMixedToTime(Arrays.asList(column,
 					column, column), row -> LocalTime.NOON);
 			calculator.init(1);
@@ -4320,8 +4320,8 @@ public class ColumnApplierTests {
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
 			ApplierMixedToTime calculator = new ApplierMixedToTime(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> LocalTime.of((int) Math.round(12 * row.getNumeric(2)), row.getIndex(0) * 2));
 			calculator.init(1);
@@ -4346,7 +4346,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getNumericColumn(TypeId.REAL, first),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			TimeBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToTime(
 					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0 ?
@@ -4359,7 +4359,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			TimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToTime( row -> LocalTime.NOON, CTX);
 			assertEquals(0, buffer.size());
@@ -4374,7 +4374,7 @@ public class ColumnApplierTests {
 			Random random = new Random();
 			int size = random.nextInt(100);
 			int[] data = randomInts(size);
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, getMappingList());
 			ApplierMixedToDateTime calculator = new ApplierMixedToDateTime(Arrays.asList(column,
 					column, column), row -> Instant.MAX);
 			calculator.init(1);
@@ -4390,8 +4390,8 @@ public class ColumnApplierTests {
 			double[] third = random(size);
 			List<String> mappingList = getMappingList();
 			ApplierMixedToDateTime calculator = new ApplierMixedToDateTime(Arrays.asList(
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, third)),
 					row -> Instant.ofEpochMilli(Math.round(row.getIndex(0) * row.getNumeric(2) * 100_000)));
 			calculator.init(1);
@@ -4416,7 +4416,7 @@ public class ColumnApplierTests {
 			int[] second = randomInts(size);
 			List<String> mappingList = getMappingList();
 			Table table = TableTestUtils.newTable(new Column[]{ColumnTestUtils.getNumericColumn(TypeId.REAL, first),
-					ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, mappingList)}
 					, new String[]{"one", "two"});
 			DateTimeBuffer buffer = table.transform(new int[]{0, 1}).applyMixedToDateTime(
 					v -> v.getNumeric(0) < ((String) v.getObject(1)).length() / 10.0 ?
@@ -4429,7 +4429,7 @@ public class ColumnApplierTests {
 
 		@Test
 		public void testNullSize() {
-			Column column = ColumnTestUtils.getCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[0], getMappingList());
 			DateTimeBuffer buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToDateTime(row -> Instant.EPOCH, CTX);
 			assertEquals(0, buffer.size());

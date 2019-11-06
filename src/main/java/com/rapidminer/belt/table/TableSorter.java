@@ -17,10 +17,13 @@
 package com.rapidminer.belt.table;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.NumericReader;
+import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.util.Mapping;
 import com.rapidminer.belt.util.Order;
@@ -136,7 +139,25 @@ class TableSorter {
 	private void sortUniformIntervals(int index, final int[] mapping) {
 		Column column = columnSet.get(columns[index]);
 		column = ColumnAccessor.get().map(column, mapping, true);
+		if (column.type().hasCapability(Column.Capability.NUMERIC_READABLE)) {
+			sortUniformIntervals(index, mapping, column);
+		} else {
+			sortUniformIntervals(index, mapping, column, column.type());
+		}
+	}
 
+	/**
+	 * Searches the column defined by the given index and mapping for uniform intervals using a numeric reader. Found
+	 * intervals are sorted by the next column.
+	 *
+	 * @param index
+	 * 		the index of the current column
+	 * @param mapping
+	 * 		the mapping (subset) to search
+	 * @param column
+	 * 		the current column
+	 */
+	private void sortUniformIntervals(int index, int[] mapping, Column column) {
 		NumericReader reader = Readers.numericReader(column, column.size());
 
 		double lastValue = reader.read();
@@ -145,6 +166,46 @@ class TableSorter {
 		while (reader.hasRemaining()) {
 			double value = reader.read();
 			if (Double.compare(lastValue, value) != 0) {
+				if (position - marker > 1) {
+					// The last two or more elements had the same value
+					sort(index + 1, mapping, marker, position);
+				}
+				lastValue = value;
+				marker = position;
+			}
+			position++;
+		}
+
+		// Check whether last value was part of uniform interval
+		if (position - marker > 1) {
+			sort(index + 1, mapping, marker, position);
+		}
+	}
+
+	/**
+	 * Searches the column defined by the given index and mapping for uniform intervals using an object reader. Found
+	 * intervals are sorted by the next column.
+	 *
+	 * @param index
+	 * 		the index of the current column
+	 * @param mapping
+	 * 		the mapping (subset) to search
+	 * @param column
+	 * 		the current column
+	 * @param type
+	 * 		the type of the current column
+	 */
+	private <T> void sortUniformIntervals(int index, int[] mapping, Column column, ColumnType<T> type) {
+		ObjectReader<T> reader = Readers.objectReader(column, type.elementType());
+
+		Comparator<T> comparator = Comparator.nullsLast(type.comparator());
+
+		T lastValue = reader.read();
+		int marker = 0;
+		int position = 1;
+		while (reader.hasRemaining()) {
+			T value = reader.read();
+			if (comparator.compare(lastValue, value) != 0) {
 				if (position - marker > 1) {
 					// The last two or more elements had the same value
 					sort(index + 1, mapping, marker, position);

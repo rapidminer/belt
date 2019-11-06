@@ -22,8 +22,6 @@ import java.util.function.IntFunction;
 import com.rapidminer.belt.buffer.CategoricalBuffer;
 import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
 import com.rapidminer.belt.buffer.UInt16CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt2CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt4CategoricalBuffer;
 import com.rapidminer.belt.buffer.UInt8CategoricalBuffer;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.reader.CategoricalReader;
@@ -56,13 +54,9 @@ final class ApplierCategoricalToCategorical<T> implements Calculator<Categorical
 	public void init(int numberOfBatches) {
 		switch (format) {
 			case UNSIGNED_INT2:
-				target = BufferAccessor.get().newUInt2Buffer(source.size());
-				break;
 			case UNSIGNED_INT4:
-				target = BufferAccessor.get().newUInt4Buffer(source.size());
-				break;
 			case UNSIGNED_INT8:
-				target = BufferAccessor.get().newUInt8Buffer(source.size());
+				target = BufferAccessor.get().newUInt8Buffer(source.size(), format);
 				break;
 			case UNSIGNED_INT16:
 				target = BufferAccessor.get().newUInt16Buffer(source.size());
@@ -83,11 +77,7 @@ final class ApplierCategoricalToCategorical<T> implements Calculator<Categorical
 	public void doPart(int from, int to, int batchIndex) {
 		switch (format) {
 			case UNSIGNED_INT2:
-				mapPart(source, operator, (UInt2CategoricalBuffer<T>) target, from, to);
-				break;
 			case UNSIGNED_INT4:
-				mapPart(source, operator, (UInt4CategoricalBuffer<T>) target, from, to);
-				break;
 			case UNSIGNED_INT8:
 				mapPart(source, operator, (UInt8CategoricalBuffer<T>) target, from, to);
 				break;
@@ -146,34 +136,5 @@ final class ApplierCategoricalToCategorical<T> implements Calculator<Categorical
 			target.set(i, operator.apply(value));
 		}
 	}
-
-	/**
-	 * Maps every index between from (inclusive) and to (exclusive) of the source column using the operator and stores
-	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT16}.
-	 */
-	private static <T> void mapPart(Column source, IntFunction<T> operator, UInt4CategoricalBuffer<T> target,
-									   int from, int to) {
-		final CategoricalReader reader = Readers.categoricalReader(source, to);
-		reader.setPosition(from - 1);
-		for (int i = from; i < to; i++) {
-			int value = reader.read();
-			target.set(i, operator.apply(value));
-		}
-	}
-
-	/**
-	 * Maps every index between from (inclusive) and to (exclusive) of the source column using the operator and stores
-	 * the result in target in format {@link IntegerFormats.Format#SIGNED_INT32}.
-	 */
-	private static <T> void mapPart(Column source, IntFunction<T> operator, UInt2CategoricalBuffer<T> target,
-									   int from, int to) {
-		final CategoricalReader reader = Readers.categoricalReader(source, to);
-		reader.setPosition(from - 1);
-		for (int i = from; i < to; i++) {
-			int value = reader.read();
-			target.set(i, operator.apply(value));
-		}
-	}
-
 
 }

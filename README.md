@@ -104,7 +104,7 @@ To know more about the implicit parallelism and the `context` used in the exampl
 # Creating tables
 
 The Belt library supports both column-wise and row-wise construction of tables.
-Furthermore, tables can be derived from existing table, e.g., by selecting row or column subsets.
+Furthermore, tables can be derived from existing tables, e.g., by selecting row or column subsets.
 
 When creating a new table, **the column-wise construction is preferred:**
 it is usually more efficient due to the column-oriented design of the library.
@@ -848,7 +848,6 @@ TIME | Java `LocalTime` objects | OBJECT | OBJECT_READABLE, NUMERIC_READABLE, SO
 Date-time columns are the only built-in columns that are not numeric-readable.
 Time columns are numeric-readable as nano-seconds since 00:00. 
 
-
 ### Custom types
 
 Custom columns can either be object columns or categorical columns. 
@@ -1368,3 +1367,87 @@ ObjectBuffer buffer2 = Buffers.objectBuffer(column, Object.class);
 ``` 
  
 would be possible for the `column` created above or the one from the [Categorical buffers section](#belt-categorical-buffers) above.
+
+### Sparse buffers
+
+In this paragraph we will show you how to take advantage of your data being sparse.
+With sparse data we mean data columns with most rows (>= 50%) taking on one and the same value.
+We call this value the *default value*.
+
+The buffers we have presented so far already take advantage of your data being sparse in some sense.
+They will automatically check the data for sparsity in their ```toColumn()``` method and return
+what we call a *sparse column* if our heuristic decides that the data is sufficiently sparse for that.
+These sparse columns come with the same interface as the default dense columns.
+But under the hood they have been heavily optimized to be more time and memory efficient when working
+with sparse data.
+Sparse columns come with a memory efficient sparse data format that will allow you
+to import a lot more data without running out of memory.
+
+Sounds good? Even better:
+If you already know that your data is sparse your can use one of our sparse buffer implementations.
+Sparse buffers are, similar to sparse columns, optimized to be time and memory efficient when handling sparse data.
+This avoids the buffers themselves becoming the new memory bottleneck.
+All of the presented buffer types (except for object buffers) are available in this sparse buffer format. 
+Please note that sparse buffers and columns come with an overhead for their sparse format so that
+they should not be used with very small data (less than 1024 rows) or data with sparsity < 50%.
+If you are unsure if the data is sparse, we advice you to use the default dense buffers.
+
+Sparse buffers come with a slightly different interface compared to the default dense buffers that we have been
+explaining so far:
+
+```java
+RealBufferSparse buffer = Buffers.sparseRealBuffer(0, 10);
+buffer.setNext(2, 0);
+buffer.setNext(7, 0.54);
+buffer.setNext(9, 0.72);
+Column column = buffer.toColumn();
+```
+
+In the above example ```sparseRealBuffer(double, int)``` is used to create a new sparse buffer with a 
+default value of ```0``` and a length of ```10```.
+All buffer positions are initially set to the default value.
+```setNext(int, double)``` is then used to set some of the buffer positions to non-default values.
+In the example we do this for the positions ```7``` and ```9```, setting them to the non-default values
+```0.5``` and ```0.72```.
+Setting position ```2``` to ```0``` has no effect as ```0``` is the default value anyway.
+The resulting column looks like this:
+
+```
+Real Column (10)
+(0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.540, 0.000, 0.720)
+```
+
+Please note that the buffer has to be filled monotonously, starting at the lower positions
+and moving to higher positions. 
+Trying to access a position with a smaller index than another index that has 
+already been set will lead to an exception:
+
+```java
+RealBufferSparse buffer = Buffers.sparseRealBuffer(0, 10);
+buffer.setNext(2, 0);
+buffer.setNext(0, 0.54);
+```
+```
+java.lang.IllegalArgumentException: Cannot modify index 0. An equal or larger index has already been set.
+```
+
+Sparse buffers are write only. They do not have ```get``` methods like their dense counterparts.
+Also please note that the sparse buffers are thread safe but filling a buffer from multiple threads will 
+potentially be slow.
+
+Another way to fill a sparse buffer is to call ```setNext(double)```.
+This method fills the given value into the next higher buffer position.
+
+```java
+RealBufferSparse buffer = Buffers.sparseRealBuffer(0, 10);
+buffer.setNext(2, 0.72);
+buffer.setNext(0.54);
+Column column = buffer.toColumn();
+```
+```
+Real Column (10)
+(0.000, 0.000, 0.720, 0.540, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000)
+```
+
+For detailed information on the individual sparse buffers
+and their performance, please take a look at their Javadoc.  
