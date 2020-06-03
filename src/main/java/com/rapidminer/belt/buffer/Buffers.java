@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -22,7 +23,9 @@ import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.Capability;
 import com.rapidminer.belt.column.Column.Category;
 import com.rapidminer.belt.column.Column.TypeId;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.column.DateTimeColumn;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.CategoricalReader;
 import com.rapidminer.belt.util.IntegerFormats.Format;
 
@@ -35,39 +38,44 @@ import com.rapidminer.belt.util.IntegerFormats.Format;
  */
 public final class Buffers {
 
-	public static final String ILLEGAL_NUMBER_OF_CATEGORIES = "Illegal number of categories: ";
+	private static final String ILLEGAL_NUMBER_OF_CATEGORIES = "Illegal number of categories: ";
 
 	static {
 		InternalBuffers internalBuffers = new InternalBuffers() {
 
 			@Override
-			public <T> UInt2CategoricalBuffer<T> newUInt2Buffer(int length) {
-				return new UInt2CategoricalBuffer<>(length);
+			public UInt2NominalBuffer newUInt2Buffer(ColumnType<String> type, int length) {
+				return new UInt2NominalBuffer(type, length);
 			}
 
 			@Override
-			public <T> UInt4CategoricalBuffer<T> newUInt4Buffer(int length) {
-				return new UInt4CategoricalBuffer<>(length);
+			public UInt4NominalBuffer newUInt4Buffer(ColumnType<String> type, int length) {
+				return new UInt4NominalBuffer(type, length);
 			}
 
 			@Override
-			public <T> UInt8CategoricalBuffer<T> newUInt8Buffer(int length, Format targetFormat) {
-				return new UInt8CategoricalBuffer<>(length, targetFormat);
+			public UInt8NominalBuffer newUInt8Buffer(ColumnType<String> type, int length, Format targetFormat) {
+				return new UInt8NominalBuffer(type, length, targetFormat);
 			}
 
 			@Override
-			public <T> UInt8CategoricalBuffer<T> newUInt8Buffer(int length) {
-				return new UInt8CategoricalBuffer<>(length);
+			public UInt8NominalBuffer newUInt8Buffer(ColumnType<String> type, int length) {
+				return new UInt8NominalBuffer(type, length);
 			}
 
 			@Override
-			public <T> UInt16CategoricalBuffer<T> newUInt16Buffer(int length) {
-				return new UInt16CategoricalBuffer<>(length);
+			public UInt16NominalBuffer newUInt16Buffer(ColumnType<String> type, int length) {
+				return new UInt16NominalBuffer(type, length);
 			}
 
 			@Override
-			public <T> Int32CategoricalBuffer<T> newInt32Buffer(int length) {
-				return new Int32CategoricalBuffer<>(length);
+			public Int32NominalBuffer newInt32Buffer(ColumnType<String> type, int length) {
+				return new Int32NominalBuffer(type, length);
+			}
+
+			@Override
+			public <T> ObjectBuffer<T> newObjectBuffer(ColumnType<T> type, int length) {
+				return new ObjectBuffer<>(type, length);
 			}
 
 		};
@@ -76,7 +84,6 @@ public final class Buffers {
 	}
 
 	private static final String MSG_NULL_COLUMN = "Column must not be null";
-	private static final String MSG_NULL_TYPE = "Type must not be null";
 	private static final String MSG_NOT_NUMERIC_READABLE = "Column must be numeric readable";
 	private static final String MSG_ILLEGAL_CAPACITY = "Illegal capacity: ";
 	private static final String MSG_TYPE_INCOMPATIBLE_WITH = "Given type is incompatible with column of type: ";
@@ -161,7 +168,7 @@ public final class Buffers {
 	}
 
 	/**
-	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#INTEGER}. The buffer is
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#INTEGER_53_BIT}. The buffer is
 	 * initially filled with {@link Double#NaN}. If the buffer is completely overwritten anyway {@link #realBuffer(int,
 	 * boolean)} can be used with initialize {@code false} instead.
 	 *
@@ -171,12 +178,12 @@ public final class Buffers {
 	 * @throws IllegalArgumentException
 	 * 		if the given size is negative
 	 */
-	public static NumericBuffer integerBuffer(int length) {
-		return integerBuffer(length, true);
+	public static NumericBuffer integer53BitBuffer(int length) {
+		return integer53BitBuffer(length, true);
 	}
 
 	/**
-	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#INTEGER}. The buffer is
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#INTEGER_53_BIT}. The buffer is
 	 * initially filled with {@link Double#NaN} is initialize is {@code true}.
 	 *
 	 * @param length
@@ -187,15 +194,15 @@ public final class Buffers {
 	 * @throws IllegalArgumentException
 	 * 		if the given size is negative
 	 */
-	public static NumericBuffer integerBuffer(int length, boolean initialize) {
+	public static NumericBuffer integer53BitBuffer(int length, boolean initialize) {
 		if (length < 0) {
 			throw new IllegalArgumentException(MSG_ILLEGAL_CAPACITY + length);
 		}
-		return new IntegerBuffer(length, initialize);
+		return new Integer53BitBuffer(length, initialize);
 	}
 
 	/**
-	 * Creates a buffer to create a {@link Column} of type {@link TypeId#INTEGER} by copying the data from the given
+	 * Creates a buffer to create a {@link Column} of type {@link TypeId#INTEGER_53_BIT} by copying the data from the given
 	 * column.
 	 *
 	 * @param column
@@ -206,19 +213,19 @@ public final class Buffers {
 	 * @throws IllegalArgumentException
 	 * 		if the given column does not have the capability {@link Capability#NUMERIC_READABLE}
 	 */
-	public static NumericBuffer integerBuffer(Column column) {
+	public static NumericBuffer integer53BitBuffer(Column column) {
 		if (column == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN);
 		}
 		if (!column.type().hasCapability(Capability.NUMERIC_READABLE)) {
 			throw new IllegalArgumentException(MSG_NOT_NUMERIC_READABLE);
 		}
-		return new IntegerBuffer(column);
+		return new Integer53BitBuffer(column);
 	}
 
 	/**
 	 * Creates a memory efficient sparse buffer of the given length to create a sparse {@link Column} of type {@link
-	 * TypeId#INTEGER}. The buffer is initially filled with the given default value.
+	 * TypeId#INTEGER_53_BIT}. The buffer is initially filled with the given default value.
 	 * <p>
 	 * Please note that the buffer implementation is thread safe but accessing it from multiple threads will be slow.
 	 * <p>
@@ -235,60 +242,94 @@ public final class Buffers {
 	 * @throws IllegalArgumentException
 	 * 		if the given size is negative
 	 */
-	public static IntegerBufferSparse sparseIntegerBuffer(double defaultValue, int length) {
-		return new IntegerBufferSparse(defaultValue, length);
+	public static Integer53BitBufferSparse sparseInteger53BitBuffer(double defaultValue, int length) {
+		return new Integer53BitBufferSparse(defaultValue, length);
 	}
 
 	/**
-	 * Creates a buffer of the given length to create a column of category {@link Category#OBJECT}. The buffer is
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#TEXT}. The buffer is
 	 * initially filled with {@code null} (missing value).
 	 *
 	 * @param length
 	 * 		the length of the buffer
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws IllegalArgumentException
 	 * 		if the given length is negative
 	 */
-	public static <T> ObjectBuffer<T> objectBuffer(int length) {
+	public static ObjectBuffer<String> textBuffer(int length) {
 		if (length < 0) {
 			throw new IllegalArgumentException(MSG_ILLEGAL_CAPACITY + length);
 		}
-		return new ObjectBuffer<>(length);
+		return new ObjectBuffer<>(ColumnType.TEXT, length);
 	}
 
 	/**
-	 * Creates a buffer to create a {@link Column} of category {@link Category#OBJECT} by copying the data from the
+	 * Creates a buffer to create a {@link Column} of type {@link TypeId#TEXT} by copying the data from the
 	 * given column.
 	 *
 	 * @param column
 	 * 		the column to create a copy of
-	 * @param type
-	 * 		the element type
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws NullPointerException
 	 * 		if the given column is {@code null}
 	 * @throws IllegalArgumentException
 	 * 		if the given column does not have the capability {@link Capability#OBJECT_READABLE} or its elements cannot be
-	 * 		cast to the given type
+	 * 		cast to {@link String}
 	 */
-	public static <T> ObjectBuffer<T> objectBuffer(Column column, Class<T> type) {
+	public static ObjectBuffer<String> textBuffer(Column column) {
 		if (column == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN);
 		}
 		if (!column.type().hasCapability(Capability.OBJECT_READABLE)) {
 			throw new IllegalArgumentException("Column must be object readable");
 		}
-		if (type == null) {
-			throw new NullPointerException(MSG_NULL_TYPE);
-		}
-		if (!type.isAssignableFrom(column.type().elementType())) {
+		if (!ColumnType.TEXT.elementType().isAssignableFrom(column.type().elementType())) {
 			throw new IllegalArgumentException(MSG_TYPE_INCOMPATIBLE_WITH + column.type().elementType());
 		}
-		return new ObjectBuffer<>(type, column);
+		return new ObjectBuffer<>(ColumnType.TEXT, column);
+	}
+
+	/**
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#TEXT_SET}. The buffer is
+	 * initially filled with {@code null} (missing value).
+	 *
+	 * @param length
+	 * 		the length of the buffer
+	 * @return the new buffer
+	 * @throws IllegalArgumentException
+	 * 		if the given length is negative
+	 */
+	public static ObjectBuffer<StringSet> textsetBuffer(int length) {
+		if (length < 0) {
+			throw new IllegalArgumentException(MSG_ILLEGAL_CAPACITY + length);
+		}
+		return new ObjectBuffer<>(ColumnType.TEXTSET, length);
+	}
+
+	/**
+	 * Creates a buffer to create a {@link Column} of type {@link TypeId#TEXT_SET} by copying the data from the
+	 * given column.
+	 *
+	 * @param column
+	 * 		the column to create a copy of
+	 * @return the new buffer
+	 * @throws NullPointerException
+	 * 		if the given column is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if the given column does not have the capability {@link Capability#OBJECT_READABLE} or its elements cannot be
+	 * 		cast to {@link StringSet}
+	 */
+	public static ObjectBuffer<StringSet> textsetBuffer(Column column) {
+		if (column == null) {
+			throw new NullPointerException(MSG_NULL_COLUMN);
+		}
+		if (!column.type().hasCapability(Capability.OBJECT_READABLE)) {
+			throw new IllegalArgumentException("Column must be object readable");
+		}
+		if (!ColumnType.TEXTSET.elementType().isAssignableFrom(column.type().elementType())) {
+			throw new IllegalArgumentException(MSG_TYPE_INCOMPATIBLE_WITH + column.type().elementType());
+		}
+		return new ObjectBuffer<>(ColumnType.TEXTSET, column);
 	}
 
 	/**
@@ -527,34 +568,32 @@ public final class Buffers {
 	}
 
 	/**
-	 * Creates a buffer of the given length to create a {@link Column} of category {@link Category#CATEGORICAL}. The
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#NOMINAL}. The
 	 * buffer supports the maximum number of categories supported by Belt ({@value Integer#MAX_VALUE}). The buffer is
 	 * initially filled with {@link CategoricalReader#MISSING_CATEGORY}.
 	 *
-	 * <p>Please note, that it is recommended to use {@link #categoricalBuffer(int, int)} instead whenever the number
+	 * <p>Please note, that it is recommended to use {@link #nominalBuffer(int, int)} instead whenever the number
 	 * of categories is known in advance.
 	 *
 	 * @param length
 	 * 		the length of the buffer
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws IllegalArgumentException
 	 * 		if the given size is negative
 	 */
-	public static <T> CategoricalBuffer<T> categoricalBuffer(int length) {
+	public static NominalBuffer nominalBuffer(int length) {
 		if (length < 0) {
 			throw new IllegalArgumentException(MSG_ILLEGAL_CAPACITY + length);
 		}
-		return new Int32CategoricalBuffer<>(length);
+		return new Int32NominalBuffer(ColumnType.NOMINAL, length);
 	}
 
 	/**
-	 * Creates a sparse buffer of the given length to create a sparse {@link Column} of category {@link
-	 * Category#CATEGORICAL}. The buffer supports the maximum number of categories supported by Belt ({@value
-	 * Integer#MAX_VALUE}). The buffer is initially filled with the given default value.
+	 * Creates a sparse buffer of the given length to create a sparse {@link Column} of type {@link TypeId#NOMINAL}.
+	 * The buffer supports the maximum number of categories supported by Belt ({@value Integer#MAX_VALUE}). The buffer
+	 * is initially filled with the given default value.
 	 *
-	 * <p>Please note, that it is recommended to use {@link #categoricalBuffer(int, int)} instead whenever the number
+	 * <p>Please note, that it is recommended to use {@link #nominalBuffer(int, int)} instead whenever the number
 	 * of categories is known in advance.
 	 * <p>
 	 * Please note that the buffer implementation is thread safe but accessing it from multiple threads will be slow.
@@ -568,19 +607,17 @@ public final class Buffers {
 	 * 		the buffer's (usually most common) default value.
 	 * @param length
 	 * 		the length of the buffer
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws IllegalArgumentException
 	 * 		if the given size is negative
 	 */
-	public static <T> CategoricalBufferSparse<T> sparseCategoricalBuffer(T defaultValue, int length) {
-		return new Int32CategoricalBufferSparse<>(defaultValue, length);
+	public static NominalBufferSparse sparseNominalBuffer(String defaultValue, int length) {
+		return new Int32NominalBufferSparse(ColumnType.NOMINAL, defaultValue, length);
 	}
 
 	/**
-	 * Creates a sparse buffer of the given length to create a sparse {@link Column} of category {@link
-	 * Category#CATEGORICAL} with at most the given number of categories. Trying to use the buffer with more than the
+	 * Creates a sparse buffer of the given length to create a sparse {@link Column} of type {@link TypeId#NOMINAL}
+	 * with at most the given number of categories. Trying to use the buffer with more than the
 	 * specified number of categories will result in an error. The buffer is initially filled with the given default
 	 * value.
 	 * <p>
@@ -588,9 +625,11 @@ public final class Buffers {
 	 * <p>
 	 * The buffer's efficiency will depend on the data's sparsity and number of different categories. The buffer will
 	 * usually be memory and time efficient for
+	 * <ul>
 	 * <li> {@code > 65535} categories (32 bit data) and a sparsity of {@code >= 50%}.
 	 * <li> {@code > 255} and {@code <= 65535} categories (16 bit data) and a sparsity of {@code >= 66%}.
 	 * <li> {@code <= 255} categories (8 bit data) and a sparsity of {@code >= 80%}.
+	 * </ul>
 	 * <p> The sparse buffer comes with a constant memory overhead so that it is
 	 * recommended not to use it for very small data ({@code <1024} data points).
 	 *
@@ -600,13 +639,11 @@ public final class Buffers {
 	 * 		the size of the buffer
 	 * @param categories
 	 * 		the number of categories
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws IllegalArgumentException
 	 * 		if the given size or number of categories is negative
 	 */
-	public static <T> CategoricalBufferSparse<T> sparseCategoricalBuffer(T defaultValue, int length, int categories) {
+	public static NominalBufferSparse sparseNominalBuffer(String defaultValue, int length, int categories) {
 		if (categories < 0) {
 			throw new IllegalArgumentException(ILLEGAL_NUMBER_OF_CATEGORIES + categories);
 		}
@@ -615,17 +652,17 @@ public final class Buffers {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new UInt8CategoricalBufferSparse<>(defaultValue, length);
+				return new UInt8NominalBufferSparse(ColumnType.NOMINAL, defaultValue, length);
 			case UNSIGNED_INT16:
-				return new UInt16CategoricalBufferSparse<>(defaultValue, length);
+				return new UInt16NominalBufferSparse(ColumnType.NOMINAL, defaultValue, length);
 			case SIGNED_INT32:
 			default:
-				return new Int32CategoricalBufferSparse<>(defaultValue, length);
+				return new Int32NominalBufferSparse(ColumnType.NOMINAL, defaultValue, length);
 		}
 	}
 
 	/**
-	 * Creates a buffer of the given length to create a {@link Column} of category {@link Category#CATEGORICAL} with at
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#NOMINAL} with at
 	 * most the given number of categories. Trying to use the buffer with more than the specified number of categories
 	 * might result in an error. The buffer is initially filled with {@link CategoricalReader#MISSING_CATEGORY}.
 	 *
@@ -633,13 +670,11 @@ public final class Buffers {
 	 * 		the size of the buffer
 	 * @param categories
 	 * 		the number of categories
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws IllegalArgumentException
 	 * 		if the given size or number of categories is negative
 	 */
-	public static <T> CategoricalBuffer<T> categoricalBuffer(int length, int categories) {
+	public static NominalBuffer nominalBuffer(int length, int categories) {
 		if (length < 0) {
 			throw new IllegalArgumentException(MSG_ILLEGAL_CAPACITY + length);
 		}
@@ -653,65 +688,54 @@ public final class Buffers {
 			case UNSIGNED_INT8:
 				// Do not use packed buffers (smaller that 8Bit) here, since the corresponding buffers are only
 				// partially thread-safe.
-				return new UInt8CategoricalBuffer<>(length, minimal);
+				return new UInt8NominalBuffer(ColumnType.NOMINAL, length, minimal);
 			case UNSIGNED_INT16:
-				return new UInt16CategoricalBuffer<>(length);
+				return new UInt16NominalBuffer(ColumnType.NOMINAL, length);
 			case SIGNED_INT32:
 			default:
-				return new Int32CategoricalBuffer<>(length);
+				return new Int32NominalBuffer(ColumnType.NOMINAL, length);
 		}
 	}
 
 	/**
-	 * Creates a buffer to create a {@link Column} of category {@link Category#CATEGORICAL} by copying the data from the
+	 * Creates a buffer to create a {@link Column} of type {@link TypeId#NOMINAL} by copying the data from the
 	 * given column. The buffer supports the maximum number of categories supported by Belt ({@value
 	 * Integer#MAX_VALUE}). The buffer is initially filled with {@link CategoricalReader#MISSING_CATEGORY}.
 	 *
-	 * <p>Please note, that it is recommended to use {@link #categoricalBuffer(Column, Class, int)} instead whenever
+	 * <p>Please note, that it is recommended to use {@link #nominalBuffer(Column, int)} instead whenever
 	 * the number of categories is known in advance.
 	 *
 	 * @param column
 	 * 		the column to derive the buffer from
-	 * @param type
-	 * 		the element type
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
 	 * @throws IllegalArgumentException
-	 * 		if the column is not categorical or if the specified type is incompatible with the given column
+	 * 		if the column is not categorical or if the String type is incompatible with the given column
 	 */
-	public static <T> CategoricalBuffer<T> categoricalBuffer(Column column, Class<T> type) {
+	public static NominalBuffer nominalBuffer(Column column) {
 		if (column == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN);
 		}
 		if (!Category.CATEGORICAL.equals(column.type().category())) {
 			throw new IllegalArgumentException("Column must be categorical");
 		}
-		if (type == null) {
-			throw new NullPointerException(MSG_NULL_TYPE);
-		}
-		if (!type.isAssignableFrom(column.type().elementType())) {
+		if (!ColumnType.NOMINAL.elementType().isAssignableFrom(column.type().elementType())) {
 			throw new IllegalArgumentException(MSG_TYPE_INCOMPATIBLE_WITH + column.type().elementType());
 		}
-		return new Int32CategoricalBuffer<>(column, type);
+		return new Int32NominalBuffer(column, ColumnType.NOMINAL);
 	}
 
 	/**
-	 * Creates a buffer to create a {@link Column} of category {@link Category#CATEGORICAL} with at most the given
+	 * Creates a buffer to create a {@link Column} of type {@link TypeId#NOMINAL} with at most the given
 	 * number of categories by copying the data from the given column. Trying to use the buffer with more than the
 	 * specified number of categories might result in an error. The buffer is initially filled with {@link
 	 * CategoricalReader#MISSING_CATEGORY}.
 	 *
 	 * @param column
 	 * 		the column to derive the buffer from
-	 * @param type
-	 * 		the element type
 	 * @param categories
 	 * 		the number of categories
-	 * @param <T>
-	 * 		the element type
 	 * @return the new buffer
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
@@ -719,23 +743,20 @@ public final class Buffers {
 	 * 		if the column is not categorical, if the specified type is incompatible with the given column, or if the given
 	 * 		number of categories is negative
 	 */
-	public static <T> CategoricalBuffer<T> categoricalBuffer(Column column, Class<T> type, int categories) {
+	public static NominalBuffer nominalBuffer(Column column, int categories) {
 		if (column == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN);
 		}
 		if (!Category.CATEGORICAL.equals(column.type().category())) {
 			throw new IllegalArgumentException("Column must be categorical");
 		}
-		if (type == null) {
-			throw new NullPointerException(MSG_NULL_TYPE);
-		}
-		if (!type.isAssignableFrom(column.type().elementType())) {
+		if (!ColumnType.NOMINAL.elementType().isAssignableFrom(column.type().elementType())) {
 			throw new IllegalArgumentException(MSG_TYPE_INCOMPATIBLE_WITH + column.type().elementType());
 		}
 		if (categories < 0) {
 			throw new IllegalArgumentException(ILLEGAL_NUMBER_OF_CATEGORIES + categories);
 		}
-		int existingCategories = column.getDictionary(type).maximalIndex() + 1;
+		int existingCategories = column.getDictionary().maximalIndex() + 1;
 		Format minimal = Format.findMinimal(Integer.max(existingCategories, categories));
 		switch (minimal) {
 			case UNSIGNED_INT2:
@@ -743,12 +764,12 @@ public final class Buffers {
 			case UNSIGNED_INT8:
 				// Do not use packed buffers (smaller that 8Bit) here, since the corresponding buffers are only
 				// partially thread-safe.
-				return new UInt8CategoricalBuffer<>(column, type, minimal);
+				return new UInt8NominalBuffer(column, ColumnType.NOMINAL, minimal);
 			case UNSIGNED_INT16:
-				return new UInt16CategoricalBuffer<>(column, type);
+				return new UInt16NominalBuffer(column, ColumnType.NOMINAL);
 			case SIGNED_INT32:
 			default:
-				return new Int32CategoricalBuffer<>(column, type);
+				return new Int32NominalBuffer(column, ColumnType.NOMINAL);
 		}
 	}
 
@@ -765,32 +786,38 @@ public final class Buffers {
 		/**
 		 * Creates a new uint2 categorical buffer of the given length.
 		 */
-		public abstract <T> UInt2CategoricalBuffer<T> newUInt2Buffer(int length);
+		public abstract UInt2NominalBuffer newUInt2Buffer(ColumnType<String> type, int length);
 
 		/**
 		 * Creates a new uint4 categorical buffer of the given length.
 		 */
-		public abstract <T> UInt4CategoricalBuffer<T> newUInt4Buffer(int length);
+		public abstract UInt4NominalBuffer newUInt4Buffer(ColumnType<String> type, int length);
 
 		/**
 		 * Creates a new uint8 categorical buffer of the given length.
 		 */
-		public abstract <T> UInt8CategoricalBuffer<T> newUInt8Buffer(int length);
+		public abstract UInt8NominalBuffer newUInt8Buffer(ColumnType<String> type, int length);
 
 		/**
 		 * Creates a new uint8 categorical buffer of the given length with the given target format.
 		 */
-		public abstract <T> UInt8CategoricalBuffer<T> newUInt8Buffer(int length, Format targetFormat);
+		public abstract UInt8NominalBuffer newUInt8Buffer(ColumnType<String> type, int length,
+														  Format targetFormat);
 
 		/**
 		 * Creates a new uint16 categorical buffer of the given length.
 		 */
-		public abstract <T> UInt16CategoricalBuffer<T> newUInt16Buffer(int length);
+		public abstract UInt16NominalBuffer newUInt16Buffer(ColumnType<String> type, int length);
 
 		/**
 		 * Creates a new int32 categorical buffer of the given length.
 		 */
-		public abstract <T> Int32CategoricalBuffer<T> newInt32Buffer(int length);
+		public abstract Int32NominalBuffer newInt32Buffer(ColumnType<String> type, int length);
+
+		/**
+		 * Creates a new object buffer of the given length.
+		 */
+		public abstract <T> ObjectBuffer<T> newObjectBuffer(ColumnType<T> type, int length);
 
 		private InternalBuffers() {
 		}

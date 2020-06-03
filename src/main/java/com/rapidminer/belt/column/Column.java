@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -17,8 +17,11 @@
 package com.rapidminer.belt.column;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
+import com.rapidminer.belt.column.type.StringSet;
+import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.table.Table;
 import com.rapidminer.belt.util.Order;
 
@@ -31,39 +34,55 @@ import com.rapidminer.belt.util.Order;
 public abstract class Column {
 
 	/**
-	 * Types of columns
+	 * Types of columns. Can be used to identify and create columns, e.g., via
+	 * {@link com.rapidminer.belt.table.Writers#mixedRowWriter(List, List, boolean)}.
 	 */
 	public enum TypeId {
 
 		/**
-		 * Double values.
+		 * 64 bit double values. Data can be accessed, for example, via {@link Readers#numericReader(Column)}.
 		 */
 		REAL("Real"),
 
 		/**
-		 * Double values with no fractional digits.
+		 * 64 bit double values with no fractional digits. Data can be accessed, for example, via {@link
+		 * Readers#numericReader(Column)}.
+		 * <p>
+		 * Please note: The maximum / minimum value that can be stored without loss of information is {@code +/-
+		 * 2^53-1}. Therefore, casting this column's values to {@code int} leads to loss of information for values
+		 * smaller / larger than {@link Integer#MIN_VALUE} / {@link Integer#MAX_VALUE}.
 		 */
-		INTEGER("Integer"),
+		INTEGER_53_BIT("Integer"),
 
 		/**
-		 * 64Bit UTC timestamps (seconds), and 32Bit fraction of a second (nanoseconds, optional).
+		 * 64 bit UTC timestamps (seconds), and 32 bit fraction of a second (nanoseconds, optional). Data can be read as
+		 * {@link java.time.Instant}. This can be done, for example, via {@link Readers#objectReader(Column, Class)}.
 		 */
 		DATE_TIME("Date-Time"),
 
 		/**
-		 * 64Bit nanoseconds of a day.
+		 * Nanoseconds of a day. Data can be read numeric or as {@link java.time.LocalTime}. This can be done, for
+		 * example, via {@link Readers#numericReader(Column)} or {@link Readers#objectReader(Column, Class)}.
 		 */
 		TIME("Time"),
 
 		/**
-		 * Categorical strings.
+		 * Categorical strings. Data can be read categorical or as {@link String}. This can be done, for example, via
+		 * {@link Readers#categoricalReader(Column)} or {@link Readers#objectReader(Column, Class)}.
 		 */
 		NOMINAL("Nominal"),
 
 		/**
-		 * Not builtin id.
+		 * Non-categorical strings. Data can be read as {@link String}. This can be done, for example, via {@link
+		 * Readers#objectReader(Column, Class)}.
 		 */
-		CUSTOM("Custom");
+		TEXT("Text"),
+
+		/**
+		 * Sets of strings. Data can be read as {@link StringSet}. This can be done, for example, via {@link
+		 * Readers#objectReader(Column, Class)}.
+		 */
+		TEXT_SET("Text-Set");
 
 		private final String displayName;
 
@@ -316,13 +335,9 @@ public abstract class Column {
 	 * Returns the dictionary of the categorical column. Throws an {@link UnsupportedOperationException} except if the
 	 * category of this column is {@link Category#CATEGORICAL}.
 	 *
-	 * @param elementType
-	 * 		the desired element type, must be a super type of the element type of this column
-	 * @param <T>
-	 * 		the type of the returned dictionary
 	 * @return the dictionary
 	 */
-	public <T> Dictionary<T> getDictionary(Class<T> elementType) {
+	public Dictionary getDictionary() {
 		throw new UnsupportedOperationException();
 	}
 

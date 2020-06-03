@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -9,7 +10,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Affero General Public License aint with this program. If not, see
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see
  * https://www.gnu.org/licenses/.
  */
 
@@ -36,12 +37,12 @@ import com.rapidminer.belt.util.IntegerArrayBuilder;
  *
  * @author Kevin Majchrzak
  */
-final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
+final class Int32CategoricalWriterSparse implements ComplexWriter {
 
 	/**
 	 * The buffer's (usually most common) default value's object representation.
 	 */
-	private final T defaultValueAsObject;
+	private final String defaultValueAsObject;
 
 	/**
 	 * {@code true} if the buffer cannot be modified anymore.
@@ -51,7 +52,7 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 	/**
 	 * The column type used to create columns.
 	 */
-	private final ColumnType<T> columnType;
+	private final ColumnType<String> columnType;
 
 	/**
 	 * The buffer's (usually most common) default value.
@@ -61,12 +62,12 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 	/**
 	 * Maps the given categorical value to its corresponding index.
 	 */
-	private Map<T, Integer> indexLookup;
+	private Map<String, Integer> indexLookup;
 
 	/**
 	 * List of distinct values stored at their corresponding index positions.
 	 */
-	private List<T> valueLookup;
+	private List<String> valueLookup;
 
 	/**
 	 * The column that has been created by the buffer or {@code null} if the buffer has not been frozen yet.
@@ -106,17 +107,17 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 	 * @param height
 	 * 		only the first 'height' values of the indices array will be used and the rest will be ignored.
 	 */
-	static <T> Int32CategoricalWriterSparse<T> ofRawIndices(ColumnType<T> type, int defaultValue,
-															Map<T, Integer> indexLookup, List<T> valueLookup,
+	static Int32CategoricalWriterSparse ofRawIndices(ColumnType<String> type, int defaultValue,
+															Map<String, Integer> indexLookup, List<String> valueLookup,
 															int[] indices, int height) {
-		return new Int32CategoricalWriterSparse<>(type, defaultValue, indexLookup, valueLookup, indices, height);
+		return new Int32CategoricalWriterSparse(type, defaultValue, indexLookup, valueLookup, indices, height);
 	}
 
 	/**
 	 * For internal use only.
 	 */
-	private Int32CategoricalWriterSparse(ColumnType<T> type, int defaultValue,
-										 Map<T, Integer> indexLookup, List<T> valueLookup,
+	private Int32CategoricalWriterSparse(ColumnType<String> type, int defaultValue,
+										 Map<String, Integer> indexLookup, List<String> valueLookup,
 										 int[] indices, int height) {
 		this.columnType = type;
 		this.indexLookup = indexLookup;
@@ -143,7 +144,7 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 	 * @param defaultValue
 	 * 		the data's (usually most common) default value.
 	 */
-	Int32CategoricalWriterSparse(ColumnType<T> type, T defaultValue) {
+	Int32CategoricalWriterSparse(ColumnType<String> type, String defaultValue) {
 		this.columnType = type;
 		indexLookup = new HashMap<>();
 		valueLookup = new ArrayList<>();
@@ -172,7 +173,7 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 		while (nextLogicalIndex < max) {
 			// the cast is safe because we check the data that is put into the buffer
 			@SuppressWarnings("unchecked")
-			T value = (T) buffer[bufferIndex];
+			String value = (String) buffer[bufferIndex];
 			setNext(value);
 			bufferIndex += bufferStepSize;
 		}
@@ -196,7 +197,7 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 	/**
 	 * Sets the next logical index to the given value.
 	 */
-	protected void setNext(T value) {
+	protected void setNext(String value) {
 		if (!Objects.equals(defaultValueAsObject, value)) {
 			nonDefaultIndices.setNext(nextLogicalIndex);
 			if (value == null) {
@@ -219,14 +220,14 @@ final class Int32CategoricalWriterSparse<T> implements ComplexWriter {
 	/**
 	 * Returns the buffer's default value (usually but not necessarily the most common value). Used for testing.
 	 */
-	T getDefaultValue() {
+	String getDefaultValue() {
 		return defaultValueAsObject;
 	}
 
 	/**
 	 * Used for testing.
 	 */
-	List<T> getValueLookup() {
+	List<String> getValueLookup() {
 		return valueLookup;
 	}
 

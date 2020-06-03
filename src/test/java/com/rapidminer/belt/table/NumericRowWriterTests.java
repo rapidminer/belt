@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -29,8 +30,9 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
+import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.NumericReader;
 import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.util.ArrayBuilderConfiguration;
@@ -93,7 +95,7 @@ public class NumericRowWriterTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullLabelsWithTypes() {
-			Writers.numericRowWriter(null, Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL), false);
+			Writers.numericRowWriter(null, Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL), false);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -113,7 +115,7 @@ public class NumericRowWriterTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullLabelsPosRowsWithTypes() {
-			Writers.numericRowWriter(null, Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL), 1, false);
+			Writers.numericRowWriter(null, Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL), 1, false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -123,7 +125,7 @@ public class NumericRowWriterTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testEmptyLabelsWithTypes() {
-			Writers.numericRowWriter(new ArrayList<>(), Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL), false);
+			Writers.numericRowWriter(new ArrayList<>(), Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL), false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -133,7 +135,7 @@ public class NumericRowWriterTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testEmptyLabelsPosRowsWithTypes() {
-			Writers.numericRowWriter(new ArrayList<>(), Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL), 1,
+			Writers.numericRowWriter(new ArrayList<>(), Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL), 1,
 					false);
 		}
 
@@ -144,18 +146,18 @@ public class NumericRowWriterTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeRowsWithTypes() {
-			Writers.numericRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL), -1
+			Writers.numericRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL), -1
 					, false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchedTypesLength() {
-			Writers.numericRowWriter(Arrays.asList("a", "b"), Collections.singletonList(ColumnTypes.INTEGER), false);
+			Writers.numericRowWriter(Arrays.asList("a", "b"), Collections.singletonList(TypeId.INTEGER_53_BIT), false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchedTypesLengthWithRows() {
-			Writers.numericRowWriter(Arrays.asList("a", "b"), Collections.singletonList(ColumnTypes.INTEGER), 5, false);
+			Writers.numericRowWriter(Arrays.asList("a", "b"), Collections.singletonList(TypeId.INTEGER_53_BIT), 5, false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -269,7 +271,7 @@ public class NumericRowWriterTests {
 			double[] third = sparseRandom(numberOfRows, true);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL, TypeId.INTEGER_53_BIT), false);
 			for (int i = 0; i < NumericReader.SMALL_BUFFER_SIZE + 10; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -279,9 +281,9 @@ public class NumericRowWriterTests {
 			// we added more than NumericReader.SMALL_BUFFER_SIZE values. Therefore, the buffer has been written to the
 			// columns and we can now check for sparsity to force sparse columns
 			writer.checkForSparsity();
-			assertTrue(writer.getColumns()[0] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[0] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getColumns()[1] instanceof RealColumnWriterSparse);
-			assertTrue(writer.getColumns()[2] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[2] instanceof Integer53BitColumnWriterSparse);
 			for (int i = NumericReader.SMALL_BUFFER_SIZE + 10; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -305,7 +307,7 @@ public class NumericRowWriterTests {
 			double[] third = sparseRandom(numberOfRows, true);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL, ColumnTypes.INTEGER), true);
+					Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL, TypeId.INTEGER_53_BIT), true);
 			for (int i = 0; i < numberOfRows - 1; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -313,24 +315,24 @@ public class NumericRowWriterTests {
 				writer.set(2, third[i]);
 			}
 			// this is the max number of rows before checking for sparsity
-			assertTrue(writer.getColumns()[0] instanceof IntegerColumnWriter);
+			assertTrue(writer.getColumns()[0] instanceof Integer53BitColumnWriter);
 			assertTrue(writer.getColumns()[1] instanceof RealColumnWriter);
-			assertTrue(writer.getColumns()[2] instanceof IntegerColumnWriter);
+			assertTrue(writer.getColumns()[2] instanceof Integer53BitColumnWriter);
 			writer.move();
 			writer.set(0, first[numberOfRows - 1]);
 			writer.set(1, second[numberOfRows - 1]);
 			writer.set(2, third[numberOfRows - 1]);
 			// now the check for sparsity should have taken place
-			assertTrue(writer.getColumns()[0] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[0] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getColumns()[1] instanceof RealColumnWriterSparse);
-			assertTrue(writer.getColumns()[2] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[2] instanceof Integer53BitColumnWriterSparse);
 			Table table = writer.create();
 			assertTrue(ColumnTestUtils.isSparse(table.getColumns()[0]));
 			assertTrue(ColumnTestUtils.isSparse(table.getColumns()[1]));
 			assertTrue(ColumnTestUtils.isSparse(table.getColumns()[2]));
-			assertEquals(ColumnTypes.INTEGER, table.getColumns()[0].type());
-			assertEquals(ColumnTypes.REAL, table.getColumns()[1].type());
-			assertEquals(ColumnTypes.INTEGER, table.getColumns()[2].type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.getColumns()[0].type());
+			assertEquals(ColumnType.REAL, table.getColumns()[1].type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.getColumns()[2].type());
 			TestCase.assertEquals(numberOfRows, table.height());
 			assertArrayEquals(new double[][]{Arrays.stream(first).map(x -> Double.isFinite(x) ? Math.round(x) : x).toArray(),
 							second, Arrays.stream(third).map(x -> Double.isFinite(x) ? Math.round(x) : x).toArray()},
@@ -352,7 +354,7 @@ public class NumericRowWriterTests {
 					third, 0, firstNumberOfRows);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL, TypeId.INTEGER_53_BIT), false);
 			for (int i = 0; i < firstNumberOfRows; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -362,9 +364,9 @@ public class NumericRowWriterTests {
 			// we added more than NumericReader.SMALL_BUFFER_SIZE values. Therefore, the buffer has been written to the
 			// columns and we can now check for sparsity to force sparse columns
 			writer.checkForSparsity();
-			assertTrue(writer.getColumns()[0] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[0] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getColumns()[1] instanceof RealColumnWriterSparse);
-			assertTrue(writer.getColumns()[2] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[2] instanceof Integer53BitColumnWriterSparse);
 			// now we add 10 times more dense data so that the overall column should be dense
 			System.arraycopy(random(firstNumberOfRows * 10), 0,
 					first, firstNumberOfRows, firstNumberOfRows * 10);
@@ -388,9 +390,9 @@ public class NumericRowWriterTests {
 			assertFalse(ColumnTestUtils.isSparse(table.getColumns()[0]));
 			assertFalse(ColumnTestUtils.isSparse(table.getColumns()[1]));
 			assertFalse(ColumnTestUtils.isSparse(table.getColumns()[2]));
-			assertEquals(ColumnTypes.INTEGER, table.getColumns()[0].type());
-			assertEquals(ColumnTypes.REAL, table.getColumns()[1].type());
-			assertEquals(ColumnTypes.INTEGER, table.getColumns()[2].type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.getColumns()[0].type());
+			assertEquals(ColumnType.REAL, table.getColumns()[1].type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.getColumns()[2].type());
 		}
 
 		@Test
@@ -407,7 +409,7 @@ public class NumericRowWriterTests {
 					third, 0, firstNumberOfRows);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.REAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.REAL, TypeId.INTEGER_53_BIT), false);
 			for (int i = 0; i < firstNumberOfRows; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -417,12 +419,12 @@ public class NumericRowWriterTests {
 			// we added more than NumericReader.SMALL_BUFFER_SIZE values. Therefore, the buffer has been written to the
 			// columns and we can now check for sparsity to force sparse columns
 			writer.checkForSparsity();
-			assertTrue(writer.getColumns()[0] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getColumns()[0] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getColumns()[1] instanceof RealColumnWriterSparse);
-			assertTrue(writer.getColumns()[2] instanceof IntegerColumnWriterSparse);
-			assertEquals(-199, ((IntegerColumnWriterSparse) writer.getColumns()[0]).getDefaultValue(), EPSILON);
+			assertTrue(writer.getColumns()[2] instanceof Integer53BitColumnWriterSparse);
+			assertEquals(-199, ((Integer53BitColumnWriterSparse) writer.getColumns()[0]).getDefaultValue(), EPSILON);
 			assertEquals(17.3, ((RealColumnWriterSparse) writer.getColumns()[1]).getDefaultValue(), EPSILON);
-			assertEquals(Double.NaN, ((IntegerColumnWriterSparse) writer.getColumns()[2]).getDefaultValue(), EPSILON);
+			assertEquals(Double.NaN, ((Integer53BitColumnWriterSparse) writer.getColumns()[2]).getDefaultValue(), EPSILON);
 			// now we add 10 times more sparse data with different default
 			// values so that the default value of the column should change
 			System.arraycopy(sparseRandom(firstNumberOfRows * 10, 19), 0,
@@ -450,9 +452,9 @@ public class NumericRowWriterTests {
 			assertEquals(19, ColumnTestUtils.getDefaultValue(table.getColumns()[0]), EPSILON);
 			assertEquals(Double.NaN, ColumnTestUtils.getDefaultValue(table.getColumns()[1]), EPSILON);
 			assertEquals(Double.POSITIVE_INFINITY, ColumnTestUtils.getDefaultValue(table.getColumns()[2]), EPSILON);
-			assertEquals(ColumnTypes.INTEGER, table.getColumns()[0].type());
-			assertEquals(ColumnTypes.REAL, table.getColumns()[1].type());
-			assertEquals(ColumnTypes.INTEGER, table.getColumns()[2].type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.getColumns()[0].type());
+			assertEquals(ColumnType.REAL, table.getColumns()[1].type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.getColumns()[2].type());
 		}
 
 		@Test
@@ -502,7 +504,7 @@ public class NumericRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER, ColumnTypes.REAL), numberOfRows * 2, false);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT, TypeId.REAL), numberOfRows * 2, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -523,7 +525,7 @@ public class NumericRowWriterTests {
 		public void testNotInitialized() {
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT), false);
 			writer.move();
 			writer.move();
 			writer.set(0, 1.53);
@@ -539,7 +541,7 @@ public class NumericRowWriterTests {
 		public void testInitialized() {
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER), true);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT), true);
 			writer.move();
 			writer.move();
 			writer.set(0, 1.53);
@@ -555,7 +557,7 @@ public class NumericRowWriterTests {
 		public void testSecondFillInitialized() {
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER), true);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT), true);
 			writer.move();
 			writer.move();
 			writer.set(0, 1.53);
@@ -581,7 +583,7 @@ public class NumericRowWriterTests {
 		public void testSecondFillNotInitialized() {
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT), false);
 			writer.move();
 			writer.move();
 			writer.set(0, 1.53);
@@ -605,16 +607,16 @@ public class NumericRowWriterTests {
 	}
 
 
-	public static class ColumnTypesTest {
+	public static class ColumnTypeTest {
 
 		@Test
 		public void testUnknownRows() {
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT), false);
 			Table table = writer.create();
 
-			assertEquals(ColumnTypes.REAL, table.column(0).type());
-			assertEquals(ColumnTypes.INTEGER, table.column(1).type());
+			assertEquals(ColumnType.REAL, table.column(0).type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.column(1).type());
 		}
 
 
@@ -626,7 +628,7 @@ public class NumericRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.INTEGER, ColumnTypes.REAL), numberOfRows / 2, false);
+					Arrays.asList(TypeId.REAL, TypeId.INTEGER_53_BIT, TypeId.REAL), numberOfRows / 2, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, first[i]);
@@ -635,15 +637,15 @@ public class NumericRowWriterTests {
 			}
 			Table table = writer.create();
 
-			assertEquals(ColumnTypes.REAL, table.column(0).type());
-			assertEquals(ColumnTypes.INTEGER, table.column(1).type());
-			assertEquals(ColumnTypes.REAL, table.column("c").type());
+			assertEquals(ColumnType.REAL, table.column(0).type());
+			assertEquals(ColumnType.INTEGER_53_BIT, table.column(1).type());
+			assertEquals(ColumnType.REAL, table.column("c").type());
 		}
 
 		@Test
 		public void testUnknownRowsReal() {
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.REAL), false);
+					Arrays.asList(TypeId.REAL, TypeId.REAL), false);
 			Table table = writer.create();
 
 			NumericRowWriter writer2 = Writers.realRowWriter(Arrays.asList("a", "b"), false);
@@ -662,7 +664,7 @@ public class NumericRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			NumericRowWriter writer = Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.REAL, ColumnTypes.REAL), numberOfRows, false);
+					Arrays.asList(TypeId.REAL, TypeId.REAL, TypeId.REAL), numberOfRows, false);
 			NumericRowWriter writer2 = Writers.realRowWriter(Arrays.asList("a", "b", "c"), numberOfRows, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
@@ -685,15 +687,14 @@ public class NumericRowWriterTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testNonNumericType() {
 			Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.objectType("broken", Void.class, null),
-							ColumnTypes.REAL), false);
+					Arrays.asList(TypeId.REAL, TypeId.TIME, TypeId.REAL), false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNonNumericTypeWithRows() {
 			Writers.numericRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.objectType("broken", Void.class, null),
-							ColumnTypes.REAL), 3, false);
+					Arrays.asList(TypeId.REAL, TypeId.TIME,
+							TypeId.REAL), 3, false);
 		}
 	}
 

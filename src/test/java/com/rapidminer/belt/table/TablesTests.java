@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -261,8 +262,8 @@ public class TablesTests {
 		assertEquals(test.labels(), adjusted.labels());
 		assertEquals(Arrays.asList(test.getColumns()[0], test.getColumns()[2]),
 				Arrays.asList(adjusted.getColumns()[0], adjusted.getColumns()[2]));
-		assertEquals(ColumnAccessor.get().getDictionaryList(test2.column(1).getDictionary(Object.class)),
-				ColumnAccessor.get().getDictionaryList(adjusted.column(1).getDictionary(Object.class)));
+		assertEquals(ColumnAccessor.get().getDictionaryList(test2.column(1).getDictionary()),
+				ColumnAccessor.get().getDictionaryList(adjusted.column(1).getDictionary()));
 	}
 
 	@Test
@@ -279,8 +280,8 @@ public class TablesTests {
 		assertEquals(test.labels(), adjusted.labels());
 		assertEquals(Arrays.asList(test.getColumns()[0], test.getColumns()[2]),
 				Arrays.asList(adjusted.getColumns()[0], adjusted.getColumns()[2]));
-		assertEquals(ColumnAccessor.get().getDictionaryList(test.column(1).getDictionary(Object.class)),
-				ColumnAccessor.get().getDictionaryList(adjusted.column(1).getDictionary(Object.class)));
+		assertEquals(ColumnAccessor.get().getDictionaryList(test.column(1).getDictionary()),
+				ColumnAccessor.get().getDictionaryList(adjusted.column(1).getDictionary()));
 	}
 
 	@Test
@@ -311,8 +312,8 @@ public class TablesTests {
 		assertEquals(test.height(), adjusted.height());
 		assertEquals(test.labels().subList(1, 3), adjusted.labels());
 		assertEquals(test.getColumns()[2], adjusted.getColumns()[1]);
-		assertEquals(test2.getColumns()[1].getDictionary(Object.class),
-				adjusted.getColumns()[0].getDictionary(Object.class));
+		assertEquals(test2.getColumns()[1].getDictionary(),
+				adjusted.getColumns()[0].getDictionary());
 	}
 
 	@Test
@@ -328,8 +329,8 @@ public class TablesTests {
 		assertEquals(test.height(), adjusted.height());
 		assertEquals(test.labels().subList(1, 3), adjusted.labels());
 		assertEquals(test.getColumns()[2], adjusted.getColumns()[1]);
-		assertEquals(ColumnAccessor.get().getDictionaryList(test.getColumns()[1].getDictionary(Object.class)),
-				ColumnAccessor.get().getDictionaryList(adjusted.getColumns()[0].getDictionary(Object.class)));
+		assertEquals(ColumnAccessor.get().getDictionaryList(test.getColumns()[1].getDictionary()),
+				ColumnAccessor.get().getDictionaryList(adjusted.getColumns()[0].getDictionary()));
 	}
 
 	@Test
@@ -364,7 +365,7 @@ public class TablesTests {
 		assertEquals(Arrays.asList(test.label(1), test.label(2), test.label(0)), adjusted.labels());
 		assertEquals(Arrays.asList(test.getColumns()[2], test.getColumns()[0]),
 				Arrays.asList(adjusted.getColumns()).subList(1, 3));
-		assertEquals(test2.column(1).getDictionary(Object.class), adjusted.column(0).getDictionary(Object.class));
+		assertEquals(test2.column(1).getDictionary(), adjusted.column(0).getDictionary());
 	}
 
 	@Test
@@ -382,7 +383,7 @@ public class TablesTests {
 		assertEquals(Arrays.asList(test.label(1), test.label(2), test.label(0)), adjusted.labels());
 		assertEquals(Arrays.asList(test.getColumns()[2], test.getColumns()[0]),
 				Arrays.asList(adjusted.getColumns()).subList(1, 3));
-		assertEquals(ColumnAccessor.get().getDictionaryList(test.column(1).getDictionary(Object.class)),
-				ColumnAccessor.get().getDictionaryList(adjusted.column(0).getDictionary(Object.class)));
+		assertEquals(ColumnAccessor.get().getDictionaryList(test.column(1).getDictionary()),
+				ColumnAccessor.get().getDictionaryList(adjusted.column(0).getDictionary()));
 	}
 }

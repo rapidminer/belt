@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -40,8 +40,9 @@ import com.rapidminer.belt.buffer.DateTimeBuffer;
 import com.rapidminer.belt.column.BooleanDictionary;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
+import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.MixedRowReader;
 import com.rapidminer.belt.reader.NumericReader;
 import com.rapidminer.belt.reader.ObjectReader;
@@ -57,10 +58,6 @@ import com.rapidminer.belt.util.ColumnRole;
 public class AppenderTests {
 
 	private static final double EPSILON = 1e-10;
-
-	private static final ColumnType<Integer> INTEGER_FREE_TYPE = ColumnTypes.objectType("test", Integer.class, null);
-	private static final ColumnType<String> STRING_FREE_TYPE =
-			ColumnTypes.objectType("test2", String.class, String::compareTo);
 
 
 	@RunWith(Parameterized.class)
@@ -81,7 +78,7 @@ public class AppenderTests {
 					Appender.append(Arrays.asList(ColumnAccessor.get().newNumericColumn(TypeId.REAL, new double[10])),
 							(int) (factor * 10),
 							p -> callbackResult[0] = p, Belt.defaultContext());
-			assertEquals(ColumnTypes.REAL, newColumn.type());
+			assertEquals(ColumnType.REAL, newColumn.type());
 			assertEquals(1.0, callbackResult[0], EPSILON);
 		}
 
@@ -95,7 +92,7 @@ public class AppenderTests {
 				totalSize += size;
 				double[] data = i % 3 == 0 ? randomInteger(size) : random(size);
 				columns.add(
-						i % 3 == 0 ? ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data) :
+						i % 3 == 0 ? ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data) :
 								ColumnAccessor.get().newNumericColumn(TypeId.REAL, data));
 			}
 			totalSize = (int) (factor * totalSize);
@@ -103,7 +100,7 @@ public class AppenderTests {
 			Column newColumn = Appender.append(columns, totalSize, p -> callbackResult[0] = p, Belt.defaultContext());
 			assertArrayEquals(readToArrayNumeric(columns, totalSize), readToArrayNumeric(newColumn, totalSize),
 					EPSILON);
-			assertEquals(ColumnTypes.REAL, newColumn.type());
+			assertEquals(ColumnType.REAL, newColumn.type());
 			assertEquals(1.0, callbackResult[0], EPSILON);
 		}
 
@@ -116,13 +113,13 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				double[] data = randomInteger(size);
-				columns.add(ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data));
+				columns.add(ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayNumeric(columns, totalSize), readToArrayNumeric(newColumn, totalSize),
 					EPSILON);
-			assertEquals(ColumnTypes.INTEGER, newColumn.type());
+			assertEquals(ColumnType.INTEGER_53_BIT, newColumn.type());
 		}
 
 		@Test
@@ -135,7 +132,7 @@ public class AppenderTests {
 				totalSize += size;
 				double[] data = i % 3 == 0 ? randomInteger(size) : random(size);
 				Column column =
-						i % 3 == 0 ? ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data) :
+						i % 3 == 0 ? ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data) :
 								ColumnAccessor.get().newNumericColumn(TypeId.REAL, data);
 				columns.add(ColumnAccessor.get().map(column, mapping(data.length), true));
 			}
@@ -143,11 +140,11 @@ public class AppenderTests {
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayNumeric(columns, totalSize), readToArrayNumeric(newColumn, totalSize),
 					EPSILON);
-			assertEquals(ColumnTypes.REAL, newColumn.type());
+			assertEquals(ColumnType.REAL, newColumn.type());
 		}
 
 		@Test
-		public void testIntegerObjects() {
+		public void testTextSetObjects() {
 			Random random = new Random();
 			List<Column> columns = new ArrayList<>(10);
 			int totalSize = 0;
@@ -155,18 +152,18 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				double[] data = randomInteger(size);
-				Object[] integers = new Object[data.length];
-				Arrays.setAll(integers, j -> (int) data[j]);
-				columns.add(ColumnAccessor.get().newObjectColumn(INTEGER_FREE_TYPE, integers));
+				Object[] values = new Object[data.length];
+				Arrays.setAll(values, j -> new StringSet(Collections.singletonList("" + data[j])));
+				columns.add(ColumnAccessor.get().newObjectColumn(ColumnType.TEXTSET, values));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, null, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(INTEGER_FREE_TYPE, newColumn.type());
+			assertEquals(ColumnType.TEXTSET, newColumn.type());
 		}
 
 		@Test
-		public void testIntegerObjectsMapped() {
+		public void testTextSetObjectsMapped() {
 			Random random = new Random();
 			List<Column> columns = new ArrayList<>(10);
 			int totalSize = 0;
@@ -174,16 +171,16 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				double[] data = randomInteger(size);
-				Object[] integers = new Object[data.length];
-				Arrays.setAll(integers, j -> (int) data[j]);
-				Column column = ColumnAccessor.get().map(ColumnAccessor.get().newObjectColumn(INTEGER_FREE_TYPE,
-						integers), mapping(data.length), true);
+				Object[] values = new Object[data.length];
+				Arrays.setAll(values, j -> new StringSet(Collections.singletonList("" + data[j])));
+				Column column = ColumnAccessor.get().map(ColumnAccessor.get().newObjectColumn(ColumnType.TEXTSET,
+						values), mapping(data.length), true);
 				columns.add(column);
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(INTEGER_FREE_TYPE, newColumn.type());
+			assertEquals(ColumnType.TEXTSET, newColumn.type());
 		}
 
 		@Test
@@ -197,13 +194,13 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data, dictionary));
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data, dictionary));
 			}
 			totalSize = (int) (factor * totalSize);
 			final double[] callbackResult = new double[]{-1.0};
 			Column newColumn = Appender.append(columns, totalSize, p -> callbackResult[0] = p, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
 			assertEquals(1.0, callbackResult[0], EPSILON);
 		}
 
@@ -219,14 +216,14 @@ public class AppenderTests {
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
 				Column column =
-						ColumnAccessor.get().map(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+						ColumnAccessor.get().map(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 								dictionary), mapping(size), true);
 				columns.add(column);
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
 		}
 
 		@Test
@@ -240,12 +237,12 @@ public class AppenderTests {
 				int numberOfCategories = random.nextInt(size);
 				List<String> dictionary = getMappingList(numberOfCategories);
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data, dictionary));
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data, dictionary));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
 		}
 
 		@Test
@@ -260,14 +257,14 @@ public class AppenderTests {
 				List<String> dictionary = getMappingList(numberOfCategories);
 				int[] data = randomCategories(size, numberOfCategories);
 				Column column =
-						ColumnAccessor.get().map(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+						ColumnAccessor.get().map(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 								dictionary), mapping(size), true);
 				columns.add(column);
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
 		}
 
 		@Test
@@ -281,15 +278,15 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(i % 5 == 0 ? ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+				columns.add(i % 5 == 0 ? ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 						dictionary, 2) :
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data, dictionary));
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data, dictionary));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertFalse(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertFalse(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -303,13 +300,13 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data, dictionary, 2));
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data, dictionary, 2));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -323,14 +320,14 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 						dictionary, i % 2 + 1));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertFalse(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertFalse(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -344,14 +341,14 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data, dictionary,
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data, dictionary,
 						BooleanDictionary.NO_ENTRY));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -365,17 +362,17 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(i != 7 ? ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+				columns.add(i != 7 ? ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 						dictionary,
-						BooleanDictionary.NO_ENTRY) : ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL,
+						BooleanDictionary.NO_ENTRY) : ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL,
 						randomCategories(size, 3), getMappingList(3),
 						2));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -386,15 +383,15 @@ public class AppenderTests {
 			for (int i = 0; i < 10; i++) {
 				int size = random.nextInt(100);
 				totalSize += size;
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, randomCategories(size, 2),
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, randomCategories(size, 2),
 						getMappingList(3),
 						2));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -408,13 +405,13 @@ public class AppenderTests {
 				int size = random.nextInt(100);
 				totalSize += size;
 				int[] data = randomCategories(size, numberOfCategories);
-				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data, dictionary, 1));
+				columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data, dictionary, 1));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -426,22 +423,22 @@ public class AppenderTests {
 			int size = random.nextInt(100) + 2;
 			totalSize += size;
 			int[] data = randomCategories(size, 2);
-			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 					Arrays.asList(null, "no"), -1));
 			size = random.nextInt(100) + 2;
 			totalSize += size;
 			data = randomCategories(size, 3);
-			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 					Arrays.asList(null, "no", "yes"), 2));
 
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {
 			}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
 			assertEquals("yes",
-					newColumn.getDictionary(String.class).get(newColumn.getDictionary(String.class).getPositiveIndex()));
+					newColumn.getDictionary().get(newColumn.getDictionary().getPositiveIndex()));
 		}
 
 		@Test
@@ -453,21 +450,21 @@ public class AppenderTests {
 			int size = random.nextInt(100) + 2;
 			totalSize += size;
 			int[] data = randomCategories(size, 2);
-			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 					Arrays.asList(null, "yes"), 1));
 			size = random.nextInt(100) + 2;
 			totalSize += size;
 			data = randomCategories(size, 3);
-			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+			columns.add(ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 					Arrays.asList(null, "yes", "no"), 1));
 
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {
 			}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.NOMINAL, newColumn.type());
-			assertTrue(newColumn.getDictionary(Object.class).isBoolean());
-			assertEquals("yes", newColumn.getDictionary(String.class).get(newColumn.getDictionary(String.class).getPositiveIndex()));
+			assertEquals(ColumnType.NOMINAL, newColumn.type());
+			assertTrue(newColumn.getDictionary().isBoolean());
+			assertEquals("yes", newColumn.getDictionary().get(newColumn.getDictionary().getPositiveIndex()));
 		}
 
 		@Test
@@ -481,12 +478,12 @@ public class AppenderTests {
 				double[] data = random(size);
 				Object[] strings = new Object[data.length];
 				Arrays.setAll(strings, j -> data[j] + "");
-				columns.add(ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, strings));
+				columns.add(ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, strings));
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, null, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(STRING_FREE_TYPE, newColumn.type());
+			assertEquals(ColumnType.TEXT, newColumn.type());
 		}
 
 		@Test
@@ -500,14 +497,14 @@ public class AppenderTests {
 				double[] data = random(size);
 				Object[] strings = new Object[data.length];
 				Arrays.setAll(strings, j -> data[j] + "");
-				Column column = ColumnAccessor.get().map(ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE,
+				Column column = ColumnAccessor.get().map(ColumnAccessor.get().newObjectColumn(ColumnType.TEXT,
 						strings), mapping(data.length), true);
 				columns.add(column);
 			}
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(STRING_FREE_TYPE, newColumn.type());
+			assertEquals(ColumnType.TEXT, newColumn.type());
 		}
 
 		@Test
@@ -528,7 +525,7 @@ public class AppenderTests {
 			final double[] callbackResult = new double[]{-1.0};
 			Column newColumn = Appender.append(columns, totalSize, p -> callbackResult[0] = p, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.TIME, newColumn.type());
+			assertEquals(ColumnType.TIME, newColumn.type());
 			assertEquals(1.0, callbackResult[0], EPSILON);
 		}
 
@@ -551,7 +548,7 @@ public class AppenderTests {
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.TIME, newColumn.type());
+			assertEquals(ColumnType.TIME, newColumn.type());
 		}
 
 		@Test
@@ -572,7 +569,7 @@ public class AppenderTests {
 			final double[] callbackResult = new double[]{-1.0};
 			Column newColumn = Appender.append(columns, totalSize, p -> callbackResult[0] = p, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.DATETIME, newColumn.type());
+			assertEquals(ColumnType.DATETIME, newColumn.type());
 		}
 
 		@Test
@@ -593,7 +590,7 @@ public class AppenderTests {
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, null, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.DATETIME, newColumn.type());
+			assertEquals(ColumnType.DATETIME, newColumn.type());
 		}
 
 		@Test
@@ -615,7 +612,7 @@ public class AppenderTests {
 			totalSize = (int) (factor * totalSize);
 			Column newColumn = Appender.append(columns, totalSize, p -> {}, Belt.defaultContext());
 			assertArrayEquals(readToArrayObjects(columns, totalSize), readToArrayObjects(newColumn, totalSize));
-			assertEquals(ColumnTypes.DATETIME, newColumn.type());
+			assertEquals(ColumnType.DATETIME, newColumn.type());
 		}
 
 		@Test
@@ -682,10 +679,10 @@ public class AppenderTests {
 		public void testColumnsContainNullCategorical() {
 			Appender.append(
 					Arrays.asList(
-							ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4],
+							ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4],
 									Arrays.asList(null, "bla")),
 							null,
-							ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4], Arrays.asList(null, "bla"))),
+							ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4], Arrays.asList(null, "bla"))),
 					11, null, Belt.defaultContext());
 		}
 
@@ -693,9 +690,9 @@ public class AppenderTests {
 		public void testColumnsContainNullObject() {
 			Appender.append(
 					Arrays.asList(
-							ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, new Object[4]),
+							ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, new Object[4]),
 							null,
-							ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, new Object[4])),
+							ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, new Object[4])),
 					11, null, Belt.defaultContext());
 		}
 
@@ -723,14 +720,14 @@ public class AppenderTests {
 		public void testNotNumeric() {
 			try {
 				Appender.append(Arrays.asList(ColumnAccessor.get().newNumericColumn(TypeId.REAL, new double[3]),
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4], Arrays.asList(null,
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4], Arrays.asList(null,
 								"bla")),
 						ColumnAccessor.get().newNumericColumn(TypeId.REAL, new double[5])), 11, null, Belt.defaultContext());
 				fail();
 			}catch(Appender.IncompatibleTypesException e){
 				assertEquals(1,e.getIndex());
-				assertEquals(ColumnTypes.REAL.toString(), e.getDesiredType());
-				assertEquals(ColumnTypes.NOMINAL.toString(),e.getActualType());
+				assertEquals(ColumnType.REAL.toString(), e.getDesiredType());
+				assertEquals(ColumnType.NOMINAL.toString(),e.getActualType());
 			}
 		}
 
@@ -738,14 +735,14 @@ public class AppenderTests {
 		public void testNotTime() {
 			try {
 				Appender.append(Arrays.asList(ColumnAccessor.get().newTimeColumn(new long[3]),
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4], Arrays.asList(null,
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4], Arrays.asList(null,
 								"bla")),
 						ColumnAccessor.get().newTimeColumn(new long[5])), 11, null, Belt.defaultContext());
 				fail();
 			}catch(Appender.IncompatibleTypesException e){
 				assertEquals(1,e.getIndex());
-				assertEquals(ColumnTypes.TIME.toString(), e.getDesiredType());
-				assertEquals(ColumnTypes.NOMINAL.toString(),e.getActualType());
+				assertEquals(ColumnType.TIME.toString(), e.getDesiredType());
+				assertEquals(ColumnType.NOMINAL.toString(),e.getActualType());
 			}
 		}
 
@@ -753,14 +750,14 @@ public class AppenderTests {
 		public void testNotDateTime() {
 			try {
 				Appender.append(Arrays.asList(ColumnAccessor.get().newDateTimeColumn(new long[3], null),
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4], Arrays.asList(null,
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4], Arrays.asList(null,
 								"bla")),
 						ColumnAccessor.get().newDateTimeColumn(new long[5], null)), 11, null, Belt.defaultContext());
 				fail();
 			}catch(Appender.IncompatibleTypesException e){
 				assertEquals(1,e.getIndex());
-				assertEquals(ColumnTypes.DATETIME.toString(), e.getDesiredType());
-				assertEquals(ColumnTypes.NOMINAL.toString(),e.getActualType());
+				assertEquals(ColumnType.DATETIME.toString(), e.getDesiredType());
+				assertEquals(ColumnType.NOMINAL.toString(),e.getActualType());
 			}
 		}
 
@@ -768,16 +765,16 @@ public class AppenderTests {
 		public void testNotCategorical() {
 			try {
 				Appender.append(Arrays.asList(
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4], Arrays.asList(null,
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4], Arrays.asList(null,
 								"bla")),
 						ColumnAccessor.get().newDateTimeColumn(new long[5], null),
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[3], Arrays.asList(null, "blup"))),
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[3], Arrays.asList(null, "blup"))),
 						11, null, Belt.defaultContext());
 				fail();
 			} catch (Appender.IncompatibleTypesException e) {
 				assertEquals(1, e.getIndex());
-				assertEquals(ColumnTypes.DATETIME.toString(), e.getActualType());
-				assertEquals(ColumnTypes.NOMINAL.toString(), e.getDesiredType());
+				assertEquals(ColumnType.DATETIME.toString(), e.getActualType());
+				assertEquals(ColumnType.NOMINAL.toString(), e.getDesiredType());
 			}
 		}
 
@@ -785,15 +782,15 @@ public class AppenderTests {
 		public void testNotObject() {
 			try {
 				Appender.append(Arrays.asList(
-						ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, new Object[4]),
+						ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, new Object[4]),
 						ColumnAccessor.get().newDateTimeColumn(new long[5], null),
-						ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, new Object[2])),
+						ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, new Object[2])),
 						11, null, Belt.defaultContext());
 				fail();
 			} catch (Appender.IncompatibleTypesException e) {
 				assertEquals(1, e.getIndex());
-				assertEquals(ColumnTypes.DATETIME.toString(), e.getActualType());
-				assertEquals(STRING_FREE_TYPE.toString(), e.getDesiredType());
+				assertEquals(ColumnType.DATETIME.toString(), e.getActualType());
+				assertEquals(ColumnType.TEXT.toString(), e.getDesiredType());
 			}
 		}
 
@@ -801,18 +798,18 @@ public class AppenderTests {
 		public void testCategoricalDifferentType() {
 			try {
 				Appender.append(Arrays.asList(
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[4], Arrays.asList(null,
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[4], Arrays.asList(null,
 								"bla")),
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.categoricalType("test", String.class,
+						ColumnAccessor.get().newCategoricalColumn(ColumnTestUtils.categoricalType(String.class,
 								null)
 								, new int[3], Arrays.asList(null, "blup")),
-						ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[3], Arrays.asList(null, "blup"))),
+						ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[3], Arrays.asList(null, "blup"))),
 						11, null, Belt.defaultContext());
 				fail();
 			} catch (Appender.IncompatibleTypesException e) {
 				assertEquals(1, e.getIndex());
-				assertEquals(ColumnTypes.categoricalType("test", String.class, null).toString(), e.getActualType());
-				assertEquals(ColumnTypes.NOMINAL.toString(), e.getDesiredType());
+				assertEquals(ColumnTestUtils.categoricalType(String.class, null).toString(), e.getActualType());
+				assertEquals(ColumnType.NOMINAL.toString(), e.getDesiredType());
 			}
 		}
 
@@ -820,15 +817,15 @@ public class AppenderTests {
 		public void testObjectDifferentType() {
 			try {
 				Appender.append(Arrays.asList(
-						ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, new Object[4]),
-						ColumnAccessor.get().newObjectColumn(INTEGER_FREE_TYPE, new Object[2]),
-						ColumnAccessor.get().newObjectColumn(STRING_FREE_TYPE, new Object[2])),
+						ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, new Object[4]),
+						ColumnAccessor.get().newObjectColumn(ColumnType.TEXTSET, new Object[2]),
+						ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, new Object[2])),
 						11, null, Belt.defaultContext());
 				fail();
 			} catch (Appender.IncompatibleTypesException e) {
 				assertEquals(1, e.getIndex());
-				assertEquals(INTEGER_FREE_TYPE.toString(), e.getActualType());
-				assertEquals(STRING_FREE_TYPE.toString(), e.getDesiredType());
+				assertEquals(ColumnType.TEXTSET.toString(), e.getActualType());
+				assertEquals(ColumnType.TEXT.toString(), e.getDesiredType());
 			}
 		}
 	}
@@ -912,7 +909,7 @@ public class AppenderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testListContainsNull() {
-			Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt("int", i -> i * i)
+			Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt53Bit("int", i -> i * i)
 					.build(Belt.defaultContext());
 			Appender.append(Arrays.asList(table, table, null, table), null, Belt.defaultContext());
 		}
@@ -932,7 +929,7 @@ public class AppenderTests {
 		@Test
 		public void testIncompatibleColumnWidths() {
 			try {
-				Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt("int", i -> i * i)
+				Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt53Bit("int", i -> i * i)
 						.build(Belt.defaultContext());
 				Appender.append(
 						Arrays.asList(table, table.columns(new int[]{1, 0}), table.columns(new int[]{0}), table), null, Belt.defaultContext());
@@ -944,7 +941,7 @@ public class AppenderTests {
 
 		@Test
 		public void testIncompatibleColumnNames() {
-			Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt("int", i -> i * i)
+			Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt53Bit("int", i -> i * i)
 					.build(Belt.defaultContext());
 			Table table2 = Builders.newTableBuilder(table).rename("real", "numeric").build(Belt.defaultContext());
 			try {
@@ -957,8 +954,8 @@ public class AppenderTests {
 		}
 
 		@Test
-		public void testIncompatibleColumnTypes() {
-			Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt("int", i -> i * i)
+		public void testIncompatibleColumnType() {
+			Table table = Builders.newTableBuilder(10).addReal("real", i -> i).addInt53Bit("int", i -> i * i)
 					.build(Belt.defaultContext());
 			Table table2 = Builders.newTableBuilder(table).replaceNominal("real", i->"value"+i).build(Belt.defaultContext());
 			try {
@@ -966,8 +963,8 @@ public class AppenderTests {
 				fail();
 			}catch(Appender.IncompatibleTypesException e){
 				assertEquals(2, e.getIndex());
-				assertEquals(ColumnTypes.REAL.toString(), e.getDesiredType());
-				assertEquals(ColumnTypes.NOMINAL.toString(), e.getActualType());
+				assertEquals(ColumnType.REAL.toString(), e.getDesiredType());
+				assertEquals(ColumnType.NOMINAL.toString(), e.getActualType());
 				assertEquals("real", e.getColumnName());
 			}
 		}

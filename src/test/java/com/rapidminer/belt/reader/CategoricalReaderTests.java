@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -35,7 +35,7 @@ import org.junit.runner.RunWith;
 
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 
 
 /**
@@ -77,7 +77,7 @@ public class CategoricalReaderTests {
 		public void testReadingFromSingleCompleteBuffer() {
 			int[] input = randomNumbers(NumericReader.DEFAULT_BUFFER_SIZE);
 			CategoricalReader reader = Readers.categoricalReader(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input, new ArrayList<>()));
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input, new ArrayList<>()));
 			int[] output = readAllToArray(reader);
 
 			assertArrayEquals(input, output);
@@ -87,7 +87,7 @@ public class CategoricalReaderTests {
 		public void testReadingTooSmallBuffer() {
 			int[] input = randomNumbers(NumericReader.DEFAULT_BUFFER_SIZE);
 			CategoricalReader reader = new CategoricalReader(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input, new ArrayList<>()),
 					1, input.length);
 			int[] output = readAllToArray(reader);
 
@@ -98,7 +98,7 @@ public class CategoricalReaderTests {
 		public void testReadingFromSingleIncompleteBuffer() {
 			int[] input = randomNumbers((int) (0.67 * NumericReader.DEFAULT_BUFFER_SIZE));
 			CategoricalReader reader = new CategoricalReader(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input, new ArrayList<>()),
 					NumericReader.DEFAULT_BUFFER_SIZE, input.length);
 			int[] output = readAllToArray(reader);
 
@@ -109,7 +109,7 @@ public class CategoricalReaderTests {
 		public void testReadingFromMultipleCompleteBuffers() {
 			int[] input = randomNumbers(5 * NumericReader.DEFAULT_BUFFER_SIZE);
 			CategoricalReader reader = new CategoricalReader(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input, new ArrayList<>()),
 					NumericReader.DEFAULT_BUFFER_SIZE, input.length);
 			int[] output = readAllToArray(reader);
 
@@ -120,7 +120,7 @@ public class CategoricalReaderTests {
 		public void testReadingFromMultipleIncompleteBuffers() {
 			int[] input = randomNumbers((int) (3.33 * NumericReader.DEFAULT_BUFFER_SIZE));
 			CategoricalReader reader = new CategoricalReader(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input, new ArrayList<>()),
 					NumericReader.DEFAULT_BUFFER_SIZE, input.length);
 			int[] output = readAllToArray(reader);
 
@@ -130,7 +130,7 @@ public class CategoricalReaderTests {
 
 		@Test
 		public void testColumnInteractionWithSingleBuffer() {
-			Column column = spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
+			Column column = spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL,
 					new int[NumericReader.DEFAULT_BUFFER_SIZE], new ArrayList<>()));
 			CategoricalReader reader = new CategoricalReader(column, NumericReader.DEFAULT_BUFFER_SIZE, column.size());
 			readAll(reader);
@@ -141,7 +141,7 @@ public class CategoricalReaderTests {
 
 		@Test
 		public void testColumnInteractionWithMultipleBuffers() {
-			Column column = spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
+			Column column = spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL,
 					new int[3 * NumericReader.DEFAULT_BUFFER_SIZE], new ArrayList<>()));
 			CategoricalReader reader = new CategoricalReader(column, NumericReader.DEFAULT_BUFFER_SIZE, column.size());
 			readAll(reader);
@@ -163,7 +163,7 @@ public class CategoricalReaderTests {
 		@Test
 		public void testInitialRemainder() {
 			int n = 64;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n],
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n],
 					new ArrayList<>());
 			CategoricalReader reader = Readers.categoricalReader(column, column.size());
 
@@ -174,7 +174,7 @@ public class CategoricalReaderTests {
 		public void testRemainder() {
 			int n = 64;
 			int reads = 16;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = Readers.categoricalReader(column, column.size());
 			for (int i = 0; i < reads; i++) {
 				reader.read();
@@ -186,7 +186,7 @@ public class CategoricalReaderTests {
 		@Test
 		public void testFinalRemainder() {
 			int n = 64;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = Readers.categoricalReader(column, column.size());
 			readAll(reader);
 
@@ -200,7 +200,7 @@ public class CategoricalReaderTests {
 		public void testGet() {
 			int n = 64;
 			int reads = 16;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = Readers.categoricalReader(column, column.size());
 			for (int i = 0; i < reads; i++) {
 				reader.read();
@@ -212,7 +212,7 @@ public class CategoricalReaderTests {
 		public void testGetBufferSmaller() {
 			int n = 64;
 			int reads = 16;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			for (int i = 0; i < reads; i++) {
 				reader.read();
@@ -223,7 +223,7 @@ public class CategoricalReaderTests {
 		@Test
 		public void testGetAtStart() {
 			int n = 64;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = Readers.categoricalReader(column, column.size());
 			assertEquals(Readers.BEFORE_FIRST_ROW, reader.position());
 		}
@@ -231,7 +231,7 @@ public class CategoricalReaderTests {
 		@Test
 		public void testGetAtEnd() {
 			int n = 64;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = Readers.categoricalReader(column, column.size());
 			while (reader.hasRemaining()) {
 				reader.read();
@@ -242,7 +242,7 @@ public class CategoricalReaderTests {
 		@Test
 		public void testGetAtEndBufferSmaller() {
 			int n = 64;
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[n], new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[n], new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			while (reader.hasRemaining()) {
 				reader.read();
@@ -256,7 +256,7 @@ public class CategoricalReaderTests {
 			int position = 16;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			reader.setPosition(position);
 			assertEquals(position, reader.position());
@@ -270,7 +270,7 @@ public class CategoricalReaderTests {
 			int position = 16;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			for (int i = 0; i < 13; i++) {
 				reader.read();
@@ -287,7 +287,7 @@ public class CategoricalReaderTests {
 			int position = 11;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			for (int i = 0; i < 13; i++) {
 				reader.read();
@@ -304,7 +304,7 @@ public class CategoricalReaderTests {
 			int position = 3;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			for (int i = 0; i < 13; i++) {
 				reader.read();
@@ -320,7 +320,7 @@ public class CategoricalReaderTests {
 			int n = 64;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			reader.setPosition(Readers.BEFORE_FIRST_ROW);
 			assertEquals(-1, reader.position());
@@ -333,7 +333,7 @@ public class CategoricalReaderTests {
 			int n = 64;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			reader.setPosition(-5);
 		}
@@ -344,7 +344,7 @@ public class CategoricalReaderTests {
 			int n = 64;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			reader.setPosition(n - 2);
 			assertEquals(n - 1, reader.read());
@@ -356,7 +356,7 @@ public class CategoricalReaderTests {
 			int n = 64;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			for (int i = 0; i < 13; i++) {
 				reader.read();
@@ -372,7 +372,7 @@ public class CategoricalReaderTests {
 			int n = 64;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			for (int i = 0; i < 13; i++) {
 				reader.read();
@@ -387,7 +387,7 @@ public class CategoricalReaderTests {
 			int n = 64;
 			int[] testArray = new int[n];
 			Arrays.setAll(testArray, i -> i);
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			reader.setPosition(16);
 			assertEquals(16, reader.position());
@@ -416,7 +416,7 @@ public class CategoricalReaderTests {
 		public void testStart() {
 			int nRows = 64;
 			int[] testArray = new int[nRows];
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			String expected = "Categorical column reader (" + nRows + ")\n" + "Position: " + Readers.BEFORE_FIRST_ROW;
 			assertEquals(expected, reader.toString());
@@ -426,7 +426,7 @@ public class CategoricalReaderTests {
 		public void testMiddle() {
 			int nRows = 64;
 			int[] testArray = new int[nRows];
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			reader.read();
 			reader.read();
@@ -441,7 +441,7 @@ public class CategoricalReaderTests {
 		public void testEnd() {
 			int nRows = 64;
 			int[] testArray = new int[nRows];
-			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>());
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>());
 			CategoricalReader reader = new CategoricalReader(column, 10, column.size());
 			while (reader.hasRemaining()) {
 				reader.read();

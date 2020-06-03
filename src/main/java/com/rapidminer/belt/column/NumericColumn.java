@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -47,7 +47,7 @@ abstract class NumericColumn extends Column {
 
 	@Override
 	public Column stripData() {
-		if (type().id() == TypeId.INTEGER) {
+		if (type().id() == TypeId.INTEGER_53_BIT) {
 			return DoubleArrayColumn.EMPTY_INT_COLUMN;
 		} else {
 			return DoubleArrayColumn.EMPTY_REAL_COLUMN;

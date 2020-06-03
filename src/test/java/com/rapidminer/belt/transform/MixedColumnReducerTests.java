@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -29,15 +29,15 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.util.Belt;
 import com.rapidminer.belt.table.Builders;
 import com.rapidminer.belt.table.Table;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
 import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.execution.Context;
 
 
@@ -66,12 +66,12 @@ public class MixedColumnReducerTests {
 		return getColumn(data);
 	}
 
-	private static CategoricalColumn<String> getColumn(String[] data) {
-		Int32CategoricalBuffer<String> buffer = BufferAccessor.get().newInt32Buffer(data.length);
+	private static CategoricalColumn getColumn(String[] data) {
+		Int32NominalBuffer buffer = BufferAccessor.get().newInt32Buffer(ColumnType.NOMINAL, data.length);
 		for (int i = 0; i < data.length; i++) {
 			buffer.set(i, data[i]);
 		}
-		return buffer.toColumn(ColumnTypes.NOMINAL);
+		return buffer.toColumn();
 	}
 
 	private static String[] randomStrings(int n) {
@@ -128,7 +128,7 @@ public class MixedColumnReducerTests {
 			int size = 75;
 			String[] data = randomStrings(size);
 			double[] data2 = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 			Column column2 = ColumnTestUtils.getNumericColumn(TypeId.REAL, data2);
 			MixedColumnsReducer<int[]> calculator = new MixedColumnsReducer<>(Arrays.asList(column,
 					column2), () -> new int[2],
@@ -167,8 +167,8 @@ public class MixedColumnReducerTests {
 			String[] data = randomStrings(size);
 			String[] data2 = randomStrings(size);
 			double[] data3 = random(size);
-			CategoricalColumn<String> column = getColumn(data);
-			CategoricalColumn<String> column2 = getColumn(data2);
+			CategoricalColumn column = getColumn(data);
+			CategoricalColumn column2 = getColumn(data2);
 			Column column3 = ColumnTestUtils.getNumericColumn(TypeId.REAL, data3);
 			MixedColumnsReducer<int[]> calculator = new MixedColumnsReducer<>(Arrays.asList(column,
 					column2, column3), () -> new int[2],
@@ -189,7 +189,7 @@ public class MixedColumnReducerTests {
 
 			int[] both = new int[data.length];
 			Arrays.setAll(both,
-					i -> (int) (Objects.toString(column.getDictionary(String.class).get(ColumnTestUtils.getIntData(column)[i]), "")
+					i -> (int) (Objects.toString(column.getDictionary().get(ColumnTestUtils.getIntData(column)[i]), "")
 					.length() * ColumnTestUtils.getIntData(column2)[i] * data3[i]));
 			int[] expected = Arrays.stream(both).skip(start).limit(end - start).collect(() -> new int[2],
 					(t, d) -> {
@@ -212,9 +212,9 @@ public class MixedColumnReducerTests {
 		public void testThreeColumnsWhole() {
 			int size = 75;
 			String[] data = randomStrings(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 			String[] data2 = randomStrings(size);
-			CategoricalColumn<String> column2 = getColumn(data2);
+			CategoricalColumn column2 = getColumn(data2);
 			double[] data3 = random(size);
 			Column column3 = ColumnTestUtils.getNumericColumn(TypeId.REAL, data3);
 
@@ -226,7 +226,7 @@ public class MixedColumnReducerTests {
 
 			double[] sum = new double[data.length];
 			Arrays.setAll(sum,
-					i -> ColumnTestUtils.getIntData(column)[i] + Objects.toString(column2.getDictionary(String.class).get(ColumnTestUtils.getIntData(column2)
+					i -> ColumnTestUtils.getIntData(column)[i] + Objects.toString(column2.getDictionary().get(ColumnTestUtils.getIntData(column2)
 							[i]))
 							.length() + data3[i]);
 			double expected = Arrays.stream(sum).reduce(0, (a, b) -> a + b);
@@ -236,7 +236,7 @@ public class MixedColumnReducerTests {
 		@Test
 		public void testThreeColumnsWholeZeroHeight() {
 			String[] data = randomStrings(0);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			RowTransformer transformer = new RowTransformer(Arrays.asList(column, column, column));
 			MutableDouble result = transformer.reduceMixed(() -> {

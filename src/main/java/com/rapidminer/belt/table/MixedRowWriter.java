@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -23,7 +24,6 @@ import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.reader.NumericReader;
 
 
@@ -73,7 +73,7 @@ public final class MixedRowWriter {
 	 * @param types
 	 * 		the types of the columns to construct
 	 */
-	MixedRowWriter(List<String> columnLabels, List<ColumnType<?>> types) {
+	MixedRowWriter(List<String> columnLabels, List<TypeId> types) {
 		this(columnLabels, types, false);
 	}
 
@@ -88,7 +88,7 @@ public final class MixedRowWriter {
 	 * 		if this is {@code true} every value that is not explicitly set is missing, if this is {@link false} values
 	 * 		for	indices that are not explicitly set are undetermined
 	 */
-	MixedRowWriter(List<String> columnLabels, List<ColumnType<?>> types, boolean initialize) {
+	MixedRowWriter(List<String> columnLabels, List<TypeId> types, boolean initialize) {
 		int numberOfColumns = columnLabels.size();
 		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(NumericRowWriter.MAX_CHECK_FOR_SPARSITY_ROW,
 				NumericRowWriter.MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
@@ -97,8 +97,9 @@ public final class MixedRowWriter {
 		classes = new Class<?>[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
 		for (int i = 0; i < numberOfColumns; i++) {
-			ColumnType<?> type = Objects.requireNonNull(types.get(i), "column type must not be null");
-			columns[i] = getBufferForType(type);
+			TypeId typeId = Objects.requireNonNull(types.get(i), "column type must not be null");
+			ColumnType<?> type = ColumnType.forId(typeId);
+			columns[i] = getBufferForType(typeId);
 			objectColumns[i] = getObjectBufferForType(type);
 			classes[i] = type.elementType();
 		}
@@ -119,7 +120,7 @@ public final class MixedRowWriter {
 	 * 		if this is {@code true} every value that is not explicitly set is missing, if this is {@link false} values
 	 * 		for	indices that are not explicitly set are undetermined
 	 */
-	MixedRowWriter(List<String> columnLabels, List<ColumnType<?>> types, int expectedRows, boolean initialize) {
+	MixedRowWriter(List<String> columnLabels, List<TypeId> types, int expectedRows, boolean initialize) {
 		int numberOfColumns = columnLabels.size();
 		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(NumericRowWriter.MAX_CHECK_FOR_SPARSITY_ROW,
 				NumericRowWriter.MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
@@ -128,8 +129,9 @@ public final class MixedRowWriter {
 		classes = new Class<?>[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
 		for (int i = 0; i < numberOfColumns; i++) {
-			ColumnType<?> type = Objects.requireNonNull(types.get(i), "column type must not be null");
-			columns[i] = getBufferForType(type, expectedRows);
+			TypeId typeId = Objects.requireNonNull(types.get(i), "column type must not be null");
+			ColumnType<?> type = ColumnType.forId(typeId);
+			columns[i] = getBufferForType(typeId, expectedRows);
 			objectColumns[i] = getObjectBufferForType(type, expectedRows);
 			classes[i] = type.elementType();
 		}
@@ -275,12 +277,18 @@ public final class MixedRowWriter {
 	}
 
 	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType) {
-		if (ColumnTypes.DATETIME.equals(columnType)) {
+		if (ColumnType.DATETIME.equals(columnType)) {
 			return new NanosecondsDateTimeWriter();
-		} else if (ColumnTypes.TIME.equals(columnType)) {
+		} else if (ColumnType.TIME.equals(columnType)) {
 			return new TimeColumnWriter();
 		} else if (columnType.category() == Column.Category.CATEGORICAL) {
-			return new Int32CategoricalWriter<>(columnType);
+			if (!columnType.elementType().equals(String.class)) {
+				throw new AssertionError("non-String categorical column");
+			}
+			//cast is safe since element type was checked above
+			@SuppressWarnings("unchecked")
+			ColumnType<String> stringColumnType = (ColumnType<String>) columnType;
+			return new Int32CategoricalWriter(stringColumnType);
 		} else if (columnType.category() == Column.Category.OBJECT) {
 			return new ObjectWriter<>(columnType);
 		} else {
@@ -291,10 +299,9 @@ public final class MixedRowWriter {
 	/**
 	 * Returns an integer or real growing column buffer without set length.
 	 */
-	private NumericColumnWriter getBufferForType(ColumnType<?> type) {
-		TypeId typeId = type.id();
-		if (typeId == TypeId.INTEGER) {
-			return new IntegerColumnWriter();
+	private NumericColumnWriter getBufferForType(TypeId typeId) {
+		if (typeId == TypeId.INTEGER_53_BIT) {
+			return new Integer53BitColumnWriter();
 		} else if (typeId == TypeId.REAL) {
 			return new RealColumnWriter();
 		} else {
@@ -303,12 +310,18 @@ public final class MixedRowWriter {
 	}
 
 	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType, int expectedRows) {
-		if (ColumnTypes.DATETIME.equals(columnType)) {
+		if (ColumnType.DATETIME.equals(columnType)) {
 			return new NanosecondsDateTimeWriter(expectedRows);
-		} else if (ColumnTypes.TIME.equals(columnType)) {
+		} else if (ColumnType.TIME.equals(columnType)) {
 			return new TimeColumnWriter(expectedRows);
 		} else if (columnType.category() == Column.Category.CATEGORICAL) {
-			return new Int32CategoricalWriter<>(columnType, expectedRows);
+			if (!columnType.elementType().equals(String.class)) {
+				throw new AssertionError("non-String categorical column");
+			}
+			//cast is safe since element type was checked above
+			@SuppressWarnings("unchecked")
+			ColumnType<String> stringColumnType = (ColumnType<String>) columnType;
+			return new Int32CategoricalWriter(stringColumnType, expectedRows);
 		} else if (columnType.category() == Column.Category.OBJECT) {
 			return new ObjectWriter<>(columnType, expectedRows);
 		} else {
@@ -319,10 +332,9 @@ public final class MixedRowWriter {
 	/**
 	 * Returns an integer or real growing column buffer with the given length.
 	 */
-	private NumericColumnWriter getBufferForType(ColumnType<?> type, int expectedRows) {
-		TypeId typeId = type.id();
-		if (typeId == TypeId.INTEGER) {
-			return new IntegerColumnWriter(expectedRows);
+	private NumericColumnWriter getBufferForType(TypeId typeId, int expectedRows) {
+		if (typeId == TypeId.INTEGER_53_BIT) {
+			return new Integer53BitColumnWriter(expectedRows);
 		} else if (typeId == TypeId.REAL) {
 			return new RealColumnWriter(expectedRows);
 		} else {

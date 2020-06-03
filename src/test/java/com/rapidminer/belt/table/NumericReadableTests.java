@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -43,7 +44,6 @@ import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.TimeColumn;
 import com.rapidminer.belt.reader.NumericReader;
 import com.rapidminer.belt.util.IntegerFormats;
@@ -63,7 +63,7 @@ public class NumericReadableTests {
 	private static final double EPSILON = 1e-10;
 
 	private static final double MISSING_FREQUENCY = 0.1;
-	private static final List<Void> EMPTY_DICTIONARY = Collections.emptyList();
+	private static final List<String> EMPTY_DICTIONARY = Collections.emptyList();
 
 	private enum Implementation {
 		DOUBLE_ARRAY("DoubleArray",
@@ -74,7 +74,7 @@ public class NumericReadableTests {
 				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, ColumnTestUtils.getMostFrequentValue(a, -0.00001d), a)),
 		SPARSE_INT_COLUMN("SparseIntColumn",
 				NumericReadableTests::random4BitIntegers,
-				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER, ColumnTestUtils.getMostFrequentValue(a, 17d), a)),
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER_53_BIT, ColumnTestUtils.getMostFrequentValue(a, 17d), a)),
 		SPARSE_DOUBLE_COLUMN_VERY_SPARSE_DATA("SparseDoubleColumnVerySparseData",
 				NumericReadableTests::verySparseDoubleData,
 				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, ColumnTestUtils.getMostFrequentValue(a, 0.00001d), a)),
@@ -86,16 +86,16 @@ public class NumericReadableTests {
 				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.REAL, Double.NaN, a)),
 		SPARSE_INT_COLUMN_DEFAULT_IS_NAN("SparseIntColumnDefaultIsNan",
 				NumericReadableTests::random4BitIntegers,
-				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER, Double.NaN, a)),
+				a -> ColumnTestUtils.getSparseDoubleColumn(Column.TypeId.INTEGER_53_BIT, Double.NaN, a)),
 		MAPPED_DOUBLE_ARRAY("MappedDoubleArray",
 				NumericReadableTests::randomDoubles,
 				a -> mappedDoubleColumn(a, Column.TypeId.REAL)),
 		INTEGER_ARRAY("IntegerArray",
 				NumericReadableTests::random32BitIntegers,
-				a -> ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, a)),
+				a -> ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, a)),
 		MAPPED_INTEGER_ARRAY("MappedIntegerArray",
 				NumericReadableTests::random32BitIntegers,
-				a -> mappedDoubleColumn(a, Column.TypeId.INTEGER)),
+				a -> mappedDoubleColumn(a, Column.TypeId.INTEGER_53_BIT)),
 		SIMPLE_CATEGORICAL_2BIT("SimpleCategorical2Bit",
 				NumericReadableTests::random2BitIntegers,
 				NumericReadableTests::categorical2BitColumn),
@@ -408,8 +408,8 @@ public class NumericReadableTests {
 		return ColumnTestUtils.getMappedNumericColumn(type, mappedData, mapping);
 	}
 
-	private static final ColumnType<Void> VOID_TYPE = ColumnTypes.categoricalType(
-			"com.rapidminer.belt.column.voidcolumn", Void.class, null);
+	private static final ColumnType<String> VOID_TYPE = ColumnTestUtils.categoricalType(
+			String.class, null);
 
 	private static Column categorical2BitColumn(double[] data) {
 		byte[] byteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];

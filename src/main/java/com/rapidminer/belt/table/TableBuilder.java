@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -28,23 +28,23 @@ import java.util.function.IntFunction;
 import java.util.function.IntToDoubleFunction;
 import java.util.function.Supplier;
 
-import com.rapidminer.belt.column.Column;
-import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.DateTimeBuffer;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.buffer.TimeBuffer;
-import com.rapidminer.belt.buffer.UInt16CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt2CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt4CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt8CategoricalBuffer;
+import com.rapidminer.belt.buffer.UInt16NominalBuffer;
+import com.rapidminer.belt.buffer.UInt2NominalBuffer;
+import com.rapidminer.belt.buffer.UInt4NominalBuffer;
+import com.rapidminer.belt.buffer.UInt8NominalBuffer;
+import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.execution.ExecutionUtils;
 import com.rapidminer.belt.util.ColumnMetaData;
 import com.rapidminer.belt.util.ColumnReference;
-import com.rapidminer.belt.execution.ExecutionUtils;
 import com.rapidminer.belt.util.IntegerFormats;
 
 
@@ -168,7 +168,7 @@ public final class TableBuilder {
 	}
 
 	/**
-	 * Adds an integer column that is filled as specified by the generator.
+	 * Adds an {@link TypeId#INTEGER_53_BIT} column that is filled as specified by the generator.
 	 *
 	 * @param label
 	 * 		the label for the new column
@@ -180,10 +180,10 @@ public final class TableBuilder {
 	 * @throws NullPointerException
 	 * 		if the label or generator is {@code null}
 	 */
-	public synchronized TableBuilder addInt(String label, IntToDoubleFunction generator) {
+	public synchronized TableBuilder addInt53Bit(String label, IntToDoubleFunction generator) {
 		requireValidUnusedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		columnSources.put(label, new ColumnSource(generator, TypeId.INTEGER));
+		columnSources.put(label, new ColumnSource(generator, TypeId.INTEGER_53_BIT));
 		return this;
 	}
 
@@ -201,7 +201,7 @@ public final class TableBuilder {
 	 * 		if the label or generator is {@code null}
 	 */
 	public TableBuilder addNominal(String label, IntFunction<String> generator) {
-		return addCategorical(label, generator, ColumnTypes.NOMINAL);
+		return addCategorical(label, generator, ColumnType.NOMINAL);
 	}
 
 	/**
@@ -221,91 +221,47 @@ public final class TableBuilder {
 	 * 		if the label or generator is {@code null}
 	 */
 	public TableBuilder addNominal(String label, IntFunction<String> generator, int maxNumberOfValues) {
-		return addCategorical(label, generator, maxNumberOfValues, ColumnTypes.NOMINAL);
+		return addCategorical(label, generator, maxNumberOfValues, ColumnType.NOMINAL);
 	}
 
 	/**
-	 * Adds a categorical column with the given type that is filled as specified by the generator.
+	 * Adds an object column with type {@link TypeId#TEXT} that is filled as specified by the generator.
 	 *
 	 * @param label
 	 * 		the label for the new column
 	 * @param generator
 	 * 		the function specifying how the column should be filled
-	 * @param type
-	 * 		the column type of the column to create, must be categorical
 	 * @return the builder
 	 * @throws IllegalArgumentException
-	 * 		if the label is invalid or already in use or if the type not categorical
+	 * 		if the label is invalid or already in use
 	 * @throws NullPointerException
-	 * 		if the label, generator or type is {@code null}
+	 * 		if the label or the generator is {@code null}
 	 */
-	public synchronized <T> TableBuilder addCategorical(String label, IntFunction<T> generator, ColumnType<T> type) {
+	public synchronized TableBuilder addText(String label, IntFunction<String> generator) {
 		requireValidUnusedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Type must be categorical");
-		}
-		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type);
-		columnSources.put(label, new ColumnSource(supplier));
-		return this;
-	}
-
-
-	/**
-	 * Adds a categorical column with the given type that is filled as specified by the generator.
-	 *
-	 * @param label
-	 * 		the label for the new column
-	 * @param generator
-	 * 		the function specifying how the column should be filled
-	 * @param maxNumberOfValues
-	 * 		the maximal number of different values that the generator generates, will be used to determine the data
-	 * 		storage format
-	 * @param type
-	 * 		the column type of the column to create, must be categorical
-	 * @return the builder
-	 * @throws IllegalArgumentException
-	 * 		if the label is invalid or already in use or if the type not categorical
-	 * @throws NullPointerException
-	 * 		if the label, generator or type is {@code null}
-	 */
-	public synchronized <T> TableBuilder addCategorical(String label, IntFunction<T> generator, int maxNumberOfValues,
-														ColumnType<T> type) {
-		requireValidUnusedLabel(label);
-		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Type must be categorical");
-		}
-		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type, maxNumberOfValues);
+		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXT);
 		columnSources.put(label, new ColumnSource(supplier));
 		return this;
 	}
 
 	/**
-	 * Adds an object column with the given type that is filled as specified by the generator.
+	 * Adds an object column with type {@link TypeId#TEXT_SET} that is filled as specified by the generator.
 	 *
 	 * @param label
 	 * 		the label for the new column
 	 * @param generator
 	 * 		the function specifying how the column should be filled
-	 * @param type
-	 * 		the column type of the column to create, must be an object type
 	 * @return the builder
 	 * @throws IllegalArgumentException
-	 * 		if the label is invalid or already in use or if the type is not an object type
+	 * 		if the label is invalid or already in use
 	 * @throws NullPointerException
-	 * 		if the label, generator or type is {@code null}
+	 * 		if the label or the generator is {@code null}
 	 */
-	public synchronized <T> TableBuilder addObject(String label, IntFunction<T> generator, ColumnType<T> type) {
+	public synchronized TableBuilder addTextset(String label, IntFunction<StringSet> generator) {
 		requireValidUnusedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.OBJECT) {
-			throw new IllegalArgumentException("Type must be an object type");
-		}
-		Supplier<Column> supplier = getObjectColumnSupplier(generator, type);
+		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXTSET);
 		columnSources.put(label, new ColumnSource(supplier));
 		return this;
 	}
@@ -354,73 +310,6 @@ public final class TableBuilder {
 		Supplier<Column> supplier = getDateTimeColumnSupplier(generator);
 		columnSources.put(label, new ColumnSource(supplier));
 		return this;
-	}
-
-	private void ensureMetaDataOwnership() {
-		if (!ownsMetaData) {
-			Map<String, List<ColumnMetaData>> copy = new HashMap<>(columnMetaData.size());
-			for (Map.Entry<String, List<ColumnMetaData>> entry: columnMetaData.entrySet()) {
-				copy.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-			}
-			columnMetaData = copy;
-			ownsMetaData = true;
-		}
-	}
-
-	private boolean containsMetaData(String label, ColumnMetaData metaData) {
-		if (columnMetaData.containsKey(label)) {
-			List<ColumnMetaData> list = columnMetaData.get(label);
-			return list.contains(metaData);
-		}
-		return false;
-	}
-
-	private boolean containsMetaDataType(String label, ColumnMetaData metaData) {
-		if (columnMetaData.containsKey(label)) {
-			String type = metaData.type();
-			for (ColumnMetaData meta : columnMetaData.get(label)) {
-				if (type.equals(meta.type())) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Adds the meta data to the given column. Validates the uniqueness properties but nothing else.
-	 *
-	 * @param label
-	 * 		the column label
-	 * @param metaData
-	 * 		the meta data to add
-	 */
-	private void addMetaDataUnchecked(String label, ColumnMetaData metaData) {
-		boolean duplicate = false;
-		switch (metaData.uniqueness()) {
-			case NONE:
-				// Column meta data type need not be unique, but we still need to prevent duplicates.
-				if (containsMetaData(label, metaData)) {
-					duplicate = true;
-				}
-				break;
-			case COLUMN:
-				if (containsMetaDataType(label, metaData)) {
-					throw new IllegalStateException("Column meta data must be unique per column");
-				}
-				break;
-			case TABLE:
-				for (String columnLabel : columnSources.keySet()) {
-					if (containsMetaDataType(columnLabel, metaData)) {
-						throw new IllegalStateException("Column meta data must be unique per table");
-					}
-				}
-				break;
-		}
-		if (!duplicate) {
-			List<ColumnMetaData> list = columnMetaData.computeIfAbsent(label, s -> new ArrayList<>(1));
-			list.add(metaData);
-		}
 	}
 
 	/**
@@ -473,131 +362,7 @@ public final class TableBuilder {
 	}
 
 	/**
-	 * Creates a supplier for a time column from the given generator.
-	 */
-	private Supplier<Column> getTimeColumnSupplier(IntFunction<LocalTime> generator) {
-		return () -> {
-			TimeBuffer buffer = Buffers.timeBuffer(numberOfRows, false);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn();
-		};
-	}
-
-	/**
-	 * Creates a supplier for a date-time column from the given generator.
-	 */
-	private Supplier<Column> getDateTimeColumnSupplier(IntFunction<Instant> generator) {
-		return () -> {
-			DateTimeBuffer buffer = Buffers.dateTimeBuffer(numberOfRows, true, false);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn();
-		};
-	}
-
-	/**
-	 * Creates a supplier for a categorical column from the given parameters.
-	 */
-	private <T> Supplier<Column> getCategoricalColumnSupplier(IntFunction<T> generator, ColumnType<T> type) {
-		return () -> {
-			Int32CategoricalBuffer<T> buffer = BufferAccessor.get().newInt32Buffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn(type);
-		};
-	}
-
-	/**
-	 * Creates a supplier for a categorical column from the given parameters. Decides on a format depending on
-	 * maxValues.
-	 */
-	private <T> Supplier<Column> getCategoricalColumnSupplier(IntFunction<T> generator, ColumnType<T> type,
-															  int maxValues) {
-		maxValues = Math.min(maxValues, numberOfRows);
-		if (maxValues <= IntegerFormats.Format.UNSIGNED_INT2.maxValue()) {
-			return getCategoricalUInt2Supplier(generator, type);
-		} else if (maxValues <= IntegerFormats.Format.UNSIGNED_INT4.maxValue()) {
-			return getCategoricalUInt4Supplier(generator, type);
-		} else if (maxValues <= IntegerFormats.Format.UNSIGNED_INT8.maxValue()) {
-			return getCategoricalUInt8Supplier(generator, type);
-		} else if (maxValues <= IntegerFormats.Format.UNSIGNED_INT16.maxValue()) {
-			return getCategoricalUInt16Supplier(generator, type);
-		} else {
-			return getCategoricalColumnSupplier(generator, type);
-		}
-	}
-
-	/**
-	 * Creates a supplier for a UInt2 categorical column from the given parameters.
-	 */
-	private <T> Supplier<Column> getCategoricalUInt2Supplier(IntFunction<T> generator, ColumnType<T> type) {
-		return () -> {
-			UInt2CategoricalBuffer<T> buffer = BufferAccessor.get().newUInt2Buffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn(type);
-		};
-	}
-
-	/**
-	 * Creates a supplier for a UInt4 categorical column from the given parameters.
-	 */
-	private <T> Supplier<Column> getCategoricalUInt4Supplier(IntFunction<T> generator, ColumnType<T> type) {
-		return () -> {
-			UInt4CategoricalBuffer<T> buffer = BufferAccessor.get().newUInt4Buffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn(type);
-		};
-	}
-
-	/**
-	 * Creates a supplier for a UInt8 categorical column from the given parameters.
-	 */
-	private <T> Supplier<Column> getCategoricalUInt8Supplier(IntFunction<T> generator, ColumnType<T> type) {
-		return () -> {
-			UInt8CategoricalBuffer<T> buffer = BufferAccessor.get().newUInt8Buffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn(type);
-		};
-	}
-
-	/**
-	 * Creates a supplier for a UInt16 categorical column from the given parameters.
-	 */
-	private <T> Supplier<Column> getCategoricalUInt16Supplier(IntFunction<T> generator, ColumnType<T> type) {
-		return () -> {
-			UInt16CategoricalBuffer<T> buffer = BufferAccessor.get().newUInt16Buffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn(type);
-		};
-	}
-
-	/**
-	 * Creates a supplier for an Object column from the given parameters.
-	 */
-	private <T> Supplier<Column> getObjectColumnSupplier(IntFunction<T> generator, ColumnType<T> type) {
-		return () -> {
-			ObjectBuffer<T> buffer = Buffers.objectBuffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toColumn(type);
-		};
-	}
-
-	/**
-	 * Adds a boolean column with the given positive value and type that is filled as specified by the generator.
+	 * Adds a nominal boolean column with the given positive value and type that is filled as specified by the generator.
 	 *
 	 * @param label
 	 * 		the label for the new column
@@ -606,38 +371,14 @@ public final class TableBuilder {
 	 * 		counting {@code null}) where one is the positive value.
 	 * @param positiveValue
 	 * 		the positive value of the boolean column
-	 * @param type
-	 * 		the column type of the column to create, must be categorical
 	 * @return the builder
 	 * @throws IllegalArgumentException
-	 * 		if the label is invalid or already in use or if the type is not categorical
+	 * 		if the label is invalid or already in use
 	 * @throws NullPointerException
-	 * 		if the label, generator or type is {@code null}
+	 * 		if the label or generator is {@code null}
 	 */
-	public synchronized <T> TableBuilder addBoolean(String label, IntFunction<T> generator, T positiveValue,
-													ColumnType<T> type) {
-		requireValidUnusedLabel(label);
-		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Type must have categorical as category.");
-		}
-		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type)));
-		return this;
-	}
-
-	/**
-	 * Creates a supplier for a boolean column from the given parameters.
-	 */
-	private <T> Supplier<Column> getBooleanColumnSupplier(IntFunction<T> generator, T positiveValue,
-														  ColumnType<T>	type) {
-		return () -> {
-			UInt2CategoricalBuffer<T> buffer = BufferAccessor.get().newUInt2Buffer(numberOfRows);
-			for (int i = 0; i < buffer.size(); i++) {
-				buffer.set(i, generator.apply(i));
-			}
-			return buffer.toBooleanColumn(type, positiveValue);
-		};
+	public TableBuilder addBoolean(String label, IntFunction<String> generator, String positiveValue) {
+		return addBoolean(label, generator, positiveValue, ColumnType.NOMINAL);
 	}
 
 	/**
@@ -666,7 +407,7 @@ public final class TableBuilder {
 	}
 
 	/**
-	 * Removes the given column from the table.
+	 * Removes the given column from the table. {@link ColumnReference}s to the column are not removed.
 	 *
 	 * @param label
 	 * 		the column to remove
@@ -781,7 +522,7 @@ public final class TableBuilder {
 	}
 
 	/**
-	 * Replaces the column with the given label by an integer column filled by the given generator.
+	 * Replaces the column with the given label by an {@link TypeId#INTEGER_53_BIT} column filled by the given generator.
 	 *
 	 * @param label
 	 * 		the label of the column to replace
@@ -793,10 +534,10 @@ public final class TableBuilder {
 	 * @throws NullPointerException
 	 * 		if the generator is {@code null}
 	 */
-	public synchronized TableBuilder replaceInt(String label, IntToDoubleFunction generator) {
+	public synchronized TableBuilder replaceInt53Bit(String label, IntToDoubleFunction generator) {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		columnSources.put(label, new ColumnSource(generator, TypeId.INTEGER));
+		columnSources.put(label, new ColumnSource(generator, TypeId.INTEGER_53_BIT));
 		return this;
 	}
 
@@ -814,7 +555,7 @@ public final class TableBuilder {
 	 * 		if the generator is {@code null}
 	 */
 	public TableBuilder replaceNominal(String label, IntFunction<String> generator) {
-		return replaceCategorical(label, generator, ColumnTypes.NOMINAL);
+		return replaceCategorical(label, generator, ColumnType.NOMINAL);
 	}
 
 	/**
@@ -834,92 +575,49 @@ public final class TableBuilder {
 	 * 		if the generator is {@code null}
 	 */
 	public TableBuilder replaceNominal(String label, IntFunction<String> generator, int maxNumberOfValues) {
-		return replaceCategorical(label, generator, maxNumberOfValues, ColumnTypes.NOMINAL);
+		return replaceCategorical(label, generator, maxNumberOfValues, ColumnType.NOMINAL);
 	}
 
-
 	/**
-	 * Replaces the column with the given label by a categorical column of the given type filled by the given generator.
+	 * Replaces the column with the given label by an object column of type {@link TypeId#TEXT} filled by the given
+	 * generator.
 	 *
 	 * @param label
 	 * 		the label of the column to replace
 	 * @param generator
 	 * 		the function specifying how the column should be filled
-	 * @param type
-	 * 		the column type of the column created by the generator, must be categorical
 	 * @return the builder
 	 * @throws IllegalArgumentException
-	 * 		if there is no column with the given label or if the type is not categorical
+	 * 		if there is no column with the given label
 	 * @throws NullPointerException
-	 * 		if the generator or the type is {@code null}
+	 * 		if the generator is {@code null}
 	 */
-	public synchronized <T> TableBuilder replaceCategorical(String label, IntFunction<T> generator,
-															ColumnType<T> type) {
+	public synchronized TableBuilder replaceText(String label, IntFunction<String> generator) {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.CATEGORICAL) {
-			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
-		}
-		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type);
+		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXT);
 		columnSources.put(label, new ColumnSource(supplier));
 		return this;
 	}
 
 	/**
-	 * Replaces the column with the given label by a categorical column of the given type filled by the given generator.
+	 * Replaces the column with the given label by an object column of type {@link TypeId#TEXT_SET} filled by the given
+	 * generator.
 	 *
 	 * @param label
 	 * 		the label of the column to replace
 	 * @param generator
 	 * 		the function specifying how the column should be filled
-	 * @param maxNumberOfValues
-	 * 		the maximal number of different values that the generator generates, will be used to determine the data
-	 * 		storage format
-	 * @param type
-	 * 		the column type of the column created by the generator, must be categorical
 	 * @return the builder
 	 * @throws IllegalArgumentException
-	 * 		if there is no column with the given label or if the type is not categorical
+	 * 		if there is no column with the given label
 	 * @throws NullPointerException
-	 * 		if the generator or the type is {@code null}
+	 * 		if the generator is {@code null}
 	 */
-	public synchronized <T> TableBuilder replaceCategorical(String label, IntFunction<T> generator,
-															int maxNumberOfValues, ColumnType<T> type) {
+	public synchronized TableBuilder replaceTextset(String label, IntFunction<StringSet> generator) {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.CATEGORICAL) {
-			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
-		}
-		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type, maxNumberOfValues);
-		columnSources.put(label, new ColumnSource(supplier));
-		return this;
-	}
-
-	/**
-	 * Replaces the column with the given label by an object column of the given type filled by the given generator.
-	 *
-	 * @param label
-	 * 		the label of the column to replace
-	 * @param generator
-	 * 		the function specifying how the column should be filled
-	 * @param type
-	 * 		the column type of the column created by the generator, must be an object type
-	 * @return the builder
-	 * @throws IllegalArgumentException
-	 * 		if there is no column with the given label or if the type is not an object type
-	 * @throws NullPointerException
-	 * 		if the generator or the type is {@code null}
-	 */
-	public synchronized <T> TableBuilder replaceObject(String label, IntFunction<T> generator, ColumnType<T> type) {
-		requireUsedLabel(label);
-		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.OBJECT) {
-			throw new IllegalArgumentException("Type must be an object type.");
-		}
-		Supplier<Column> supplier = getObjectColumnSupplier(generator, type);
+		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXTSET);
 		columnSources.put(label, new ColumnSource(supplier));
 		return this;
 	}
@@ -969,8 +667,8 @@ public final class TableBuilder {
 	}
 
 	/**
-	 * Replaces the column with the given label by a boolean column with the given positive value of the given type
-	 * filled by the given generator.
+	 * Replaces the column with the given label by a nominal boolean column with the given positive value of the given
+	 * type filled by the given generator.
 	 *
 	 * @param label
 	 * 		the label of the column to replace
@@ -979,24 +677,14 @@ public final class TableBuilder {
 	 * 		counting {@code null}) where one is the positive value.
 	 * @param positiveValue
 	 * 		the positive value of the boolean column
-	 * @param type
-	 * 		the categorical column type of the column created by the generator
 	 * @return the builder
 	 * @throws IllegalArgumentException
-	 * 		if there is no column with the given label or if the type is not categorical
+	 * 		if there is no column with the given label
 	 * @throws NullPointerException
-	 * 		if the generator or the type is {@code null}
+	 * 		if the generator or the label is {@code null}
 	 */
-	public synchronized <T> TableBuilder replaceBoolean(String label, IntFunction<T> generator, T positiveValue,
-														ColumnType<T> type) {
-		requireUsedLabel(label);
-		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
-		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
-		if (type.category() != Column.Category.CATEGORICAL) {
-			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
-		}
-		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type)));
-		return this;
+	public TableBuilder replaceBoolean(String label, IntFunction<String> generator, String positiveValue) {
+		return replaceBoolean(label, generator, positiveValue, ColumnType.NOMINAL);
 	}
 
 	/**
@@ -1026,8 +714,10 @@ public final class TableBuilder {
 	}
 
 	/**
-	 * Renames the column with the given label to the new label without changing the order of the columns. This does
-	 * not change any {@link ColumnReference}s.
+	 * Renames the column with the given label to the new label without changing the order of the columns. This also
+	 * changes any {@link ColumnReference}s pointing to the old label to the new label.
+	 *
+	 * For bulk renaming use the {@link Table#rename(Map)} method instead as it is faster.
 	 *
 	 * @param label
 	 * 		the label of the column to be renamed
@@ -1061,7 +751,7 @@ public final class TableBuilder {
 			ensureMetaDataOwnership();
 			columnMetaData.put(newLabel, columnMetaData.remove(label));
 		}
-
+		updateReferences(label, newLabel);
 		return this;
 	}
 
@@ -1098,6 +788,411 @@ public final class TableBuilder {
 	}
 
 	/**
+	 * Adds a categorical column with the given type that is filled as specified by the generator.
+	 *
+	 * @param label
+	 * 		the label for the new column
+	 * @param generator
+	 * 		the function specifying how the column should be filled
+	 * @param type
+	 * 		the column type of the column to create, must be categorical
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if the label is invalid or already in use or if the type not categorical
+	 * @throws NullPointerException
+	 * 		if the label, generator or type is {@code null}
+	 */
+	private synchronized TableBuilder addCategorical(String label, IntFunction<String> generator, ColumnType<String> type) {
+		requireValidUnusedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		if (type.category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Type must be categorical");
+		}
+		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type);
+		columnSources.put(label, new ColumnSource(supplier));
+		return this;
+	}
+
+
+	/**
+	 * Adds a categorical column with the given type that is filled as specified by the generator.
+	 *
+	 * @param label
+	 * 		the label for the new column
+	 * @param generator
+	 * 		the function specifying how the column should be filled
+	 * @param maxNumberOfValues
+	 * 		the maximal number of different values that the generator generates, will be used to determine the data
+	 * 		storage format
+	 * @param type
+	 * 		the column type of the column to create, must be categorical
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if the label is invalid or already in use or if the type not categorical
+	 * @throws NullPointerException
+	 * 		if the label, generator or type is {@code null}
+	 */
+	private synchronized TableBuilder addCategorical(String label, IntFunction<String> generator, int maxNumberOfValues,
+														 ColumnType<String> type) {
+		requireValidUnusedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		if (type.category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Type must be categorical");
+		}
+		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type, maxNumberOfValues);
+		columnSources.put(label, new ColumnSource(supplier));
+		return this;
+	}
+
+
+	private void ensureMetaDataOwnership() {
+		if (!ownsMetaData) {
+			Map<String, List<ColumnMetaData>> copy = new HashMap<>(columnMetaData.size());
+			for (Map.Entry<String, List<ColumnMetaData>> entry: columnMetaData.entrySet()) {
+				copy.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+			}
+			columnMetaData = copy;
+			ownsMetaData = true;
+		}
+	}
+
+	private boolean containsMetaData(String label, ColumnMetaData metaData) {
+		if (columnMetaData.containsKey(label)) {
+			List<ColumnMetaData> list = columnMetaData.get(label);
+			return list.contains(metaData);
+		}
+		return false;
+	}
+
+	private boolean containsMetaDataType(String label, ColumnMetaData metaData) {
+		if (columnMetaData.containsKey(label)) {
+			String type = metaData.type();
+			for (ColumnMetaData meta : columnMetaData.get(label)) {
+				if (type.equals(meta.type())) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Adds the meta data to the given column. Validates the uniqueness properties but nothing else.
+	 *
+	 * @param label
+	 * 		the column label
+	 * @param metaData
+	 * 		the meta data to add
+	 */
+	private void addMetaDataUnchecked(String label, ColumnMetaData metaData) {
+		boolean duplicate = false;
+		switch (metaData.uniqueness()) {
+			case NONE:
+				// Column meta data type need not be unique, but we still need to prevent duplicates.
+				if (containsMetaData(label, metaData)) {
+					duplicate = true;
+				}
+				break;
+			case COLUMN:
+				if (containsMetaDataType(label, metaData)) {
+					throw new IllegalStateException("Column meta data must be unique per column");
+				}
+				break;
+			case TABLE:
+				for (String columnLabel : columnSources.keySet()) {
+					if (containsMetaDataType(columnLabel, metaData)) {
+						throw new IllegalStateException("Column meta data must be unique per table");
+					}
+				}
+				break;
+		}
+		if (!duplicate) {
+			List<ColumnMetaData> list = columnMetaData.computeIfAbsent(label, s -> new ArrayList<>(1));
+			list.add(metaData);
+		}
+	}
+
+	/**
+	 * Updates all references that point to the old label to the new label.
+	 */
+	private void updateReferences(String oldLabel, String newLabel) {
+		for (Map.Entry<String, List<ColumnMetaData>> entry : columnMetaData.entrySet()) {
+			int index = 0;
+			for (ColumnMetaData metaData : entry.getValue()) {
+				if (metaData instanceof ColumnReference) {
+					if (oldLabel.equals(((ColumnReference) metaData).getColumn())) {
+						ensureMetaDataOwnership();
+						columnMetaData.get(entry.getKey()).set(index, new ColumnReference(newLabel,
+								((ColumnReference) metaData).getValue()));
+					}
+					break; //only one reference per label
+				}
+				index++;
+			}
+		}
+	}
+
+	/**
+	 * Creates a supplier for a time column from the given generator.
+	 */
+	private Supplier<Column> getTimeColumnSupplier(IntFunction<LocalTime> generator) {
+		return () -> {
+			TimeBuffer buffer = Buffers.timeBuffer(numberOfRows, false);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for a date-time column from the given generator.
+	 */
+	private Supplier<Column> getDateTimeColumnSupplier(IntFunction<Instant> generator) {
+		return () -> {
+			DateTimeBuffer buffer = Buffers.dateTimeBuffer(numberOfRows, true, false);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for a categorical column from the given parameters.
+	 */
+	private Supplier<Column> getCategoricalColumnSupplier(IntFunction<String> generator, ColumnType<String> type) {
+		return () -> {
+			Int32NominalBuffer buffer = BufferAccessor.get().newInt32Buffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for a categorical column from the given parameters. Decides on a format depending on
+	 * maxValues.
+	 */
+	private Supplier<Column> getCategoricalColumnSupplier(IntFunction<String> generator, ColumnType<String> type,
+															  int maxValues) {
+		maxValues = Math.min(maxValues, numberOfRows);
+		if (maxValues <= IntegerFormats.Format.UNSIGNED_INT2.maxValue()) {
+			return getCategoricalUInt2Supplier(generator, type);
+		} else if (maxValues <= IntegerFormats.Format.UNSIGNED_INT4.maxValue()) {
+			return getCategoricalUInt4Supplier(generator, type);
+		} else if (maxValues <= IntegerFormats.Format.UNSIGNED_INT8.maxValue()) {
+			return getCategoricalUInt8Supplier(generator, type);
+		} else if (maxValues <= IntegerFormats.Format.UNSIGNED_INT16.maxValue()) {
+			return getCategoricalUInt16Supplier(generator, type);
+		} else {
+			return getCategoricalColumnSupplier(generator, type);
+		}
+	}
+
+	/**
+	 * Creates a supplier for a UInt2 categorical column from the given parameters.
+	 */
+	private Supplier<Column> getCategoricalUInt2Supplier(IntFunction<String> generator, ColumnType<String> type) {
+		return () -> {
+			UInt2NominalBuffer buffer = BufferAccessor.get().newUInt2Buffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for a UInt4 categorical column from the given parameters.
+	 */
+	private Supplier<Column> getCategoricalUInt4Supplier(IntFunction<String> generator, ColumnType<String> type) {
+		return () -> {
+			UInt4NominalBuffer buffer = BufferAccessor.get().newUInt4Buffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for a UInt8 categorical column from the given parameters.
+	 */
+	private Supplier<Column> getCategoricalUInt8Supplier(IntFunction<String> generator, ColumnType<String> type) {
+		return () -> {
+			UInt8NominalBuffer buffer = BufferAccessor.get().newUInt8Buffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for a UInt16 categorical column from the given parameters.
+	 */
+	private Supplier<Column> getCategoricalUInt16Supplier(IntFunction<String> generator, ColumnType<String> type) {
+		return () -> {
+			UInt16NominalBuffer buffer = BufferAccessor.get().newUInt16Buffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Creates a supplier for an Object column from the given parameters.
+	 */
+	private <T> Supplier<Column> getObjectColumnSupplier(IntFunction<T> generator, ColumnType<T> type) {
+		return () -> {
+			ObjectBuffer<T> buffer = BufferAccessor.get().newObjectBuffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toColumn();
+		};
+	}
+
+	/**
+	 * Adds a boolean column with the given positive value and type that is filled as specified by the generator.
+	 *
+	 * @param label
+	 * 		the label for the new column
+	 * @param generator
+	 * 		the function specifying how the column should be filled. It must return exactly two different values (not
+	 * 		counting {@code null}) where one is the positive value.
+	 * @param positiveValue
+	 * 		the positive value of the boolean column
+	 * @param type
+	 * 		the column type of the column to create, must be categorical
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if the label is invalid or already in use or if the type is not categorical
+	 * @throws NullPointerException
+	 * 		if the label, generator or type is {@code null}
+	 */
+	private synchronized TableBuilder addBoolean(String label, IntFunction<String> generator, String positiveValue,
+													ColumnType<String> type) {
+		requireValidUnusedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		if (type.category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException("Type must have categorical as category.");
+		}
+		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type)));
+		return this;
+	}
+
+	/**
+	 * Creates a supplier for a boolean column from the given parameters.
+	 */
+	private Supplier<Column> getBooleanColumnSupplier(IntFunction<String> generator, String positiveValue,
+														  ColumnType<String> type) {
+		return () -> {
+			UInt2NominalBuffer buffer = BufferAccessor.get().newUInt2Buffer(type, numberOfRows);
+			for (int i = 0; i < buffer.size(); i++) {
+				buffer.set(i, generator.apply(i));
+			}
+			return buffer.toBooleanColumn(positiveValue);
+		};
+	}
+
+	/**
+	 * Replaces the column with the given label by a categorical column of the given type filled by the given generator.
+	 *
+	 * @param label
+	 * 		the label of the column to replace
+	 * @param generator
+	 * 		the function specifying how the column should be filled
+	 * @param type
+	 * 		the column type of the column created by the generator, must be categorical
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label or if the type is not categorical
+	 * @throws NullPointerException
+	 * 		if the generator or the type is {@code null}
+	 */
+	private synchronized TableBuilder replaceCategorical(String label, IntFunction<String> generator,
+															ColumnType<String> type) {
+		requireUsedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		if (type.category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
+		}
+		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type);
+		columnSources.put(label, new ColumnSource(supplier));
+		return this;
+	}
+
+	/**
+	 * Replaces the column with the given label by a categorical column of the given type filled by the given generator.
+	 *
+	 * @param label
+	 * 		the label of the column to replace
+	 * @param generator
+	 * 		the function specifying how the column should be filled
+	 * @param maxNumberOfValues
+	 * 		the maximal number of different values that the generator generates, will be used to determine the data
+	 * 		storage format
+	 * @param type
+	 * 		the column type of the column created by the generator, must be categorical
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label or if the type is not categorical
+	 * @throws NullPointerException
+	 * 		if the generator or the type is {@code null}
+	 */
+	private synchronized TableBuilder replaceCategorical(String label, IntFunction<String> generator,
+															int maxNumberOfValues, ColumnType<String> type) {
+		requireUsedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		if (type.category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
+		}
+		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type, maxNumberOfValues);
+		columnSources.put(label, new ColumnSource(supplier));
+		return this;
+	}
+
+	/**
+	 * Replaces the column with the given label by a boolean column with the given positive value of the given type
+	 * filled by the given generator.
+	 *
+	 * @param label
+	 * 		the label of the column to replace
+	 * @param generator
+	 * 		the function specifying how the column should be filled. It must return exactly two different values (not
+	 * 		counting {@code null}) where one is the positive value.
+	 * @param positiveValue
+	 * 		the positive value of the boolean column
+	 * @param type
+	 * 		the categorical column type of the column created by the generator
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label or if the type is not categorical
+	 * @throws NullPointerException
+	 * 		if the generator or the type is {@code null}
+	 */
+	private synchronized TableBuilder replaceBoolean(String label, IntFunction<String> generator, String positiveValue,
+														ColumnType<String> type) {
+		requireUsedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		if (type.category() != Column.Category.CATEGORICAL) {
+			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
+		}
+		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type)));
+		return this;
+	}
+
+	/**
 	 * Builds a new table from the given labels and sources and meta data inside the given context.
 	 */
 	private Table createTable(String[] labels, Map<String, List<ColumnMetaData>> columnMetaData,
@@ -1129,8 +1224,8 @@ public final class TableBuilder {
 		Column.TypeId type = TypeId.REAL;
 		if (information.generator != null) {
 			data = new double[numberOfRows];
-			if (information.type == TypeId.INTEGER) {
-				type = TypeId.INTEGER;
+			if (information.type == TypeId.INTEGER_53_BIT) {
+				type = TypeId.INTEGER_53_BIT;
 			}
 			fillData(information, data);
 		}
@@ -1139,7 +1234,7 @@ public final class TableBuilder {
 
 	/**
 	 * Fills the data array with the generator from information, rounding when the type of the information is {@link
-	 * TypeId#INTEGER}.
+	 * TypeId#INTEGER_53_BIT}.
 	 *
 	 * @param information
 	 * 		the information for filling the data via generator
@@ -1147,7 +1242,7 @@ public final class TableBuilder {
 	 * 		the data array to fill
 	 */
 	private void fillData(ColumnSource information, double[] data) {
-		if (information.type == TypeId.INTEGER) {
+		if (information.type == TypeId.INTEGER_53_BIT) {
 			for (int j = 0; j < numberOfRows; j++) {
 				double value = information.generator.applyAsDouble(j);
 				if (Double.isFinite(value)) {

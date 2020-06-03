@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -34,14 +34,14 @@ import com.rapidminer.belt.util.IntegerFormats.Format;
  *
  * @author Gisa Meier
  */
-class Int32CategoricalWriter<T> implements ComplexWriter {
+class Int32CategoricalWriter implements ComplexWriter {
 
 	private static final int[] PLACEHOLDER_BUFFER = new int[0];
 	private boolean frozen = false;
-	private final Map<T, Integer> indexLookup = new HashMap<>();
-	private final List<T> valueLookup = new ArrayList<>();
+	private final Map<String, Integer> indexLookup = new HashMap<>();
+	private final List<String> valueLookup = new ArrayList<>();
 
-	private final ColumnType<T> columnType;
+	private final ColumnType<String> columnType;
 
 	private int size;
 	private int[] data;
@@ -52,13 +52,13 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 	 * @param length
 	 * 		the length of the buffer
 	 */
-	Int32CategoricalWriter(ColumnType<T> columnType, int length) {
+	Int32CategoricalWriter(ColumnType<String> columnType, int length) {
 		this.data = new int[length];
 		this.valueLookup.add(null); //position 0 stands for missing value, i.e. null
 		this.columnType = columnType;
 	}
 
-	Int32CategoricalWriter(ColumnType<T> columnType) {
+	Int32CategoricalWriter(ColumnType<String> columnType) {
 		this.data = PLACEHOLDER_BUFFER;
 		this.valueLookup.add(null); //position 0 stands for missing value, i.e. null
 		this.size = 0;
@@ -66,7 +66,7 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 	}
 
 	@Override
-	public CategoricalColumn<T> toColumn() {
+	public CategoricalColumn toColumn() {
 		freeze();
 		return ColumnAccessor.get().newCategoricalColumn(columnType, data, valueLookup);
 	}
@@ -81,7 +81,7 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 		while (copyIndex < max) {
 			// the cast is safe because we check the data that is put into the buffer
 			@SuppressWarnings("unchecked")
-			T value = (T) buffer[bufferIndex];
+			String value = (String) buffer[bufferIndex];
 			set(copyIndex, value);
 			bufferIndex += bufferStepSize;
 			copyIndex++;
@@ -98,25 +98,25 @@ class Int32CategoricalWriter<T> implements ComplexWriter {
 	/**
 	 * Used internally to create sparse categorical writers.
 	 */
-	Map<T, Integer> getIndexLookup() {
+	Map<String, Integer> getIndexLookup() {
 		return indexLookup;
 	}
 
 	/**
 	 * Used internally to create sparse categorical writers.
 	 */
-	List<T> getValueLookup() {
+	List<String> getValueLookup() {
 		return valueLookup;
 	}
 
 	/**
 	 * Used internally to create sparse categorical writers.
 	 */
-	ColumnType<T> getColumnType() {
+	ColumnType<String> getColumnType() {
 		return columnType;
 	}
 
-	private void set(int index, T value) {
+	private void set(int index, String value) {
 		if (value == null) {
 			//set NaN
 			data[index] = 0;

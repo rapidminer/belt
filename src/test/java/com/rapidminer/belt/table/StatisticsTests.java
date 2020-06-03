@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -39,18 +39,19 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.rapidminer.belt.buffer.Buffers;
+import com.rapidminer.belt.buffer.NominalBuffer;
+import com.rapidminer.belt.buffer.NumericBuffer;
+import com.rapidminer.belt.buffer.ObjectBuffer;
+import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnTestUtils;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.column.Statistics;
 import com.rapidminer.belt.column.Statistics.Result;
 import com.rapidminer.belt.column.Statistics.Statistic;
-import com.rapidminer.belt.buffer.Buffers;
-import com.rapidminer.belt.buffer.CategoricalBuffer;
-import com.rapidminer.belt.buffer.NumericBuffer;
-import com.rapidminer.belt.buffer.ObjectBuffer;
-import com.rapidminer.belt.transform.ParallelExecutorTests;
-import com.rapidminer.belt.column.Column;
-import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.transform.ParallelExecutorTests;
 import com.rapidminer.belt.util.Belt;
 
 
@@ -515,7 +516,7 @@ public class StatisticsTests {
 			});
 
 			Table table = Builders.newTableBuilder(N)
-					.add("categories", ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices,
+					.add("categories", ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices,
 							dictionary))
 					.build(CTX);
 
@@ -534,6 +535,62 @@ public class StatisticsTests {
 			assertEquals("three", multiple.get(Statistic.MODE).getObject(String.class));
 			assertEquals(3, multiple.get(Statistic.MODE).getCategorical());
 		}
+
+		@Test
+		public void testAllCounts() {
+			Random rng = new Random(2382717L);
+			List<String> dictionary = new ArrayList<>(4);
+			dictionary.add(null);
+			dictionary.add("one");
+			dictionary.add("two");
+			dictionary.add("three");
+			dictionary.add("unused");
+
+			int[] indices = new int[N];
+			Arrays.setAll(indices, i -> {
+				if (i < 10) {
+					return 1;
+				} else if (i < 30) {
+					return 2;
+				} else if (i < 70) {
+					return 3;
+				} else {
+					return 0;
+				}
+			});
+
+			Table table = Builders.newTableBuilder(N)
+					.add("categories", ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices,
+							dictionary))
+					.build(CTX);
+
+			Table shuffled = table.map(permutation(rng, table.height()), false);
+			Column column = shuffled.column("categories");
+
+			Map<Statistic, Result> multiple = Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE, Statistic.INDEX_COUNTS),
+					CTX);
+
+			assertEquals(70, multiple.get(Statistic.COUNT).getNumeric(), EPSILON);
+			assertEquals(10, multiple.get(Statistic.LEAST).getNumeric(), EPSILON);
+			assertEquals("one", multiple.get(Statistic.LEAST).getObject(String.class));
+			assertEquals(1, multiple.get(Statistic.LEAST).getCategorical());
+			assertEquals(40, multiple.get(Statistic.MODE).getNumeric(), EPSILON);
+			assertEquals("three", multiple.get(Statistic.MODE).getObject(String.class));
+			assertEquals(3, multiple.get(Statistic.MODE).getCategorical());
+			assertEquals(0, multiple.get(Statistic.INDEX_COUNTS).getCategorical());
+			assertEquals(Double.NaN, multiple.get(Statistic.INDEX_COUNTS).getNumeric(), 0);
+			Object indexCounts = multiple.get(Statistic.INDEX_COUNTS).getObject();
+			assertTrue(indexCounts instanceof Statistics.CategoricalIndexCounts);
+			Statistics.CategoricalIndexCounts counts = (Statistics.CategoricalIndexCounts) indexCounts;
+			assertEquals(N - 70, counts.countForIndex(0));
+			assertEquals(10, counts.countForIndex(1));
+			assertEquals(20, counts.countForIndex(2));
+			assertEquals(40, counts.countForIndex(3));
+			assertEquals(0, counts.countForIndex(4));
+			assertEquals(0, counts.countForIndex(5));
+		}
+
 
 		@Test
 		public void testZeroCounts() {
@@ -583,7 +640,7 @@ public class StatisticsTests {
 			});
 
 			Table table = Builders.newTableBuilder(N)
-					.add("categories", ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices,
+					.add("categories", ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices,
 							dictionary))
 					.build(CTX);
 
@@ -603,12 +660,10 @@ public class StatisticsTests {
 
 	public static class ObjectColumn {
 
-		private static final ColumnType<String> FREE_TEXT = ColumnTypes.objectType("custom", String.class, null);
-
 		@Test
 		public void testEmpty() {
 			Table table = Builders.newTableBuilder(50)
-					.addObject("custom", i -> "bar", FREE_TEXT)
+					.addTextset("custom", i -> new StringSet(null))
 					.build(CTX);
 			assertTrue(Statistics.compute(table.column("custom"), Collections.emptySet(), CTX).isEmpty());
 		}
@@ -616,13 +671,13 @@ public class StatisticsTests {
 		@Test
 		public void testCount() {
 			Random rng = new Random(1109920L);
-			ObjectBuffer<String> buffer = Buffers.objectBuffer(N);
+			ObjectBuffer<String> buffer = BufferAccessor.get().newObjectBuffer(ColumnType.TEXT, N);
 			for (int i = 0; i < 100; i++) {
 				buffer.set(i, String.valueOf(i));
 			}
 
 			Table table = Builders.newTableBuilder(N)
-					.add("freetext", buffer.toColumn(FREE_TEXT))
+					.add("freetext", buffer.toColumn())
 					.build(CTX);
 
 			Table shuffled = table.map(permutation(rng, table.height()), false);
@@ -637,10 +692,10 @@ public class StatisticsTests {
 
 		@Test
 		public void testZeroCount() {
-			ObjectBuffer<String> buffer = Buffers.objectBuffer(N);
+			ObjectBuffer<String> buffer = BufferAccessor.get().newObjectBuffer(ColumnType.TEXT, N);
 
 			Table table = Builders.newTableBuilder(N)
-					.add("freetext", buffer.toColumn(FREE_TEXT))
+					.add("freetext", buffer.toColumn())
 					.build(CTX);
 
 			Column column = table.column("freetext");
@@ -656,12 +711,12 @@ public class StatisticsTests {
 
 	public static class Categorical {
 
-		private static final ColumnType<String> CUSTOM_NOMINAL = ColumnTypes.categoricalType("custom", String.class, null);
+		private static final ColumnType<String> CUSTOM_NOMINAL = ColumnTestUtils.categoricalType(String.class, null);
 
 		@Test
 		public void testEmpty() {
 			Table table = Builders.newTableBuilder(50)
-					.addCategorical("categories", i -> "foo", CUSTOM_NOMINAL)
+					.addNominal("categories", i -> "foo")
 					.build(CTX);
 			assertTrue(Statistics.compute(table.column("categories"), Collections.emptySet(), CTX).isEmpty());
 		}
@@ -711,10 +766,10 @@ public class StatisticsTests {
 
 		@Test
 		public void testZeroCounts() {
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(N);
+			NominalBuffer buffer = Buffers.nominalBuffer(N);
 
 			Table table = Builders.newTableBuilder(N)
-					.add("custom", buffer.toColumn(CUSTOM_NOMINAL))
+					.add("custom", buffer.toColumn())
 					.build(CTX);
 
 			Column column = table.column("custom");
@@ -1153,8 +1208,8 @@ public class StatisticsTests {
 		public static Iterable<Object[]> columnImplementations() {
 			return Arrays.asList(
 					new Object[]{Buffers.realBuffer(100).toColumn(), "real"},
-					new Object[]{Buffers.integerBuffer(100).toColumn(), "integer"},
-					new Object[]{Buffers.<String>categoricalBuffer(100).toColumn(ColumnTypes.NOMINAL), "nominal"},
+					new Object[]{Buffers.integer53BitBuffer(100).toColumn(), "integer"},
+					new Object[]{Buffers.<String>nominalBuffer(100).toColumn(), "nominal"},
 					new Object[]{Buffers.dateTimeBuffer(100, false).toColumn(), "datetime"},
 					new Object[]{Buffers.timeBuffer(100).toColumn(), "time"}
 			);

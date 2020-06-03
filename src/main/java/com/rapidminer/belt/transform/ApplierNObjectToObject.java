@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -20,9 +20,9 @@ package com.rapidminer.belt.transform;
 import java.util.List;
 import java.util.function.Function;
 
-import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.ObjectRow;
 import com.rapidminer.belt.reader.ObjectRowReader;
 import com.rapidminer.belt.reader.Readers;
@@ -40,18 +40,21 @@ final class ApplierNObjectToObject<R, T> implements Calculator<ObjectBuffer<T>> 
 	private ObjectBuffer<T> target;
 	private final List<Column> sources;
 	private final Function<ObjectRow<R>, T> operator;
-	private final Class<R> type;
+	private final Class<R> sourceType;
+	private final ColumnType<T> targetType;
 
-	ApplierNObjectToObject(List<Column> sources, Class<R> type, Function<ObjectRow<R>, T> operator) {
+	ApplierNObjectToObject(List<Column> sources, Class<R> sourceType, Function<ObjectRow<R>, T> operator,
+						   ColumnType<T> targetType) {
 		this.sources = sources;
 		this.operator = operator;
-		this.type = type;
+		this.sourceType = sourceType;
+		this.targetType = targetType;
 	}
 
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = Buffers.objectBuffer(sources.get(0).size());
+		target = BufferAccessor.get().newObjectBuffer(targetType, sources.get(0).size());
 	}
 
 	@Override
@@ -61,7 +64,7 @@ final class ApplierNObjectToObject<R, T> implements Calculator<ObjectBuffer<T>> 
 
 	@Override
 	public void doPart(int from, int to, int batchIndex) {
-		mapPart(sources, operator, type, target, from, to);
+		mapPart(sources, operator, sourceType, target, from, to);
 	}
 
 	@Override

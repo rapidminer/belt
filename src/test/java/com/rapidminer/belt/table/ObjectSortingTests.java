@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,9 +27,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.SplittableRandom;
 import java.util.function.LongFunction;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -39,7 +41,6 @@ import org.junit.runners.Parameterized;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.DateTimeColumn;
 import com.rapidminer.belt.column.TimeColumn;
 import com.rapidminer.belt.util.IntegerFormats;
@@ -128,7 +129,10 @@ public class ObjectSortingTests {
 		private static int MAX_MAPPING = 512;
 
 		private static final Comparator<Object> INTEGER_COMPARATOR = Comparator.nullsLast(
-				Comparator.comparing(x -> (Integer) x));
+				Comparator.comparing(x -> Integer.parseInt(Objects.toString(x))));
+
+		private static final Comparator<String> STRING_INTEGER_COMPARATOR = Comparator.nullsLast(
+				Comparator.comparing(x -> Integer.parseInt(Objects.toString(x))));
 
 		private static final Comparator<Object> INSTANT_COMPARATOR = Comparator.nullsLast(
 				Comparator.comparing(x -> (Instant) x));
@@ -329,33 +333,35 @@ public class ObjectSortingTests {
 
 		}
 
-		private static final ColumnType<Object> HIDDEN_INT_TYPE = ColumnTypes.categoricalType(
-				"com.rapidminer.belt.column.test.objectcolumn", Object.class, INTEGER_COMPARATOR);
+		private static final ColumnType<String> HIDDEN_INT_TYPE = ColumnTestUtils.categoricalType(
+				String.class, STRING_INTEGER_COMPARATOR);
 
 		private static Column categorical2BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, 4, n);
 			byte[] byteData = new byte[n % 4 == 0 ? n / 4 : n / 4 + 1];
 			for (int i = 0; i < n; i++) {
 				IntegerFormats.writeUInt2(byteData, i, indices[i]);
 			}
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT2, n);
-			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, data, mapping);
+			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping);
 		}
 
 		private static Column remappedCategorical2BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, 4, n);
 			byte[] byteData = new byte[n % 4 == 0 ? n / 4 : n / 4 + 1];
 			for (int i = 0; i < n; i++) {
 				IntegerFormats.writeUInt2(byteData, i, indices[i]);
 			}
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT2, n);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, data, reDictionary, remapping);
 		}
 
-		private static List<Object> reDictionary(List<Object> mapping, int[] remapping) {
-			List<Object> remappedDictionary = new ArrayList<>(mapping);
+		private static List<String> reDictionary(List<String> mapping, int[] remapping) {
+			List<String> remappedDictionary = new ArrayList<>(mapping);
 			for (int i = 1; i < remapping.length; i++) {
 				remappedDictionary.set(remapping[i], mapping.get(i));
 			}
@@ -378,38 +384,42 @@ public class ObjectSortingTests {
 		}
 
 		private static Column categorical4BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, 16, n);
 			byte[] byteData = new byte[n % 2 == 0 ? n / 2 : n / 2 + 1];
 			for (int i = 0; i < n; i++) {
 				IntegerFormats.writeUInt4(byteData, i, indices[i]);
 			}
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT4, n);
-			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, data, mapping);
+			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping);
 		}
 
 		private static Column remappedCategorical4BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, 16, n);
 			byte[] byteData = new byte[n % 2 == 0 ? n / 2 : n / 2 + 1];
 			for (int i = 0; i < n; i++) {
 				IntegerFormats.writeUInt4(byteData, i, indices[i]);
 			}
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT4, n);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, data, reDictionary, remapping);
 		}
 
 		private static Column categorical8BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, 16, n);
 			byte[] byteData = new byte[n];
 			for (int i = 0; i < n; i++) {
 				byteData[i] = (byte) indices[i];
 			}
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
-			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, data, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping);
 		}
 
 		private static Column categoricalSparse8BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, 16, n, random.nextInt(16), 0.9);
 			byte[] byteData = new byte[n];
@@ -417,38 +427,42 @@ public class ObjectSortingTests {
 				byteData[i] = (byte) indices[i];
 			}
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
-			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
 		}
 
 		private static Column categoricalSparse16BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
 			short[] data = new short[n];
 			for (int i = 0; i < n; i++) {
 				data[i] = (short) indices[i];
 			}
-			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, (short) 0));
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping, ColumnTestUtils.getMostFrequentValue(data, (short) 0));
 		}
 
 		private static Column categoricalSparse32BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] data = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
-			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, 0));
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping, ColumnTestUtils.getMostFrequentValue(data, 0));
 		}
 
 		private static Column remappedCategorical8BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, 16, n);
 			byte[] byteData = new byte[n];
 			for (int i = 0; i < n; i++) {
 				byteData[i] = (byte) indices[i];
 			}
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, data, reDictionary, remapping);
 		}
 
 		private static Column remappedCategoricalSparse8BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, 16, n, random.nextInt(16), 0.9);
 			byte[] byteData = new byte[n];
@@ -456,34 +470,37 @@ public class ObjectSortingTests {
 				byteData[i] = (byte) indices[i];
 			}
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
 			return ColumnTestUtils.getRemappedCategoricalSparseColumn(HIDDEN_INT_TYPE, data, reDictionary, remapping,
 					ColumnTestUtils.getMostFrequentValue(byteData, (byte)0));
 		}
 
 		private static Column categorical16BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
 			short[] shortData = new short[n];
 			for (int i = 0; i < n; i++) {
 				shortData[i] = (short) indices[i];
 			}
-			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, shortData, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, shortData, newMapping);
 		}
 
 		private static Column remappedCategorical16BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
 			short[] shortData = new short[n];
 			for (int i = 0; i < n; i++) {
 				shortData[i] = (short) indices[i];
 			}
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, shortData, reDictionary,
 					remapping);
 		}
 
 		private static Column remappedCategoricalSparse16BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
 			short[] shortData = new short[n];
@@ -491,34 +508,38 @@ public class ObjectSortingTests {
 				shortData[i] = (short) indices[i];
 			}
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			return ColumnTestUtils.getRemappedCategoricalSparseColumn(HIDDEN_INT_TYPE, shortData, reDictionary,
 					remapping, ColumnTestUtils.getMostFrequentValue(shortData, (short)0));
 		}
 
 		private static Column categorical32BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
-			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, indices, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(HIDDEN_INT_TYPE, indices, newMapping);
 		}
 
 		private static Column remappedCategorical32BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, indices, reDictionary,
 					remapping);
 		}
 
 		private static Column remappedCategoricalSparse32BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
 			int[] remapping = zeroFixPermutation(mapping.size());
-			List<Object> reDictionary = reDictionary(mapping, remapping);
+			List<String> reDictionary = reDictionary(newMapping, remapping);
 			return ColumnTestUtils.getRemappedCategoricalSparseColumn(HIDDEN_INT_TYPE, indices, reDictionary,
 					remapping, ColumnTestUtils.getMostFrequentValue(indices, 0));
 		}
 
 		private static Column mappedCategorical2BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, 4, n);
 			int[] mapping = permutation(data.length);
 			byte[] mappedByteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
@@ -526,10 +547,11 @@ public class ObjectSortingTests {
 				IntegerFormats.writeUInt2(mappedByteData, mapping[i], data[i]);
 			}
 			PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT2, data.length);
-			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, dictionary, mapping);
+			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, newDictionary, mapping);
 		}
 
 		private static Column remappedMappedCategorical2BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, 4, n);
 			int[] mapping = permutation(data.length);
 			byte[] mappedByteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
@@ -537,13 +559,14 @@ public class ObjectSortingTests {
 				IntegerFormats.writeUInt2(mappedByteData, mapping[i], data[i]);
 			}
 			int[] remapping = zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary = reDictionary(dictionary, remapping);
+			List<String> reDictionary = reDictionary(newDictionary, remapping);
 			PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT2, data.length);
 			return ColumnTestUtils.getRemappedMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, reDictionary,
 					remapping, mapping);
 		}
 
 		private static Column mappedCategorical4BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, 16, n);
 			int[] mapping = permutation(data.length);
 			byte[] mappedByteData = new byte[data.length % 2 == 0 ? data.length / 2 : data.length / 2 + 1];
@@ -551,10 +574,11 @@ public class ObjectSortingTests {
 				IntegerFormats.writeUInt4(mappedByteData, mapping[i], data[i]);
 			}
 			PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT4, data.length);
-			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, dictionary, mapping);
+			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, newDictionary, mapping);
 		}
 
 		private static Column remappedMappedCategorical4BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, 16, n);
 			int[] mapping = permutation(data.length);
 			byte[] mappedByteData = new byte[data.length % 2 == 0 ? data.length / 2 : data.length / 2 + 1];
@@ -562,13 +586,14 @@ public class ObjectSortingTests {
 				IntegerFormats.writeUInt4(mappedByteData, mapping[i], data[i]);
 			}
 			int[] remapping = zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary = reDictionary(dictionary, remapping);
+			List<String> reDictionary = reDictionary(newDictionary, remapping);
 			PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT4, data.length);
 			return ColumnTestUtils.getRemappedMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, reDictionary,
 					remapping, mapping);
 		}
 
 		private static Column mappedCategorical8BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, 256, n);
 			int[] mapping = permutation(data.length);
 			byte[] mappedByteData = new byte[data.length];
@@ -576,10 +601,11 @@ public class ObjectSortingTests {
 				mappedByteData[mapping[i]] = (byte) data[i];
 			}
 			PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT8, data.length);
-			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, dictionary, mapping);
+			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, newDictionary, mapping);
 		}
 
 		private static Column remappedMappedCategorical8BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, 256, n);
 			int[] mapping = permutation(data.length);
 			byte[] mappedByteData = new byte[data.length];
@@ -587,24 +613,26 @@ public class ObjectSortingTests {
 				mappedByteData[mapping[i]] = (byte) data[i];
 			}
 			int[] remapping = zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary = reDictionary(dictionary, remapping);
+			List<String> reDictionary = reDictionary(newDictionary, remapping);
 			PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT8, data.length);
 			return ColumnTestUtils.getRemappedMappedCategoricalColumn(HIDDEN_INT_TYPE, packed, reDictionary,
 					remapping, mapping);
 		}
 
 		private static Column mappedCategorical16BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, MAX_MAPPING, n);
 			int[] mapping = permutation(data.length);
 			short[] mappedShortData = new short[data.length];
 			for (int i = 0; i < data.length; i++) {
 				mappedShortData[mapping[i]] = (short) data[i];
 			}
-			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedShortData, dictionary,
+			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedShortData, newDictionary,
 					mapping);
 		}
 
 		private static Column remappedMappedCategorical16BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, MAX_MAPPING, n);
 			int[] mapping = permutation(data.length);
 			short[] mappedShortData = new short[data.length];
@@ -612,23 +640,25 @@ public class ObjectSortingTests {
 				mappedShortData[mapping[i]] = (short) data[i];
 			}
 			int[] remapping = zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary = reDictionary(dictionary, remapping);
+			List<String> reDictionary = reDictionary(newDictionary, remapping);
 			return ColumnTestUtils.getRemappedMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedShortData,
 					reDictionary, remapping,
 					mapping);
 		}
 
 		private static Column mappedCategorical32BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, MAX_MAPPING, n);
 			int[] mapping = permutation(data.length);
 			int[] mappedIntData = new int[data.length];
 			for (int i = 0; i < data.length; i++) {
 				mappedIntData[mapping[i]] = data[i];
 			}
-			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedIntData, dictionary, mapping);
+			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedIntData, newDictionary, mapping);
 		}
 
 		private static Column remappedMappedCategorical32BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, MAX_MAPPING, n);
 			int[] mapping = permutation(data.length);
 			int[] mappedIntData = new int[data.length];
@@ -636,7 +666,7 @@ public class ObjectSortingTests {
 				mappedIntData[mapping[i]] = data[i];
 			}
 			int[] remapping = zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary = reDictionary(dictionary, remapping);
+			List<String> reDictionary = reDictionary(newDictionary, remapping);
 			return ColumnTestUtils.getRemappedMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedIntData,
 					reDictionary, remapping,
 					mapping);
@@ -648,8 +678,8 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				objectData[i] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return ColumnAccessor.get().newObjectColumn(ColumnTypes.categoricalType(
-					"com.rapidminer.belt.column.test.objectcolumn", Object.class, INTEGER_COMPARATOR),
+			return ColumnAccessor.get().newObjectColumn(ColumnTestUtils.categoricalType(
+					Object.class, INTEGER_COMPARATOR),
 					objectData);
 		}
 
@@ -660,8 +690,8 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				mappedObjectData[mapping[i]] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return ColumnTestUtils.getMappedObjectColumn(ColumnTypes.categoricalType(
-					"com.rapidminer.belt.column.test.objectcolumn", Object.class, INTEGER_COMPARATOR),
+			return ColumnTestUtils.getMappedObjectColumn(ColumnTestUtils.categoricalType(
+					Object.class, INTEGER_COMPARATOR),
 					mappedObjectData, mapping);
 		}
 
@@ -941,21 +971,24 @@ public class ObjectSortingTests {
 
 		}
 
-		private static final ColumnType<Object> HIDDEN_INT_TYPE = ColumnTypes.categoricalType(
-				"com.rapidminer.belt.column.test.objectcolumn", Object.class, null);
+		private static final ColumnType<String> HIDDEN_INT_TYPE = ColumnTestUtils.categoricalType(
+				String.class, null);
 
 		private static Column categorical32BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
-			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, indices, mapping);
+			return ColumnAccessor.get().newCategoricalColumn(HIDDEN_INT_TYPE, indices, newMapping);
 		}
 
 		private static Column categoricalSparse32BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] data = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
-			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, 0));
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping, ColumnTestUtils.getMostFrequentValue(data, 0));
 		}
 
 		private static Column categoricalSparse8BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, 16, n, random.nextInt(16), 0.9);
 			byte[] byteData = new byte[n];
@@ -963,37 +996,41 @@ public class ObjectSortingTests {
 				byteData[i] = (byte) indices[i];
 			}
 			PackedIntegers data = new PackedIntegers(byteData, Format.UNSIGNED_INT8, n);
-			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
 		}
 
 		private static Column categoricalSparse16BitColumn(long seed, List<Object> mapping, int n) {
+			List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			SplittableRandom random = new SplittableRandom(seed);
 			int[] indices = ColumnTestUtils.sparseRandomInts(random, MAX_MAPPING, n, random.nextInt(MAX_MAPPING), 0.9);
 			short[] data = new short[n];
 			for (int i = 0; i < n; i++) {
 				data[i] = (short) indices[i];
 			}
-			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, mapping, ColumnTestUtils.getMostFrequentValue(data, (short) 0));
+			return ColumnTestUtils.getSparseCategoricalColumn(HIDDEN_INT_TYPE, data, newMapping, ColumnTestUtils.getMostFrequentValue(data, (short) 0));
 		}
 
 		private static Column remappedCategorical32BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] indices = randomIntegers(seed, MAX_MAPPING, n);
 			int[] remapping = WithComparator.zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary =  WithComparator.reDictionary(dictionary, remapping);
+			List<String> reDictionary =  WithComparator.reDictionary(newDictionary, remapping);
 			return ColumnTestUtils.getRemappedCategoricalColumn(HIDDEN_INT_TYPE, indices, reDictionary, remapping);
 		}
 
 		private static Column mappedCategorical32BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, MAX_MAPPING, n);
 			int[] mapping = permutation(data.length);
 			int[] mappedIntData = new int[data.length];
 			for (int i = 0; i < data.length; i++) {
 				mappedIntData[mapping[i]] = data[i];
 			}
-			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedIntData, dictionary, mapping);
+			return ColumnTestUtils.getMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedIntData, newDictionary, mapping);
 		}
 
 		private static Column remappedMappedCategorical32BitColumn(long seed, List<Object> dictionary, int n) {
+			List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 			int[] data = randomIntegers(seed, MAX_MAPPING, n);
 			int[] mapping = permutation(data.length);
 			int[] mappedIntData = new int[data.length];
@@ -1001,7 +1038,7 @@ public class ObjectSortingTests {
 				mappedIntData[mapping[i]] = data[i];
 			}
 			int[] remapping = WithComparator.zeroFixPermutation(dictionary.size());
-			List<Object> reDictionary =  WithComparator.reDictionary(dictionary, remapping);
+			List<String> reDictionary =  WithComparator.reDictionary(newDictionary, remapping);
 			return ColumnTestUtils.getRemappedMappedCategoricalColumn(HIDDEN_INT_TYPE, mappedIntData,
 					reDictionary, remapping, mapping);
 		}
@@ -1012,9 +1049,7 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				objectData[i] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return ColumnAccessor.get().newObjectColumn(ColumnTypes.objectType(
-					"com.rapidminer.belt.column.test.objectcolumn", Object.class, null),
-					objectData);
+			return ColumnAccessor.get().newObjectColumn(ColumnTestUtils.OBJECT_DUMMY_TYPE, objectData);
 		}
 
 		private static Column mappedFree(long seed, List<Object> categoricalMapping, int n) {
@@ -1024,8 +1059,7 @@ public class ObjectSortingTests {
 			for (int i = 0; i < data.length; i++) {
 				mappedObjectData[mapping[i]] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 			}
-			return ColumnTestUtils.getMappedObjectColumn(ColumnTypes.objectType(
-					"com.rapidminer.belt.column.test.objectcolumn", Object.class, null),
+			return ColumnTestUtils.getMappedObjectColumn(ColumnTestUtils.OBJECT_DUMMY_TYPE,
 					mappedObjectData, mapping);
 		}
 

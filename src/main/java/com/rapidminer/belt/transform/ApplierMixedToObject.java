@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -20,9 +20,9 @@ package com.rapidminer.belt.transform;
 import java.util.List;
 import java.util.function.Function;
 
-import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.MixedRow;
 import com.rapidminer.belt.reader.MixedRowReader;
 import com.rapidminer.belt.reader.Readers;
@@ -39,16 +39,18 @@ final class ApplierMixedToObject<T> implements Calculator<ObjectBuffer<T>> {
 	private ObjectBuffer<T> target;
 	private final List<Column> sources;
 	private final Function<MixedRow, T> operator;
+	private final ColumnType<T> targetType;
 
-	ApplierMixedToObject(List<Column> sources, Function<MixedRow, T> operator) {
+	ApplierMixedToObject(List<Column> sources, Function<MixedRow, T> operator, ColumnType<T> targetType) {
 		this.sources = sources;
 		this.operator = operator;
+		this.targetType = targetType;
 	}
 
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = Buffers.objectBuffer(sources.get(0).size());
+		target = BufferAccessor.get().newObjectBuffer(targetType, sources.get(0).size());
 	}
 
 	@Override

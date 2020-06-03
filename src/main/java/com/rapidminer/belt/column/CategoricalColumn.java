@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -30,19 +30,19 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 /**
  * Column with data associated to integer categories. Data can be accessed via a {@link CategoricalReader}
- * or a {@link NumericReader} together with access to the mapping by {@link #getDictionary(Class)} or via a
+ * or a {@link NumericReader} together with access to the mapping by {@link #getDictionary()} or via a
  * {@link ObjectReader}.
  *
  * @author Gisa Meier, Michael Knopf
  */
-public abstract class CategoricalColumn<R> extends Column {
+public abstract class CategoricalColumn extends Column {
 
 	private static final int[] EMPTY_INT_ARRAY = new int[0];
 	private static final String MESSAGE_STEP_SIZE = "step size must not be smaller than 1";
 
-	private final ColumnType<R> columnType;
+	private final ColumnType<String> columnType;
 
-	CategoricalColumn(ColumnType<R> columnType, int size) {
+	CategoricalColumn(ColumnType<String> columnType, int size) {
 		super(size);
 		this.columnType = columnType;
 	}
@@ -242,18 +242,6 @@ public abstract class CategoricalColumn<R> extends Column {
 
 	abstract void fillFromInt32(Object[] array, int startIndex, int arrayOffset, int arrayStepSize);
 
-	@Override
-	public <T> Dictionary<T> getDictionary(Class<T> elementType) {
-		Class<?> columnElementType = type().elementType();
-		if (elementType.isAssignableFrom(columnElementType)) {
-			// the cast is safe because of the check above
-			@SuppressWarnings("unchecked")
-			Dictionary<T> result = (Dictionary<T>) getDictionary();
-			return result;
-		} else {
-			throw new IllegalArgumentException("Element type is not super type of " + columnElementType);
-		}
-	}
 
 	/**
 	 * Creates a column that replaces this column's dictionary with the given one. The categorical indices are updated
@@ -264,14 +252,14 @@ public abstract class CategoricalColumn<R> extends Column {
 	 * 		the dictionary for the remapped column
 	 * @return a new categorical column with the given dictionary
 	 */
-	CategoricalColumn<R> remap(Dictionary<R> newDictionary) {
-		Dictionary<R> oldDictionary = getDictionary();
+	CategoricalColumn remap(Dictionary newDictionary) {
+		Dictionary oldDictionary = getDictionary();
 		if (newDictionary == oldDictionary) {
 			// no need to do anything in case of exactly the same dictionaries
 			// we do not want an unnecessary identity remapping in that case
 			return this;
 		}
-		Map<R, Integer> inverseNewDictionary = newDictionary.createInverse();
+		Map<String, Integer> inverseNewDictionary = newDictionary.createInverse();
 		int[] remapping = new int[oldDictionary.maximalIndex() + 1];
 		for (int j = 1; j <= oldDictionary.maximalIndex(); j++) {
 			Integer newIndex = inverseNewDictionary.get(oldDictionary.get(j));
@@ -292,18 +280,18 @@ public abstract class CategoricalColumn<R> extends Column {
 	 * @param otherDictionary the dictionary to merge with
 	 * @return a new categorical column with the merged dictionary
 	 */
-	CategoricalColumn<R> mergeDictionaries(Dictionary<R> otherDictionary) {
-		Dictionary<R> oldDictionary = getDictionary();
+	CategoricalColumn mergeDictionaries(Dictionary otherDictionary) {
+		Dictionary oldDictionary = getDictionary();
 		if (otherDictionary == getDictionary()) {
 			// no need to do anything in case of exactly the same dictionaries
 			// we do not want an unnecessary identity remapping in that case
 			return this;
 		}
-		Map<R, Integer> inverseOtherDictionary = otherDictionary.createInverse();
+		Map<String, Integer> inverseOtherDictionary = otherDictionary.createInverse();
 		int[] remapping = new int[oldDictionary.maximalIndex() + 1];
-		List<R> mergedDictionaryList = null;
+		List<String> mergedDictionaryList = null;
 		for (int j = 1; j <= oldDictionary.maximalIndex(); j++) {
-			R value = oldDictionary.get(j);
+			String value = oldDictionary.get(j);
 			Integer newIndex = inverseOtherDictionary.get(value);
 			if (newIndex != null) {
 				remapping[j] = newIndex;
@@ -315,15 +303,15 @@ public abstract class CategoricalColumn<R> extends Column {
 				remapping[j] = mergedDictionaryList.size() - 1;
 			}
 		}
-		Dictionary<R> newDictionary;
+		Dictionary newDictionary;
 		if (mergedDictionaryList == null) {
 			//every value of the current dictionary is in the other dictionary
 			newDictionary = otherDictionary;
 		} else {
 			boolean keepPositiveIndex = otherDictionary.isBoolean() && oldDictionary.hasPositive()
 					&& mergedDictionaryList.size() <= BooleanDictionary.MAXIMAL_RAW_SIZE;
-			newDictionary = keepPositiveIndex ? new BooleanDictionary<>(mergedDictionaryList,
-					otherDictionary.getPositiveIndex()) : new Dictionary<>(mergedDictionaryList);
+			newDictionary = keepPositiveIndex ? new BooleanDictionary(mergedDictionaryList,
+					otherDictionary.getPositiveIndex()) : new Dictionary(mergedDictionaryList);
 		}
 		return remap(newDictionary, remapping);
 	}
@@ -337,7 +325,7 @@ public abstract class CategoricalColumn<R> extends Column {
 	 * 		the remapping to apply to the values
 	 * @return a new remapped column
 	 */
-	abstract CategoricalColumn<R> remap(Dictionary<R> newDictionary, int[] remapping);
+	abstract CategoricalColumn remap(Dictionary newDictionary, int[] remapping);
 
 	/**
 	 * Returns the format of the underlying category indices.
@@ -375,15 +363,8 @@ public abstract class CategoricalColumn<R> extends Column {
 		return ColumnPrinter.print(this);
 	}
 
-	/**
-	 * Returns the dictionary associated with this column.
-	 *
-	 * @return the dictionary
-	 */
-	protected abstract Dictionary<R> getDictionary();
-
 	@Override
-	public final ColumnType<R> type() {
+	public final ColumnType<String> type() {
 		return columnType;
 	}
 
@@ -394,8 +375,8 @@ public abstract class CategoricalColumn<R> extends Column {
 	 * 		the new positive value
 	 * @return a new categorical column with a boolean dictionary
 	 */
-	CategoricalColumn<R> toBoolean(R positiveValue) {
-		BooleanDictionary<R> newDictionary = getDictionary().toBoolean(positiveValue);
+	CategoricalColumn toBoolean(String positiveValue) {
+		BooleanDictionary newDictionary = getDictionary().toBoolean(positiveValue);
 		return swapDictionary(newDictionary);
 	}
 
@@ -409,10 +390,10 @@ public abstract class CategoricalColumn<R> extends Column {
 	 * 		the new dictionary
 	 * @return a new categorical column
 	 */
-	protected abstract CategoricalColumn<R> swapDictionary(Dictionary<R> newDictionary);
+	protected abstract CategoricalColumn swapDictionary(Dictionary newDictionary);
 
 	@Override
 	public Column stripData() {
-		return new SimpleCategoricalColumn<>(columnType, EMPTY_INT_ARRAY, getDictionary());
+		return new SimpleCategoricalColumn(columnType, EMPTY_INT_ARRAY, getDictionary());
 	}
 }

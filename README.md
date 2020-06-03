@@ -43,7 +43,7 @@ For example, one can specify cell values via lambda functions:
 
 ```Java
 Table table = Builders.newTableBuilder(10)
-		.addInt("id", i -> i)
+		.addInt53Bit("id", i -> i)
 		.addNominal("sensor", i -> String.format("Sensor #%03d", rng.nextInt(3)))
 		.addReal("value_a", i -> rng.nextDouble())
 		.addReal("value_b", i -> rng.nextDouble())
@@ -194,7 +194,7 @@ When working with mixed writers, this is accomplished by providing a separate li
 
 ```Java
 MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("id", "sensor", "value_a", "value_b"),
-		Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.NOMINAL, ColumnTypes.REAL, ColumnTypes.REAL),
+		Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.NOMINAL, TypeId.REAL, TypeId.REAL),
 		false);
 
 for (int i = 0; i < 10; i++) {
@@ -337,7 +337,7 @@ As third option, a column can be read as sequence of objects of a specified clas
 ```java
 ObjectReader<String> reader = Readers.objectReader(column, String.class);
 while(reader.hasRemaining()){  
-	    String value = reader.read();
+	String value = reader.read();
 }
 ```
  
@@ -393,7 +393,7 @@ if (column.type().hasCapability(Capability.NUMERIC_READABLE)) {
 It is important to know that every column is numeric-readable, object-readable or both.
 All object-readable columns can be read with an `ObjectReader<Object>` but if you know more about the column type you can also use a more specialized class.
 
-Note that when reading a categorical column with a categorical reader, the associated object value (as obtained with an object reader) can be retrieved via `column.getDictionary(type).get(categoryIndex)`. 
+Note that when reading a categorical column with a categorical reader, the associated String value (as obtained with an object reader) can be retrieved via `column.getDictionary().get(categoryIndex)`. 
 For more information about dictionaries visit the [dictionary appendix](#belt-dictionaries).
 
 ## Row-wise reading
@@ -465,7 +465,7 @@ for (NumericRowReader reader = Readers.numericRowReader(numericReadableColumns);
 }
 ```
 
-Note that when reading categorical columns with a numeric reader, the associated object values (as obtained with an object reader) can be retrieved via `column.getDictionary(type).get((int) value)`.
+Note that when reading categorical columns with a numeric reader, the associated String values (as obtained with an object reader) can be retrieved via `column.getDictionary().get((int) value)`.
 For more information about dictionaries visit the [dictionary appendix](#belt-dictionaries).
 
 The next example uses the column selector to find all nominal columns which are readable as String objects.
@@ -565,7 +565,7 @@ For instance, the following example might be executed concurrently:
 
 ```Java
 NumericBuffer addOne = table.transform("data")
-		.applyNumericToInteger(v -> v + 1, context);
+		.applyNumericToReal(v -> v + 1, context);
 ```
 Whether the code runs multi-threaded and with how many worker threads depends on:
 
@@ -580,7 +580,7 @@ Thus, we can explicitly set the workload ```Workload.SMALL```:
 ```Java
 NumericBuffer addOne = table.transform("data")
 		.workload(Workload.SMALL)
-		.applyNumericToInteger(v -> v + 1, context);
+		.applyNumericToReal(v -> v + 1, context);
 ```
 
 Whereas for expensive arithmetic operations such as ```Math#sin(double)```, a larger workload might be more appropriate:
@@ -588,7 +588,7 @@ Whereas for expensive arithmetic operations such as ```Math#sin(double)```, a la
 ```Java
 NumericBuffer sin = table.transform("data")
 		.workload(Workload.MEDIUM)
-		.applyNumericToInteger(Math::sin, context); 
+		.applyNumericToReal(Math::sin, context); 
 ```
 
 The workload not only plays a factor when deciding whether to run the core in parallel,
@@ -604,7 +604,7 @@ For example, the following code would write the progress to the standard output:
 NumericBuffer sin = table.transform("data")
 		.workload(Workload.MEDIUM)
 		.callback(p -> System.out.println(String.format("Progress: %d%", p * 100)))
-		.applyNumericToInteger(Math::sin, context); 
+		.applyNumericReal(Math::sin, context); 
 ```
 
 The progress is either in range ```[0, 1]``` or of value ```Double.NAN``` for indeterminate states.
@@ -796,8 +796,8 @@ Types are grouped into **categories** and have different **capabilities** such a
 
 Columns are divided in three categories: numeric, categorical and object columns. 
 To determine to which category a column belongs, use `column.type().category()`.
- * `NUMERIC` columns contain numeric data, such as real or integer numbers.
- * `CATEGORICAL` columns contain non-unique integer indices paired with an index mapping to a complex type. 
+ * `NUMERIC` columns contain numeric data, such as 64 bit real or 53 bit integer numbers.
+ * `CATEGORICAL` columns contain non-unique integer indices paired with an index mapping to a String. 
  The index mapping is called a dictionary. 
  A dictionary of two or fewer values can additionally know if a value is positive or negative. 
  It is important to note that not all values in the dictionary are required to appear in the data.
@@ -818,91 +818,54 @@ Columns can be readable in different ways, as shown by the time columns in the f
 Checking the capabilities of one or multiple columns is important for picking the correct reader.
 See [Reading tables](#belt-reading-tables) for details.
 
-While all built-in column types are sortable, for some cell types sorting might not make sense. 
+While all current column types are sortable, for some cell types sorting might not make sense. 
 A column must be sortable when it is used to sort by in the `table.sort` methods. 
 All columns that have a non-zero `Comparator` accessible via `column.type().comparator()` are sortable but there are columns that are sortable without supplying a comparator, for example real columns.
 
 #### Type id
 
-All the built-in types described in detail in the next section are associated with the type ids `REAL`, `INTEGER`, `NOMINAL`, `DATE_TIME` or `TIME`. 
-Other types have `CUSTOM` as the `TypeId` which is accessible via `column.type().id()`.
-Custom types are described via an additional String with `column.type().customTypeID()` which is `null` for all built-in types.
+Every one of the types described in detail in the next section is associated with one of the type ids `REAL`, `INTEGER_53_BIT`, `NOMINAL`, `DATE_TIME`, `TIME`, `TEXT` or `TEXT_SET`. 
  
 #### Element type
 
 For object and categorical columns, the type of their elements can be accessed via `column.type().elementType()`. 
 For instance, nominal columns have the element type `String.class`.
  
-### Built-in types
+### Types
 
-The following column types are built-in.
+Belt has the following column types.
 
 Type Id | Description | Category | Capabilities | Element Type
 --- | --- | --- | --- | ---
-REAL | `double` values | NUMERIC | NUMERIC_READABLE, SORTABLE | `Void.class`
-INTEGER | `double` values without fractional digits | NUMERIC | NUMERIC_READABLE, SORTABLE | `Void.class`
+REAL | 64 bit `double` values | NUMERIC | NUMERIC_READABLE, SORTABLE | `Void.class`
+INTEGER_53_BIT | 64 bit `double` values without fractional digits | NUMERIC | NUMERIC_READABLE, SORTABLE | `Void.class`
 NOMINAL | `int` category indices together with a dictionary of `String` values | CATEGORICAL | NUMERIC_READABLE, OBJECT_READABLE, SORTABLE | `String.class`
 DATE_TIME | Java `Instant` objects | OBJECT | OBJECT_READABLE, SORTABLE | `Instant.class`
 TIME | Java `LocalTime` objects | OBJECT | OBJECT_READABLE, NUMERIC_READABLE, SORTABLE | `LocalTime.class`
+TEXT | Java `String` objects | OBJECT | OBJECT_READABLE, SORTABLE | `String.class`
+TEXT_SET | Custom `StringSet` objects | OBJECT | OBJECT_READABLE, SORTABLE | `StringSet.class`
 
-Date-time columns are the only built-in columns that are not numeric-readable.
+Text-set columns have elements that are immutable `Set<String>`s, defined by the `StringSet` class.
 Time columns are numeric-readable as nano-seconds since 00:00. 
+Real, 53 Bit Integer, Nominal and Time columns are numeric-readable, the others are only object-readable.
 
-### Custom types
+Please note that the 53 Bit Integer columns internally store rounded 64 bit `double` values and not `int` values.
+Therefore, the maximum / minimum integer value that can be stored without loss of information is `+/- 2^53-1`,
+or `+/- 9,007,199,254,740,991`.
+This range is a lot bigger than that of Java Integers.
+Consequently, casting to `int` may lead to loss of information for large numbers and should be avoided.
+Instead, cast to `long` if necessary (but note that the full range of `long` cannot be stored in a 53 bit integer column).
 
-Custom columns can either be object columns or categorical columns. 
-Custom column types can be created via the `ColumnTypes` class, for example 
-
-```java
-ColumnType<Coordinate> coordinateObjectType = ColumnTypes.objectType("com.mypage.type.coordinate",
-			Coordinate.class, comparator);
-```
-
-or
-
-```java
-ColumnType<Emoji> emojiCategoricalType = ColumnTypes.categoricalType("com.mypage.type.emoji",
-		    Emoji.class, null);
-```
-
-If columns of the custom type should not be sortable, the comparator can be `null`. 
-The element types, e.g. `Coordinate.class` and `Emoji.class` in our examples, must be immutable, otherwise the safe sharing between tables might break.
-
-To create a custom column, use an object or categorical buffer of the appropriate type as follows
-
-```java
-ObjectBuffer<Coordinate> buffer = Buffers.objectBuffer(4);
-buffer.set(0, new Coordinate(400.3, 11.2));
-buffer.set(2, new Coordinate(400.3, 11.2));
-Column column = buffer.toColumn(coordinateObjectType);
-```
-
-or
-
-
-```java
-CategoricalBuffer<Emoji> buffer = Buffers.categoricalBuffer(3);
-buffer.set(0, emoji1);
-buffer.set(2, emoji2);
-Column column = buffer.toColumn(emojiCategoricalType);
-```
-
-Alternatively, the custom types can be used inside a table builder
-
-```java
-Table table = Builders.newTableBuilder(5)
-		.addObject("coordinates", i -> new Coordinate(i * 33, i * 55), coordinateObjectType)
-		.addCategorical("emojis", i -> emojis[i], emojiCategoricalType)
-		.build(context);
-```
+While both nominal and text columns can be read as `String` values, the text columns have no underlying category indices
+and are meant for the case where the `String` values of the column are (mostly) different.
 
 <a name="belt-dictionaries" />
 
 ## Dictionaries
 
 All categorical columns (see [Column types](#belt-column-types)) have dictionaries. 
-Dictionaries are a mapping from category indices to object values. 
-Every assigned category index is associated to a different object value.
+Dictionaries are a mapping from category indices to String values. 
+Every assigned category index is associated to a different String value.
 If a category index is not assigned to an object value, it is assumed to be assigned to `null`.
 The category index `CategoricalReader.MISSING_CATEGORY` is always unassigned and is the category index that stands for a missing value.
 
@@ -927,20 +890,19 @@ and the dictionary
 
 ### Accessing dictionaries
 
-To access a dictionary of a categorical column, use the method `column.getDictionary(type)` where the type is the element type of the column or a super type. 
-For example, for the nominal column above, type could be `String.class` or `Object.class`.
+To access a dictionary of a categorical column, use the method `column.getDictionary()`. 
 
 If you have a category index and want to find out the associated object value, use `dictionary.get(index)`. 
 This method returns `null` for unassigned indices such as `CategoricalReader.MISSING_CATEGORY`.
 
 If you require the reverse mapping from object values to category indices, you can create one by using `dictionary.createInverse()`.
 
-To iterate through all assigned object values together with their category indices, the dictionary iterator can be used.
+To iterate through all assigned String values together with their category indices, the dictionary iterator can be used.
 Continuing with the example above we get:
 
 ```java
-Dictionary<String> dictionary = column.getDictionary(String.class);
-for (Dictionary.Entry<String> entry : dictionary) {
+Dictionary dictionary = column.getDictionary();
+for (Dictionary.Entry entry : dictionary) {
 	System.out.println(entry.getIndex() + " -> " + entry.getValue());
 }
 ```
@@ -1083,7 +1045,7 @@ If there is only one value in the dictionary and it is supposed to be negative, 
 Boolean information can be accessed as in the following example
 
 ```java
-Dictionary<String> dictionary = booleanColumn.getDictionary(String.class);
+Dictionary dictionary = booleanColumn.getDictionary();
 if(dictionary.isBoolean()){
 	if(dictionary.hasPositive()){
 		String positiveValue = dictionary.get(dictionary.getPositiveIndex());
@@ -1168,12 +1130,17 @@ Missing values can be set via `buffer.set(index, Double.NaN)` and it is also pos
 When creating a real buffer from a column via `Buffers.realBuffer(column)`, the column must have the capability `NUMERIC_READABLE` (see [Column types](#belt-column-types)). 
 If a value should be changed depending on the current value, the method `buffer.get(index)` which returns a double value can be used.
  
-### Integer buffers
+### 53 Bit Integer buffers
  
-An integer buffer is similar to a real buffer but in order to ensure `double` values without fractional digits required for `INTEGER` columns (see [Column types](#belt-column-types)), the input is rounded.
+A 53 bit integer buffer is similar to a real buffer but in order to ensure `double` values without fractional digits 
+required for `INTEGER_53_BIT` columns (see [Column types](#belt-column-types)), the input is rounded by the buffer.
+
+Please note that the buffer internally stores rounded 64 bit `double` values and not `int` values.
+Therefore, the maximum / minimum integer value that can be stored without loss of information is `+/- 2^53-1`,
+or `+/- 9,007,199,254,740,991`.
   
 ```java
-NumericBuffer buffer = Buffers.integerBuffer(10, true);
+NumericBuffer buffer = Buffers.integer53BitBuffer(10, true);
 buffer.set(2, 3.0);
 buffer.set(1, 4.0);
 buffer.set(9, 3.14);
@@ -1191,23 +1158,22 @@ Integer Column (10)
 
 Here, both `3.14` and `2.718` are rounded to `3`. 
 As for real buffers, it is possible to set infinite values and missing values to `Double.NEGATIVE_INFINITY`, `Double.POSITIVE_INFINITY`, and `Double.NaN` respectively.
-Since `Buffers.integerBuffer(size, true)` is used, the buffer is initialized and all unset values, e.g., at index 0, are missing. 
-`Buffer.integerBuffer(size, false)` should be used in case every value will be set.
+Since `Buffers.integer53BitBuffer(size, true)` is used, the buffer is initialized and all unset values, e.g., at index 0, are missing. 
+`Buffer.integer53BitBuffer(size, false)` should be used in case every value will be set.
  
-To ascertain if a `NumericBuffer` is a real or integer buffer, the method `buffer.type()` can be used.
+To ascertain if a `NumericBuffer` is a real or 53 bit integer buffer, the method `buffer.type()` can be used.
 
-When creating a real buffer from a column via `Buffers.realBuffer(column)`, the column must have the capability `NUMERIC_READABLE` (see [Column types](column_types.md)), and all values will be rounded.
+When creating a 53 bit integer buffer from a column via `Buffers.integer53BitBuffer(column)`, the column must have the capability `NUMERIC_READABLE` (see [Column types](column_types.md)), and all values will be rounded.
 If a value should be changed depending on the current value, the method `buffer.get(index)` which returns a double value can be used.
  
 <a name="belt-categorical-buffers" />
  
-### Categorical buffers
+### Nominal buffers
  
-Categorical buffers are for creating categorical columns.
-See [Column types](#belt-column-types) for more details, e.g., on nominal columns.
+Nominal buffers are for creating nominal columns. 
   
 ```java
-CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(10, 3);
+NominalBuffer buffer = Buffers.nominalBuffer(10, 3);
 buffer.set(0, "red");
 buffer.set(2, "blue");
 buffer.set(4, "green");
@@ -1216,7 +1182,7 @@ buffer.set(9, "red");
 buffer.set(7, "blue");
 buffer.set(6, "green");
 buffer.set(7, null);
-Column column = buffer.toColumn(ColumnTypes.NOMINAL);
+Column column = buffer.toColumn();
 ```
 
 ```
@@ -1224,29 +1190,22 @@ Nominal Column (10)
 (red, ?, blue, ?, green, blue, green, ?, ?, red)
 ```
 
-In this example, categorical buffers are created with `Buffers.categoricalBuffer(size)` or `Buffers.categoricalBuffer(size, categories)`. 
+In this example, nominal buffers are created with `Buffers.nominalBuffer(size)` or `Buffers.nominalBuffer(size, categories)`. 
 To obtain better compression, the method with the categories parameter should be used assuming an upper bound of the different (non-null) values is known.
-When using `Buffers.categoricalBuffer(size)` there is no limit to the different values, but often a bound can be known. 
+When using `Buffers.nominalBuffer(size)` there is no limit to the different values, but often a bound can be known. 
 If more different values are set than the maximum allowed by the compression, the `set` method will throw an exception. 
 If a small number of categories is chosen and the goal is to stop setting values if this number is reached, the `setSave(index, value)`-method can be used instead, 
 which returns `false` if the limit is reached. Looking up the number of different values already encountered is possible with `buffer.differentValues()`. 
  
 As in the example above, all values at indices that are not set are automatically missing. 
 To explicitly set a missing value, `buffer.set(index, null)` can be used. 
-Creating a column at the end requires a `ColumnType` to specify what kind of categorical column should be created, e.g. a nominal column in our example.
-In the case where at most two (non-null) values are set and they have a positive/negative assignment, `buffer.toBooleanColumn(type, positiveValue)` can be called instead. 
-For example, if we change our code above to never use `"blue"` then we could use `buffer.toBooleanColumn(ColumnTypes.NOMINAL, "green")` to have `"green"` as positive value and `"red"` as negative one.
-If only one negative value is set, `buffer.toBooleanColumn(type, null)` can be used.
+In the case where at most two (non-null) values are set and they have a positive/negative assignment, `buffer.toBooleanColumn(positiveValue)` can be called instead of `buffer.toColumn()`. 
+For example, if we change our code above to never use `"blue"` then we could use `buffer.toBooleanColumn("green")` to have `"green"` as positive value and `"red"` as negative one.
+If only one negative value is set, `buffer.toBooleanColumn(null)` can be used.
   
-When creating a categorical buffer from a column via `Buffers.categoricalBuffer(column, type)` the column must be categorical. 
-The `type` can be a super-type of the element type of the column. 
-For example with the `column` created in our example above, one could do
-   
-```java
-CategoricalBuffer<Object> buffer2 = Buffers.categoricalBuffer(column, Object.class);
-```
+When creating a nominal buffer from a column via `Buffers.nominalBuffer(column)` the column must be nominal. 
 
-As for empty buffers, if the maximum number of categories is known, the method `Buffers.categoricalBuffer(column, type, categories)` should be used instead. 
+As for empty buffers, if the maximum number of categories is known, the method `Buffers.nominalBuffer(column, categories)` should be used instead. 
 However, the categories of the original column must be considered as starting point for the counting. 
 As for the other buffers, checking the current value at an index is possible with `buffer.get(index)`.
 
@@ -1271,7 +1230,7 @@ Time Column (10)
 (12:00, ?, ?, ?, ?, 00:00, ?, 12:33:20.100003005, 12:33:20.100003005, ?)
 ```
 
-As for integer buffer, `Buffers.timeBuffer(size, true)` or `Buffers.timeBuffer(size)` creates a buffer with all values initially missing value.
+As for the 53 bit integer buffer, `Buffers.timeBuffer(size, true)` or `Buffers.timeBuffer(size)` creates a buffer with all values initially missing value.
 If all index values are set, `Buffers.timeBuffer(size, false)` is preferred.
 
 The example above shows how it is possible to set values in a time buffer either by setting `LocalTime` objects or by setting the value as nanoseconds of the day `long` value directly. 
@@ -1336,37 +1295,32 @@ Values can be accessed with `buffer.get(index)` but only as `Instant` objects an
  [//]: # (TODO: Currently the precision cannot be accessed and neither can one change the precision to one different from the column - Missing Feature??)
 
 
-### Object buffers
+### Object buffers  
 
 Object buffers are used to create object columns. 
-Currently, the only built-in object column types are time and date-time which have their own buffer.
-So object buffers are only of interest for custom column types.
+Note that the standard column types time and date-time have their own buffer.
+So object buffers are only of interest for the other object column types like `ColumnType.TEXT` or `ColumnType.TEXT_SET`.
  
 ```java
-ObjectBuffer<String> buffer = Buffers.objectBuffer(10);
+ObjectBuffer<String> buffer = Buffers.textBuffer(10);
 for (int i = 0; i < buffer.size(); i++) {
 	buffer.set(i, "value_" + i);
 }
 buffer.set(3, null);
-Column column = buffer.toColumn(customStringType);
+Column column = buffer.toColumn();
 ```
 
 ``` 
-Custom Column (10)
+Column (10)
 (value_0, value_1, value_2, ?, value_4, value_5, value_6, value_7, value_8, value_9)
 ```
 
-In the example, the `customStringType` must be created beforehand as described in the Custom Types section in [Column types](#belt-column-types).
+In the example, the textBuffer method creates a buffer of column type `ColumnType.TEXT` which is a column type with `String` element type.
 Missing values are again set via `null`.
 
-When creating an object buffer from a column via `Buffers.objectBuffer(column, type)`, the column must be object-readable and the type a super-type of the column. 
-For example, 
- 
-```java
-ObjectBuffer buffer2 = Buffers.objectBuffer(column, Object.class);
-``` 
- 
-would be possible for the `column` created above or the one from the [Categorical buffers section](#belt-categorical-buffers) above.
+When creating an object buffer from a column via `Buffers.textBuffer(column)`, the column must be object-readable and the column's element type must be `String`. 
+
+Analogously, buffers for `ColumnType.TEXT_SET` can be created using the `Buffers.textsetBuffer` methods.
 
 ### Sparse buffers
 

@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -72,7 +73,7 @@ class DoubleSparseColumn extends NumericColumn {
 	DoubleSparseColumn(TypeId type, double defaultValue, int[] nonDefaultIndices, double[] nonDefaultValues, int size) {
 		super(size);
 		this.size = size;
-		columnType = type == TypeId.INTEGER ? ColumnTypes.INTEGER : ColumnTypes.REAL;
+		columnType = type == TypeId.INTEGER_53_BIT ? ColumnType.INTEGER_53_BIT : ColumnType.REAL;
 		this.defaultValue = defaultValue;
 		this.nonDefaultIndices = nonDefaultIndices;
 		this.nonDefaultValues = nonDefaultValues;
@@ -93,7 +94,7 @@ class DoubleSparseColumn extends NumericColumn {
 	DoubleSparseColumn(TypeId type, double defaultValue, double[] data) {
 		super(data.length);
 		this.size = data.length;
-		columnType = type == TypeId.INTEGER ? ColumnTypes.INTEGER : ColumnTypes.REAL;
+		columnType = type == TypeId.INTEGER_53_BIT ? ColumnType.INTEGER_53_BIT : ColumnType.REAL;
 		this.defaultValue = defaultValue;
 		boolean defaultIsNan = Double.isNaN(defaultValue);
 		int numberOfNonDefaults = 0;

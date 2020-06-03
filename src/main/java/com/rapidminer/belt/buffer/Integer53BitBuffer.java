@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -24,24 +24,26 @@ import com.rapidminer.belt.column.ColumnType;
 
 
 /**
- * A {@link NumericBuffer} with length fixed from the start storing rounded double values.
+ * A {@link NumericBuffer} with length fixed from the start storing rounded double values. Finite double values are
+ * rounded via {@link Math#round(double)}. Whole numbers between {@code +/- 2^53-1} can be stored without loss of
+ * information.
  *
  * @author Gisa Meier
  */
-final class IntegerBuffer extends NumericBuffer {
+final class Integer53BitBuffer extends NumericBuffer {
 
 	private final double[] data;
 	private boolean frozen = false;
 
 	/**
-	 * Creates a buffer of the given length to create a {@link Column} of type id {@link Column.TypeId#INTEGER}.
+	 * Creates a buffer of the given length to create a {@link Column} of type id {@link Column.TypeId#INTEGER_53_BIT}.
 	 *
 	 * @param length
 	 * 		the length of the buffer
 	 * @param initialize
 	 * 		if {@code true} all values are set to {@link Double#NaN}
 	 */
-	IntegerBuffer(int length, boolean initialize) {
+	Integer53BitBuffer(int length, boolean initialize) {
 		data = new double[length];
 		if (initialize) {
 			Arrays.fill(data, Double.NaN);
@@ -49,17 +51,19 @@ final class IntegerBuffer extends NumericBuffer {
 	}
 
 	/**
-	 * Creates a buffer by copying the data from the given column.  Throws a {@link UnsupportedOperationException} if the
+	 * Creates a buffer by copying the data from the given column. Throws a {@link UnsupportedOperationException} if the
 	 * category has not the capability {@link Column.Capability#NUMERIC_READABLE}.
+	 * <p> Finite values are rounded via {@link Math#round(double)} and stored as {@code double} values. Whole numbers
+	 * between {@code +/- 2^53-1} can be stored without loss of information.
 	 *
 	 * @param column
 	 * 		the Column to copy into the buffer
 	 */
-	IntegerBuffer(Column column) {
+	Integer53BitBuffer(Column column) {
 		data = new double[column.size()];
 		column.fill(data, 0);
 		ColumnType<?> type = column.type();
-		if (type.id() != TypeId.INTEGER && type.id() != TypeId.TIME && type
+		if (type.id() != TypeId.INTEGER_53_BIT && type.id() != TypeId.TIME && type
 				.category() != Column.Category.CATEGORICAL) {
 			// must round if underlying data was not rounded already
 			for (int i = 0; i < data.length; i++) {
@@ -78,7 +82,8 @@ final class IntegerBuffer extends NumericBuffer {
 
 
 	/**
-	 * {@inheritDoc} Finite values are rounded.
+	 * {@inheritDoc} <p> Finite values are rounded via {@link Math#round(double)} and stored as {@code double} values.
+	 * Whole numbers between {@code +/- 2^53-1} can be stored without loss of information.
 	 */
 	@Override
 	public void set(int index, double value) {
@@ -101,7 +106,7 @@ final class IntegerBuffer extends NumericBuffer {
 
 	@Override
 	public TypeId type() {
-		return TypeId.INTEGER;
+		return TypeId.INTEGER_53_BIT;
 	}
 
 	@Override

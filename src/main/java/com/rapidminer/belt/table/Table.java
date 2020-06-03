@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -644,8 +644,8 @@ public final class Table {
 	}
 
 	/**
-	 * Creates a new table with names replace by those specified by the renaming map. This does not rename any
-	 * {@link ColumnReference}s.
+	 * Creates a new table with old names replaced by those specified by the renaming map. This does also rename any
+	 * {@link ColumnReference}s. Old names that are not in the table are ignored.
 	 *
 	 * @param renamingMap
 	 * 		a map from old name to new name
@@ -662,8 +662,7 @@ public final class Table {
 		if (width == 0 || renamingMap.isEmpty()) {
 			return this;
 		}
-		ColumnRenamer renamer = new ColumnRenamer(labels, labelMap, metaDataMap);
-		renamer.rename(renamingMap);
+		ColumnRenamer renamer = new ColumnRenamer(labels, labelMap, metaDataMap, renamingMap);
 		return new Table(columns, renamer.getLabels(), renamer.getLabelMap(), renamer.getMetaDataMap(), height);
 	}
 

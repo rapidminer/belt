@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -37,11 +37,11 @@ import com.rapidminer.belt.util.Sorting;
 /**
  * Column with data associated to integer categories twisted by a mapping that selects a (reordered) subset of the
  * columns. Data can be accessed via a {@link CategoricalReader}, an {@link ObjectReader}, or a {@link NumericReader}
- * together with access to the dictionary by {@link #getDictionary(Class)}.
+ * together with access to the dictionary by {@link #getDictionary()}.
  *
  * @author Gisa Meier, Michael Knopf
  */
-class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMappedColumn {
+class MappedCategoricalColumn extends CategoricalColumn implements CacheMappedColumn {
 
 	private static final String NULL_DATA = "Data must not be null";
 	private static final String NULL_CATEGORY_MAPPING = "Categorical mapping must not be null";
@@ -53,9 +53,9 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 	private final short[] shortData;
 	private final int[] intData;
 
-	private final Dictionary<R> dictionary;
+	private final Dictionary dictionary;
 
-	MappedCategoricalColumn(ColumnType<R> type, PackedIntegers data, Dictionary<R> dictionary, int[] mapping) {
+	MappedCategoricalColumn(ColumnType<String> type, PackedIntegers data, Dictionary dictionary, int[] mapping) {
 		super(type, mapping.length);
 		if (!BYTE_BACKED_FORMATS.contains(data.format())) {
 			throw new IllegalArgumentException("Given data management not backed by byte array");
@@ -68,7 +68,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_CATEGORY_MAPPING);
 	}
 
-	MappedCategoricalColumn(ColumnType<R> type, short[] data, Dictionary<R> dictionary, int[] mapping) {
+	MappedCategoricalColumn(ColumnType<String> type, short[] data, Dictionary dictionary, int[] mapping) {
 		super(type, mapping.length);
 		this.format = Format.UNSIGNED_INT16;
 		this.byteData = null;
@@ -78,7 +78,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_CATEGORY_MAPPING);
 	}
 
-	MappedCategoricalColumn(ColumnType<R> type, int[] data, Dictionary<R> dictionary, int[] mapping) {
+	MappedCategoricalColumn(ColumnType<String> type, int[] data, Dictionary dictionary, int[] mapping) {
 		super(type, mapping.length);
 		this.format = Format.SIGNED_INT32;
 		this.byteData = null;
@@ -394,7 +394,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 	 * @return the categorical mapping
 	 */
 	@Override
-	protected Dictionary<R> getDictionary() {
+	public Dictionary getDictionary() {
 		return dictionary;
 	}
 
@@ -429,11 +429,11 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 
 	@Override
 	public int[] sort(Order order) {
-		Comparator<R> comparator = type().comparator();
+		Comparator<String> comparator = type().comparator();
 		if(comparator==null){
 			throw new UnsupportedOperationException();
 		}
-		Comparator<R> comparatorWithNull = Comparator.nullsLast(comparator);
+		Comparator<String> comparatorWithNull = Comparator.nullsLast(comparator);
 		switch (format) {
 			case UNSIGNED_INT2:
 				return Sorting.sort(mapping.length,
@@ -484,49 +484,49 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
 				PackedIntegers mappedBytes = Mapping.apply(byteData, mapping);
-				return new SimpleCategoricalColumn<>(type(), mappedBytes, dictionary);
+				return new SimpleCategoricalColumn(type(), mappedBytes, dictionary);
 			case UNSIGNED_INT16:
 				short[] mappedShorts = Mapping.apply(shortData, mapping);
-				return new SimpleCategoricalColumn<>(type(), mappedShorts, dictionary);
+				return new SimpleCategoricalColumn(type(), mappedShorts, dictionary);
 			case SIGNED_INT32:
 				int[] mappedIntegers = Mapping.apply(intData, mapping);
-				return new SimpleCategoricalColumn<>(type(), mappedIntegers, dictionary);
+				return new SimpleCategoricalColumn(type(), mappedIntegers, dictionary);
 			default:
 				throw new IllegalStateException();
 		}
 	}
 
 	@Override
-	protected CategoricalColumn<R> swapDictionary(Dictionary<R> newDictionary) {
+	protected CategoricalColumn swapDictionary(Dictionary newDictionary) {
 		return getCategoricalColumn(newDictionary, mapping);
 	}
 
-	private CategoricalColumn<R> getCategoricalColumn(Dictionary<R> dictionary, int[] mapping) {
+	private CategoricalColumn getCategoricalColumn(Dictionary dictionary, int[] mapping) {
 		switch (format) {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new MappedCategoricalColumn<>(type(), byteData, dictionary, mapping);
+				return new MappedCategoricalColumn(type(), byteData, dictionary, mapping);
 			case UNSIGNED_INT16:
-				return new MappedCategoricalColumn<>(type(), shortData, dictionary, mapping);
+				return new MappedCategoricalColumn(type(), shortData, dictionary, mapping);
 			case SIGNED_INT32:
-				return new MappedCategoricalColumn<>(type(), intData, dictionary, mapping);
+				return new MappedCategoricalColumn(type(), intData, dictionary, mapping);
 			default:
 				throw new IllegalStateException();
 		}
 	}
 
 	@Override
-	CategoricalColumn<R> remap(Dictionary<R> newDictionary, int[] remapping) {
+	CategoricalColumn remap(Dictionary newDictionary, int[] remapping) {
 		switch (format) {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new RemappedMappedCategoricalColumn<>(type(), byteData, newDictionary, remapping, mapping);
+				return new RemappedMappedCategoricalColumn(type(), byteData, newDictionary, remapping, mapping);
 			case UNSIGNED_INT16:
-				return new RemappedMappedCategoricalColumn<>(type(), shortData, newDictionary, remapping, mapping);
+				return new RemappedMappedCategoricalColumn(type(), shortData, newDictionary, remapping, mapping);
 			case SIGNED_INT32:
-				return new RemappedMappedCategoricalColumn<>(type(), intData, newDictionary, remapping, mapping);
+				return new RemappedMappedCategoricalColumn(type(), intData, newDictionary, remapping, mapping);
 			default:
 				throw new IllegalStateException();
 		}
@@ -627,7 +627,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		}
 	}
 
-	private R lookUpUInt2(int i) {
+	private String lookUpUInt2(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = readUInt2(byteData.data(), position);
@@ -641,7 +641,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		}
 	}
 
-	private R lookUpUInt4(int i) {
+	private String lookUpUInt4(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = readUInt4(byteData.data(), position);
@@ -655,7 +655,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		}
 	}
 
-	private R lookUpUInt8(int i) {
+	private String lookUpUInt8(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = Byte.toUnsignedInt(byteData.data()[position]);
@@ -669,7 +669,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		}
 	}
 
-	private R lookUpUInt16(int i) {
+	private String lookUpUInt16(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < shortData.length) {
 			int datum = Short.toUnsignedInt(shortData[position]);
@@ -683,7 +683,7 @@ class MappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMa
 		}
 	}
 
-	private R lookUpInt32(int i) {
+	private String lookUpInt32(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < intData.length) {
 			int datum = intData[position];

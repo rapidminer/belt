@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -352,46 +352,6 @@ public final class Readers {
 			}
 		}
 		return new ObjectRowReader<>(columns, type);
-	}
-
-	/**
-	 * Creates a new reader for row-wise reads of a single or a handful of rows of all the columns in the given table.
-	 * All columns must be {@link Column.Capability#NUMERIC_READABLE}.
-	 *
-	 * <p>This is only intended for a few reads and will be much slower than {@link #numericRowReader(Table)} in most
-	 * cases.
-	 *
-	 * @param table
-	 * 		the table to read
-	 * @return a reader for numeric-readable columns
-	 * @throws NullPointerException
-	 * 		if the table is {@code null}
-	 */
-	public static NumericRowReader unbufferedNumericRowReader(Table table) {
-		if (table == null) {
-			throw new NullPointerException(MSG_NULL_TABLE);
-		}
-		return new NumericRowReader(table.columnList(), NumericReader.MIN_BUFFER_SIZE);
-	}
-
-	/**
-	 * Creates a new reader for row-wise numeric reads of a single or a handful of rows of all the columns in the given
-	 * table.
-	 *
-	 * <p>This is only intended for a few reads and will be much slower than {@link #numericRowReader(Table)} in most
-	 * cases.
-	 *
-	 * @param table
-	 * 		the table to read
-	 * @return a reader for arbitrary columns
-	 * @throws NullPointerException
-	 * 		if the table is {@code null}
-	 */
-	public static MixedRowReader unbufferedMixedRowReader(Table table) {
-		if (table == null) {
-			throw new NullPointerException(MSG_NULL_TABLE);
-		}
-		return new MixedRowReader(table.columnList(), NumericReader.MIN_BUFFER_SIZE);
 	}
 
 	/**

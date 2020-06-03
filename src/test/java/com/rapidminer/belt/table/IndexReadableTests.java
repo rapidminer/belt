@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -37,7 +37,6 @@ import com.rapidminer.belt.column.CacheMappedColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.IntegerFormats.Format;
 import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
@@ -52,7 +51,7 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 @RunWith(Enclosed.class)
 public class IndexReadableTests {
 
-	private static final List<Void> EMPTY_DICTIONARY = Collections.emptyList();
+	private static final List<String> EMPTY_DICTIONARY = Collections.emptyList();
 
 	private enum Implementation {
 		SIMPLE_CATEGORICAL_2BIT("SimpleCategorical2Bit",
@@ -219,8 +218,8 @@ public class IndexReadableTests {
 				mapToInt(i -> (int) i).toArray();
 	}
 
-	private static final ColumnType<Void> VOID_TYPE = ColumnTypes.categoricalType(
-			"com.rapidminer.belt.column.test.voidcolumn", Void.class, null);
+	private static final ColumnType<String> STRING_TYPE = ColumnTestUtils.categoricalType(
+			String.class, null);
 
 	private static Column categorical2BitColumn(int[] data) {
 		byte[] byteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
@@ -228,7 +227,7 @@ public class IndexReadableTests {
 			IntegerFormats.writeUInt2(byteData, i, data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY);
+		return ColumnAccessor.get().newCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY);
 	}
 
 	private static Column remappedCategorical2BitColumn(int[] data) {
@@ -242,7 +241,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping);
 	}
 
 	private static Column categorical4BitColumn(int[] data) {
@@ -251,7 +250,7 @@ public class IndexReadableTests {
 			IntegerFormats.writeUInt4(byteData, i, data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY);
+		return ColumnAccessor.get().newCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY);
 	}
 
 	private static Column remappedCategorical4BitColumn(int[] data) {
@@ -265,7 +264,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping);
 	}
 
 	private static Column categoricalDense8BitColumn(int[] data) {
@@ -274,7 +273,7 @@ public class IndexReadableTests {
 			byteData[i] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getSimpleCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY);
+		return ColumnTestUtils.getSimpleCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY);
 	}
 
 	private static Column categoricalSparse8BitColumn(int[] data) {
@@ -283,7 +282,7 @@ public class IndexReadableTests {
 			byteData[i] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getSparseCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY,
+		return ColumnTestUtils.getSparseCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY,
 				ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
 	}
 
@@ -298,7 +297,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping);
 	}
 
 	private static Column remappedCategoricalSparse8BitColumn(int[] data) {
@@ -312,7 +311,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping,
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping,
 				ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
 	}
 
@@ -321,7 +320,7 @@ public class IndexReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			shortData[i] = (short) data[i];
 		}
-		return ColumnTestUtils.getSimpleCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY);
+		return ColumnTestUtils.getSimpleCategoricalColumn(STRING_TYPE, shortData, EMPTY_DICTIONARY);
 	}
 
 	private static Column categoricalSparse16BitColumn(int[] data) {
@@ -329,7 +328,7 @@ public class IndexReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			shortData[i] = (short) data[i];
 		}
-		return ColumnTestUtils.getSparseCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY,
+		return ColumnTestUtils.getSparseCategoricalColumn(STRING_TYPE, shortData, EMPTY_DICTIONARY,
 				ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
 	}
 
@@ -343,7 +342,7 @@ public class IndexReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, shortData, EMPTY_DICTIONARY, remapping);
 	}
 
 	private static Column remappedCategoricalSparse16BitColumn(int[] data) {
@@ -356,16 +355,16 @@ public class IndexReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, shortData, EMPTY_DICTIONARY, remapping,
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(STRING_TYPE, shortData, EMPTY_DICTIONARY, remapping,
 				ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
 	}
 
 	private static Column categoricalDense32BitColumn(int[] data) {
-		return ColumnTestUtils.getSimpleCategoricalColumn(VOID_TYPE, data, EMPTY_DICTIONARY);
+		return ColumnTestUtils.getSimpleCategoricalColumn(STRING_TYPE, data, EMPTY_DICTIONARY);
 	}
 
 	private static Column categoricalSparse32BitColumn(int[] data) {
-		return ColumnTestUtils.getSparseCategoricalColumn(VOID_TYPE, data, EMPTY_DICTIONARY,
+		return ColumnTestUtils.getSparseCategoricalColumn(STRING_TYPE, data, EMPTY_DICTIONARY,
 				ColumnTestUtils.getMostFrequentValue(data, 0));
 	}
 
@@ -379,7 +378,7 @@ public class IndexReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedCategoricalColumn(VOID_TYPE, intData, EMPTY_DICTIONARY, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, intData, EMPTY_DICTIONARY, remapping);
 	}
 
 	private static Column remappedCategoricalSparse32BitColumn(int[] data) {
@@ -392,7 +391,7 @@ public class IndexReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedCategoricalSparseColumn(VOID_TYPE, intData, EMPTY_DICTIONARY, remapping,
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(STRING_TYPE, intData, EMPTY_DICTIONARY, remapping,
 				ColumnTestUtils.getMostFrequentValue(data, 0));
 	}
 
@@ -416,7 +415,7 @@ public class IndexReadableTests {
 			IntegerFormats.writeUInt2(mappedByteData, mapping[i], data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnTestUtils.getMappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, mapping);
 	}
 
 	private static Column remappedMappedCategorical2BitColumn(int[] data) {
@@ -431,7 +430,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping,
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping,
 				mapping);
 	}
 
@@ -442,7 +441,7 @@ public class IndexReadableTests {
 			IntegerFormats.writeUInt4(mappedByteData, mapping[i], data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnTestUtils.getMappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, mapping);
 	}
 
 	private static Column remappedMappedCategorical4BitColumn(int[] data) {
@@ -457,7 +456,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping, mapping);
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping, mapping);
 	}
 
 
@@ -468,7 +467,7 @@ public class IndexReadableTests {
 			mappedByteData[mapping[i]] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getMappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, mapping);
 	}
 
 	private static Column remappedMappedCategorical8BitColumn(int[] data) {
@@ -483,7 +482,7 @@ public class IndexReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(VOID_TYPE, packed, EMPTY_DICTIONARY, remapping, mapping);
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, packed, EMPTY_DICTIONARY, remapping, mapping);
 	}
 
 	private static Column mappedCategorical16BitColumn(int[] data) {
@@ -492,7 +491,7 @@ public class IndexReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			mappedShortData[mapping[i]] = (short) data[i];
 		}
-		return ColumnTestUtils.getMappedCategoricalColumn(VOID_TYPE, mappedShortData, EMPTY_DICTIONARY, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, mappedShortData, EMPTY_DICTIONARY, mapping);
 	}
 
 	private static Column remappedMappedCategorical16BitColumn(int[] data) {
@@ -506,7 +505,7 @@ public class IndexReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(VOID_TYPE, mappedShortData, EMPTY_DICTIONARY, remapping,
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, mappedShortData, EMPTY_DICTIONARY, remapping,
 				mapping);
 	}
 
@@ -516,7 +515,7 @@ public class IndexReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			mappedIntData[mapping[i]] = data[i];
 		}
-		return ColumnTestUtils.getMappedCategoricalColumn(VOID_TYPE, mappedIntData, EMPTY_DICTIONARY, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, mappedIntData, EMPTY_DICTIONARY, mapping);
 	}
 
 	private static Column remappedMappedCategorical32BitColumn(int[] data) {
@@ -530,7 +529,7 @@ public class IndexReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(VOID_TYPE, mappedIntData, EMPTY_DICTIONARY, remapping,
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, mappedIntData, EMPTY_DICTIONARY, remapping,
 				mapping);
 	}
 

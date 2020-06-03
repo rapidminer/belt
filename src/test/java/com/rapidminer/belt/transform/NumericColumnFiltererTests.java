@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -37,7 +37,7 @@ import com.rapidminer.belt.table.TableTestUtils;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.Workload;
 import com.rapidminer.belt.reader.NumericReader;
@@ -473,7 +473,7 @@ public class NumericColumnFiltererTests {
 			int size = 75;
 			int[] data = randomInt(size);
 			CategoricalColumnFilterer calculator = new CategoricalColumnFilterer(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY), i -> i > 5);
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, data, EMPTY_DICTIONARY), i -> i > 5);
 			calculator.init(1);
 			int start = 10;
 			int end = 30;
@@ -489,7 +489,7 @@ public class NumericColumnFiltererTests {
 			int size = 75;
 			int[] data = randomInt(size);
 			Table table = TableTestUtils.newTable(new Column[]{
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, EMPTY_DICTIONARY)}, new String[]{"a"});
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, data, EMPTY_DICTIONARY)}, new String[]{"a"});
 			Table filtered = table.filterCategorical(0, d -> d > 5, Workload.SMALL, CTX);
 
 
@@ -504,9 +504,9 @@ public class NumericColumnFiltererTests {
 			int[] second = randomInt(size);
 			int[] third = randomInt(size);
 			CategoricalColumnsFilterer calculator = new CategoricalColumnsFilterer(Arrays.asList(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, EMPTY_DICTIONARY),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, EMPTY_DICTIONARY),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, EMPTY_DICTIONARY)),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, first, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, second, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, third, EMPTY_DICTIONARY)),
 					row -> row.get(0) + row.get(1) > row.get(2));
 			calculator.init(1);
 			int start = 10;
@@ -525,9 +525,9 @@ public class NumericColumnFiltererTests {
 			int[] second = randomInt(size);
 			int[] third = randomInt(size);
 			Table table = TableTestUtils.newTable(new Column[]{
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first, EMPTY_DICTIONARY),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second, EMPTY_DICTIONARY),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, EMPTY_DICTIONARY)},
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, first, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, second, EMPTY_DICTIONARY),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, third, EMPTY_DICTIONARY)},
 					new String[]{"a", "b", "c"});
 			Table filtered = table.filterCategorical(new int[]{0, 1, 2}, row -> row.get(0) + row.get(1) > row.get(2),
 					Workload.DEFAULT, CTX);
@@ -553,7 +553,7 @@ public class NumericColumnFiltererTests {
 			int[] data = randomInt(size);
 			List<String> mappingList = getMappingList();
 			ObjectColumnFilterer<String> calculator = new ObjectColumnFilterer<>(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, data, mappingList), String.class,
 					i -> i == null || i.length() > 6);
 			calculator.init(1);
 			int start = 10;
@@ -572,7 +572,7 @@ public class NumericColumnFiltererTests {
 			int[] data = randomInt(size);
 			List<String> mappingList = getMappingList();
 			Table table = TableTestUtils.newTable(new Column[]{
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, data, mappingList)}, new String[]{"a"});
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, data, mappingList)}, new String[]{"a"});
 			Table filtered = table.filterObjects(0, String.class, i -> i != null && !"value1".equals(i), Workload.SMALL, CTX);
 
 			double[] expected = Arrays.stream(data).filter(i -> i != 0 && !"value1".equals(mappingList.get(i)))
@@ -588,11 +588,11 @@ public class NumericColumnFiltererTests {
 			int[] third = randomInt(size);
 			List<String> mappingList = getMappingList();
 			ObjectColumnsFilterer<String> calculator = new ObjectColumnsFilterer<>(Arrays.asList(
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, first,
 							mappingList),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, second,
 							mappingList),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)), String.class,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, third, mappingList)), String.class,
 					row -> row.get(0) == null || (!row.get(0).equals(row.get(1)) && !row.get(0).equals(row.get(2))));
 			calculator.init(1);
 			int start = 10;
@@ -613,11 +613,11 @@ public class NumericColumnFiltererTests {
 			int[] third = randomInt(size);
 			List<String> mappingList = getMappingList();
 			Table table = TableTestUtils.newTable(new Column[]{
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, first,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, first,
 							mappingList),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, second,
 							mappingList),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)},
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, third, mappingList)},
 					new String[]{"a", "b", "c"});
 			Table filtered = table.filterObjects(new int[]{0, 1, 2}, String.class,
 					row -> row.get(0) != null && row.get(1) != null && row.get(2) != null,
@@ -646,9 +646,9 @@ public class NumericColumnFiltererTests {
 			List<String> mappingList = getMappingList();
 			MixedColumnsFilterer calculator = new MixedColumnsFilterer(Arrays.asList(
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, first),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, second,
 							mappingList),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, third, mappingList)),
 					row -> row.getNumeric(0) > 0.5 || row.getIndex(1) == 0 || row.getObject(1).equals(row.getObject(2)));
 			calculator.init(1);
 			int start = 10;
@@ -670,9 +670,9 @@ public class NumericColumnFiltererTests {
 			List<String> mappingList = getMappingList();
 			Table table = TableTestUtils.newTable(new Column[]{
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, first),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, second,
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, second,
 							mappingList),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, third, mappingList)},
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, third, mappingList)},
 					new String[]{"a", "b", "c"});
 			Table filtered = table.filterMixed(new int[]{0, 1, 2},
 					row -> row.getNumeric(0) > 0.1 && row.getObject(1) != null && row.getObject(2) != null,

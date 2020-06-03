@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -18,8 +18,7 @@ package com.rapidminer.belt.table;
 
 import java.util.List;
 
-import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.Column.TypeId;
 
 
 /**
@@ -46,7 +45,7 @@ public final class Writers {
 	 * @param columnLabels
 	 * 		the labels of the columns
 	 * @param types
-	 * 		the types of the columns, either {@link ColumnTypes#INTEGER} or {@link ColumnTypes#REAL}
+	 * 		the type ids of the columns, either {@link TypeId#INTEGER_53_BIT} or {@link TypeId#REAL}
 	 * @param initialize 
 	 * 		if this is {@code true} every value that is not explicitly set is missing, if this is {@code false} values
 	 * 		for	indices that are not explicitly set are undetermined
@@ -55,9 +54,9 @@ public final class Writers {
 	 * 		if column label or type list is {@code null} or contains {@code null}
 	 * @throws IllegalArgumentException
 	 * 		if column label list is empty or not the same size as types list or the types contain a type that is
-	 * 		neither	{@link ColumnTypes#INTEGER} nor {@link ColumnTypes#REAL}
+	 * 		neither	{@link TypeId#INTEGER_53_BIT} nor {@link TypeId#REAL}
 	 */
-	public static NumericRowWriter numericRowWriter(List<String> columnLabels, List<ColumnType<Void>> types,
+	public static NumericRowWriter numericRowWriter(List<String> columnLabels, List<TypeId> types,
 													boolean initialize) {
 		if (columnLabels == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN_LABELS);
@@ -141,7 +140,7 @@ public final class Writers {
 	 * @param columnLabels
 	 * 		the labels of the columns
 	 * @param types
-	 * 		the types of the columns, either {@link ColumnTypes#INTEGER} or {@link ColumnTypes#REAL}
+	 * 		the type ids of the columns, either {@link TypeId#INTEGER_53_BIT} or {@link TypeId#REAL}
 	 * @param expectedRows
 	 * 		an estimate for the number of rows in the final table. A good estimation prevents unnecessary resizing of
 	 * 		the	data containers.
@@ -153,9 +152,9 @@ public final class Writers {
 	 * 		if column label or type list is {@code null} or contains {@code null}
 	 * @throws IllegalArgumentException
 	 * 		if column label list is empty or not the same size as types list or expected rows are negative or the types
-	 * 		contain a type that is neither {@link ColumnTypes#INTEGER} nor {@link ColumnTypes#REAL}
+	 * 		contain a type that is neither {@link TypeId#INTEGER_53_BIT} nor {@link TypeId#REAL}
 	 */
-	public static NumericRowWriter numericRowWriter(List<String> columnLabels, List<ColumnType<Void>> types,
+	public static NumericRowWriter numericRowWriter(List<String> columnLabels, List<TypeId> types,
 													int expectedRows, boolean initialize) {
 		if (columnLabels == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN_LABELS);
@@ -196,7 +195,7 @@ public final class Writers {
 	 * @throws IllegalArgumentException
 	 * 		if column label list is empty or not the same size as types list
 	 */
-	public static MixedRowWriter mixedRowWriter(List<String> columnLabels, List<ColumnType<?>> types,
+	public static MixedRowWriter mixedRowWriter(List<String> columnLabels, List<TypeId> types,
 												boolean initialize) {
 		if (columnLabels == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN_LABELS);
@@ -221,7 +220,7 @@ public final class Writers {
 	 * @param columnLabels
 	 * 		the labels of the columns
 	 * @param types
-	 * 		the types of the columns
+	 * 		the type ids of the columns
 	 * @param expectedRows
 	 * 		an estimate for the number of rows in the final table. A good estimation prevents unnecessary resizing of
 	 * 		the	data containers.
@@ -234,7 +233,7 @@ public final class Writers {
 	 * @throws IllegalArgumentException
 	 * 		if column label list is empty or not the same size as types list or expected rows are negative
 	 */
-	public static MixedRowWriter mixedRowWriter(List<String> columnLabels, List<ColumnType<?>> types,
+	public static MixedRowWriter mixedRowWriter(List<String> columnLabels, List<TypeId> types,
 												int expectedRows, boolean initialize) {
 		if (columnLabels == null) {
 			throw new NullPointerException(MSG_NULL_COLUMN_LABELS);

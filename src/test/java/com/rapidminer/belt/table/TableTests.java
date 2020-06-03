@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -46,10 +47,11 @@ import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.DateTimeBuffer;
 import com.rapidminer.belt.buffer.NumericBuffer;
 import com.rapidminer.belt.buffer.TimeBuffer;
-import com.rapidminer.belt.buffer.UInt4CategoricalBuffer;
+import com.rapidminer.belt.buffer.UInt4NominalBuffer;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.ExecutionAbortedException;
 import com.rapidminer.belt.execution.Workload;
@@ -381,7 +383,7 @@ public class TableTests {
 			int[] data2 = new int[height];
 			Arrays.setAll(data2, i -> i);
 			Column[] columns = {ColumnAccessor.get().newNumericColumn(TypeId.REAL, data),
-					ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data2, new ArrayList<>()),
+					ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data2, new ArrayList<>()),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data)};
 			Table table = new Table(columns, randomLabels(3));
 
@@ -404,7 +406,7 @@ public class TableTests {
 			int[] data2 = new int[height];
 			Arrays.setAll(data2, i -> i);
 			Column[] columns = {ColumnAccessor.get().newNumericColumn(TypeId.REAL, data),
-					ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data2, new ArrayList<>()),
+					ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data2, new ArrayList<>()),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data)};
 			Table table = new Table(columns, randomLabels(3));
 
@@ -944,10 +946,10 @@ public class TableTests {
 		public void testStripData() {
 			Table table = Builders.newTableBuilder(123)
 					.addReal("real", i -> i)
-					.addInt("int", i -> i).addTime("time", i -> LocalTime.NOON)
+					.addInt53Bit("int", i -> i).addTime("time", i -> LocalTime.NOON)
 					.addDateTime("datetime", Instant::ofEpochSecond)
 					.addNominal("nominal", i -> "val" + i)
-					.addBoolean("boolean", i -> i % 2 == 0 ? "yes" : "no", "yes", ColumnTypes.NOMINAL)
+					.addBoolean("boolean", i -> i % 2 == 0 ? "yes" : "no", "yes")
 					.build(Belt.defaultContext());
 
 			Table stripped = table.stripData();
@@ -973,7 +975,7 @@ public class TableTests {
 			double[] data = {5, 7, 3, 111, 4, 47, 89};
 			double[] data2 = { 50, 70.1, 300.56, 1000.1111, 40, 40.7, 80.99 };
 			double[] data3 = { 5.111, 7.111, 3.111, 1.1111, 4.1111, 4.7111, 8.9111 };
-			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data),
+			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3)};
 			Table table = new Table(columns, randomLabels(columns.length));
@@ -991,29 +993,12 @@ public class TableTests {
 			assertEquals(expected, table.toString());
 		}
 
-		private class Custom {
-
-			private final int n;
-
-			Custom(int n) {
-				this.n = n;
-			}
-
-			@Override
-			public String toString() {
-				StringBuilder builder = new StringBuilder();
-				for (int i = 0; i < n + 1; i++) {
-					builder.append(i);
-				}
-				return builder.toString();
-			}
-		}
 
 		@Test
 		public void testWithDifferentTypes() {
 			double[] data = {5, Double.NaN, 3, 111, 4, 47, 89};
 			double[] data2 = {50, 70.1, 300.56, 1000.1111, Double.NaN, 40.7, 80.99};
-			UInt4CategoricalBuffer<String> buffer = BufferAccessor.get().newUInt4Buffer(data.length);
+			UInt4NominalBuffer buffer = BufferAccessor.get().newUInt4Buffer(ColumnType.NOMINAL, data.length);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, "value" + (i % 3));
 			}
@@ -1036,47 +1021,35 @@ public class TableTests {
 				timeBuffer.set(i, 8639999099099L * i);
 			}
 			timeBuffer.set(3, null);
-			Object[] veryCustom = new Object[data.length];
-			Arrays.setAll(veryCustom, Custom::new);
-			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data),
+			Object[] textSet = new Object[data.length];
+			Arrays.setAll(textSet, i -> new StringSet(j -> "" + j, i));
+			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
-					buffer.toColumn(ColumnTypes.NOMINAL),
-					ColumnAccessor.get().newObjectColumn(ColumnTypes.objectType("com.rapidminer.test", String.class,
-							null), objects),
+					buffer.toColumn(),
+					ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, objects),
 					highBuffer.toColumn(), lowBuffer.toColumn(), timeBuffer.toColumn(),
-					ColumnAccessor.get().newObjectColumn(ColumnTypes.objectType("com.rapidminer.custom",
-							Custom.class, null),
-							veryCustom)};
+					ColumnAccessor.get().newObjectColumn(ColumnType.TEXTSET, textSet)};
 			Table table = new Table(columns, randomLabels(columns.length));
 
 			String expected = "Table (8x7)\n" +
-					"col0    | col1     | col2    | col3   | col4                           | col5                 |" +
-					" " +
-					"col6               | col7   \n" +
-					"Integer | Real     | Nominal | Custom | Date-Time                      | Date-Time            |" +
-					" " +
-					"Time               | Custom \n" +
-					"      5 |   50.000 |  value0 |  free0 |           1970-01-01T00:00:00Z | 1970-01-01T00:00:00Z | " +
-					" " +
-					"            00:00 |       0\n" +
-					"      ? |   70.100 |  value1 |  free1 | 1973-03-15T02:21:41.009990099Z | 1998-10-22T21:15:09Z |" +
-					" " +
-					"02:23:59.999099099 |      01\n" +
-					"      3 |  300.560 |  value2 |  free2 |                              ? | 2027-08-13T18:30:18Z |" +
-					" " +
-					"04:47:59.998198198 |     012\n" +
-					"    111 | 1000.111 |  value0 |  free3 | 1979-08-09T07:05:03.029970297Z | 1920-04-28T09:17:11Z | " +
-					" " +
-					"                ? |    0123\n" +
-					"      4 |        ? |       ? |  free4 | 1982-10-21T09:26:44.039960396Z | 1949-02-17T06:32:20Z |" +
-					" " +
-					"09:35:59.996396396 |   01234\n" +
-					"     47 |   40.700 |  value2 |  free5 | 1986-01-02T11:48:25.049950495Z |                    ? |" +
-					" " +
-					"11:59:59.995495495 |  012345\n" +
-					"     89 |   80.990 |  value0 |  free6 | 1989-03-16T14:10:06.059940594Z | 2006-09-30T01:02:38Z |" +
-					" " +
-					"14:23:59.994594594 | 0123456";
+					"col0    | col1     | col2    | col3  | col4                           | col5                 | " +
+					"col6               | col7              \n" +
+					"Integer | Real     | Nominal | Text  | Date-Time                      | Date-Time            | " +
+					"Time               | Text-Set          \n" +
+					"      5 |   50.000 |  value0 | free0 |           1970-01-01T00:00:00Z | 1970-01-01T00:00:00Z |   " +
+					"           00:00 |                 []\n" +
+					"      ? |   70.100 |  value1 | free1 | 1973-03-15T02:21:41.009990099Z | 1998-10-22T21:15:09Z | " +
+					"02:23:59.999099099 |                [0]\n" +
+					"      3 |  300.560 |  value2 | free2 |                              ? | 2027-08-13T18:30:18Z | " +
+					"04:47:59.998198198 |             [0, 1]\n" +
+					"    111 | 1000.111 |  value0 | free3 | 1979-08-09T07:05:03.029970297Z | 1920-04-28T09:17:11Z |   " +
+					"               ? |          [0, 1, 2]\n" +
+					"      4 |        ? |       ? | free4 | 1982-10-21T09:26:44.039960396Z | 1949-02-17T06:32:20Z | " +
+					"09:35:59.996396396 |       [0, 1, 2, 3]\n" +
+					"     47 |   40.700 |  value2 | free5 | 1986-01-02T11:48:25.049950495Z |                    ? | " +
+					"11:59:59.995495495 |    [0, 1, 2, 3, 4]\n" +
+					"     89 |   80.990 |  value0 | free6 | 1989-03-16T14:10:06.059940594Z | 2006-09-30T01:02:38Z | " +
+					"14:23:59.994594594 | [0, 1, 2, 3, 4, 5]";
 			assertEquals(expected, table.toString());
 		}
 
@@ -1088,7 +1061,7 @@ public class TableTests {
 			Column[] columns = {ColumnAccessor.get().newNumericColumn(TypeId.REAL, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3),
-					ColumnAccessor.get().newNumericColumn(TypeId.INTEGER, data),
+					ColumnAccessor.get().newNumericColumn(TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
@@ -1116,7 +1089,7 @@ public class TableTests {
 			double[] data3 = {5, 70, 3, 100, 4, 4, 800};
 			Column[] columns = {ColumnAccessor.get().newNumericColumn(TypeId.REAL, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
-					ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data3),
+					ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data3),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3),
@@ -1143,7 +1116,7 @@ public class TableTests {
 			double[] data2 = { 50, 70.1, 300.56, 1000.1111, 40, 40.7, 80.99, 30_000.1, 2, 3, 4, 5, 1 };
 			double[] data3 = { 5.111, 7.111, 3.111, 1.1111, 4.1111, 4.7111, 8.9111, 0.1111, 1.1111, 2.1111, 3_1111,
 					14_000, 50.1111 };
-			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data),
+			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3)};
 			Table table = new Table(columns, randomLabels(columns.length));
@@ -1171,7 +1144,7 @@ public class TableTests {
 			double[] data = {5, 7, 3, 1, 4, 48, 89, 1, 2, 3, 11, 0};
 			double[] data2 = { 50, 70.1, 300.56, 10.1111, 40, 40.7, 80.99, 30_000.1, 2, 3, 4000, 5 };
 			double[] data3 = { 5.111, 7.111, 3.111, 1.1111, 4.1111, 4.7111, 8.9111, 10.10, 11, 12, 130, 14 };
-			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data),
+			Column[] columns = {ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3)};
 			Table table = new Table(columns, randomLabels(columns.length));
@@ -1203,13 +1176,13 @@ public class TableTests {
 			Column[] columns = {ColumnAccessor.get().newNumericColumn(TypeId.REAL, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3),
-					ColumnAccessor.get().newNumericColumn(TypeId.INTEGER, data),
+					ColumnAccessor.get().newNumericColumn(TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3),
-					ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data),
+					ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3),
-					ColumnAccessor.get().newNumericColumn(TypeId.INTEGER, data),
+					ColumnAccessor.get().newNumericColumn(TypeId.INTEGER_53_BIT, data),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data2),
 					ColumnAccessor.get().newNumericColumn(TypeId.REAL, data3)};
 			Table table = new Table(columns, randomLabels(columns.length));
@@ -1587,6 +1560,41 @@ public class TableTests {
 
 	public static class MetaData {
 
+		/**
+		 * Meta data that is not column unique, otherwise similar to {@link ColumnAnnotation}
+		 */
+		static class NonUnique implements ColumnMetaData {
+
+			private final String value;
+
+			NonUnique(String value) {
+				this.value = value;
+			}
+
+			@Override
+			public boolean equals(Object o) {
+				if (this == o) {
+					return true;
+				}
+				if (o == null || getClass() != o.getClass()) {
+					return false;
+				}
+				NonUnique nonUnique = (NonUnique) o;
+				return Objects.equals(value, nonUnique.value);
+			}
+
+			@Override
+			public int hashCode() {
+				return Objects.hash(value);
+			}
+
+			@Override
+			public String type() {
+				return "com.rapidminer.belt.met.column.noneunique";
+			}
+
+		}
+
 		private static Table table;
 
 		@BeforeClass
@@ -1599,8 +1607,8 @@ public class TableTests {
 					.addReal("four", i -> 4)
 					.addMetaData("zero", ColumnRole.ID)
 					.addMetaData("one", ColumnRole.METADATA)
-					.addMetaData("one", new ColumnAnnotation("First annotation"))
-					.addMetaData("one", new ColumnAnnotation("Second annotation"))
+					.addMetaData("one", new NonUnique("First annotation"))
+					.addMetaData("one", new NonUnique("Second annotation"))
 					.addMetaData("three", ColumnRole.METADATA)
 					.addMetaData("four", ColumnRole.LABEL)
 					.build(CTX);
@@ -1631,8 +1639,8 @@ public class TableTests {
 		@Test
 		public void testSimpleGetForMultipleMetaData() {
 			List<ColumnMetaData> expected = Arrays.asList(ColumnRole.METADATA,
-					new ColumnAnnotation("First annotation"),
-					new ColumnAnnotation("Second annotation")
+					new NonUnique("First annotation"),
+					new NonUnique("Second annotation")
 			);
 			// The API does not guarantee the order of meta data
 			assertEquals(new HashSet<>(expected), new HashSet<>(table.getMetaData("one")));
@@ -1661,16 +1669,16 @@ public class TableTests {
 		}
 
 		@Test
-		public void testTypedGetForSingleMatchngMetaData() {
+		public void testTypedGetForSingleMatchingMetaData() {
 			assertEquals(Arrays.asList(ColumnRole.ID), table.getMetaData("zero", ColumnRole.class));
 		}
 
 		@Test
 		public void testTypedGetForMultipleMatchingMetaData() {
-			List<ColumnAnnotation> expected = Arrays.asList(new ColumnAnnotation("First annotation"),
-					new ColumnAnnotation("Second annotation")
+			List<NonUnique> expected = Arrays.asList(new NonUnique("First annotation"),
+					new NonUnique("Second annotation")
 			);
-			List<ColumnAnnotation> result = table.getMetaData("one", ColumnAnnotation.class);
+			List<NonUnique> result = table.getMetaData("one", NonUnique.class);
 			// The API does not guarantee the order of meta data
 			assertEquals(new HashSet<>(expected), new HashSet<>(result));
 		}
@@ -1710,12 +1718,12 @@ public class TableTests {
 
 		@Test
 		public void testSingleGetForMultipleMatchingMetaData() {
-			List<ColumnAnnotation> expected = Arrays.asList(new ColumnAnnotation("First annotation"),
-					new ColumnAnnotation("Second annotation")
+			List<NonUnique> expected = Arrays.asList(new NonUnique("First annotation"),
+					new NonUnique("Second annotation")
 			);
-			ColumnAnnotation annotation = table.getFirstMetaData("one", ColumnAnnotation.class);
+			NonUnique nonUnique = table.getFirstMetaData("one", NonUnique.class);
 			// The API does not guarantee the order of meta data
-			assertTrue(expected.contains(annotation));
+			assertTrue(expected.contains(nonUnique));
 		}
 
 		@Test
@@ -1847,6 +1855,41 @@ public class TableTests {
 		}
 
 		@Test
+		public void testRenameWithNoMDButRef() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("one", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla"), new ColumnReference("two")));
+			metaData.put("three", Collections.singletonList(ColumnRole.OUTLIER));
+			Table table = new Table(columns, new String[]{"one", "two", "three"}, metaData);
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "TWO");
+			Table newTable = table.rename(renaming);
+			assertArrayEquals(columns, newTable.getColumns());
+			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
+			expectedMetaData.put("one", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla"), new ColumnReference("TWO")));
+			expectedMetaData.put("three", Collections.singletonList(ColumnRole.OUTLIER));
+			assertEquals(expectedMetaData, newTable.getMetaData());
+		}
+
+		@Test
+		public void testColumnSelectionLeavesRef() {
+			int width = 3;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("one", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla"), new ColumnReference("two")));
+			metaData.put("two", Collections.singletonList(ColumnRole.OUTLIER));
+			Table table = new Table(columns, new String[]{"one", "two", "three"}, metaData);
+			Table newTable = table.columns(Arrays.asList("three", "one"));
+			assertArrayEquals(new Column[]{columns[2], columns[0]}, newTable.getColumns());
+			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
+			expectedMetaData.put("one", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("bla"), new ColumnReference("two")));
+			assertEquals(expectedMetaData, newTable.getMetaData());
+		}
+
+		@Test
 		public void testColumnRelations() {
 			int width = 3;
 			int height = 13;
@@ -1861,8 +1904,12 @@ public class TableTests {
 			renaming.put("one", "Eins");
 			Table newTable = table.rename(renaming);
 			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
-			expectedMetaData.put("Eins", metaData.get("one"));
-			expectedMetaData.put("3", metaData.get("three"));
+			List<ColumnMetaData> oneMD = new ArrayList<>(metaData.get("one"));
+			oneMD.set(2, new ColumnReference("3"));
+			expectedMetaData.put("Eins", oneMD);
+			List<ColumnMetaData> threeMD = new ArrayList<>(metaData.get("three"));
+			threeMD.set(1, new ColumnReference("TWO", "x"));
+			expectedMetaData.put("3", threeMD);
 			//meta data not affected by renaming
 			assertEquals(expectedMetaData, newTable.getMetaData());
 		}
@@ -1879,10 +1926,43 @@ public class TableTests {
 			renaming.put("two", "TWO");
 			Table newTable = table.rename(renaming);
 			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
-			//meta data not affected by renaming
-			expectedMetaData.put("three", metaData.get("three"));
+			//column references affected by renaming
+			List<ColumnMetaData> threeMD = Collections.singletonList(new ColumnReference("TWO", "x"));
+			expectedMetaData.put("three", threeMD);
 			assertEquals(expectedMetaData, newTable.getMetaData());
 			assertArrayEquals(new String[]{"one", "TWO", "three"}, newTable.labelArray());
+		}
+
+		@Test
+		public void testColumnRelationsSwap() {
+			int width = 6;
+			int height = 13;
+			Column[] columns = random(width, height);
+			Map<String, List<ColumnMetaData>> metaData = new HashMap<>();
+			metaData.put("three", Collections.singletonList(new ColumnReference("two", "x")));
+			metaData.put("two", Collections.singletonList(new ColumnReference("four", "x")));
+			metaData.put("four", Collections.singletonList(new ColumnReference("two", "x")));
+			metaData.put("five",Collections.singletonList(new ColumnReference("six", "x")));
+			metaData.put("six", Collections.singletonList(new ColumnReference("one", "x")));
+			metaData.put("one", Collections.singletonList(new ColumnAnnotation("bla")));
+			Table table = new Table(columns, new String[]{"one", "two", "three", "four", "five", "six"}, metaData);
+			Map<String,String> renaming = new HashMap<>();
+			renaming.put("two", "four");
+			renaming.put("three", "one");
+			renaming.put("five", "six");
+			renaming.put("four", "two");
+			renaming.put("six", "five");
+			renaming.put("one", "three");
+			Table newTable = table.rename(renaming);
+			Map<String, List<ColumnMetaData>> expectedMetaData = new HashMap<>();
+			expectedMetaData.put("one", Collections.singletonList(new ColumnReference("four", "x")));
+			expectedMetaData.put("four", Collections.singletonList(new ColumnReference("two", "x")));
+			expectedMetaData.put("two", Collections.singletonList(new ColumnReference("four", "x")));
+			expectedMetaData.put("six",Collections.singletonList(new ColumnReference("five", "x")));
+			expectedMetaData.put("five", Collections.singletonList(new ColumnReference("three", "x")));
+			expectedMetaData.put("three", Collections.singletonList(new ColumnAnnotation("bla")));
+			assertEquals(expectedMetaData, newTable.getMetaData());
+			assertArrayEquals(new String[]{"three", "four", "one", "two", "six", "five"}, newTable.labelArray());
 		}
 
 		@Test

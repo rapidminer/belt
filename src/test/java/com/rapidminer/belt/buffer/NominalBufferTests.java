@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
@@ -45,8 +46,8 @@ import org.junit.runners.Parameterized.Parameters;
 import com.rapidminer.belt.column.BooleanDictionary;
 import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.Dictionary;
 import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.IntegerFormats.Format;
@@ -59,20 +60,20 @@ import junit.framework.TestCase;
  * @author Gisa Schaefer
  */
 @RunWith(Enclosed.class)
-public class CategoricalBufferTests {
+public class NominalBufferTests {
 
-	private static CategoricalBuffer<String> buffer(int length, IntegerFormats.Format format) {
+	private static NominalBuffer buffer(int length, IntegerFormats.Format format) {
 		switch (format) {
 			case UNSIGNED_INT2:
-				return new UInt2CategoricalBuffer<>(length);
+				return new UInt2NominalBuffer(ColumnType.NOMINAL, length);
 			case UNSIGNED_INT4:
-				return new UInt4CategoricalBuffer<>(length);
+				return new UInt4NominalBuffer(ColumnType.NOMINAL,length);
 			case UNSIGNED_INT8:
-				return new UInt8CategoricalBuffer<>(length);
+				return new UInt8NominalBuffer(ColumnType.NOMINAL,length);
 			case UNSIGNED_INT16:
-				return new UInt16CategoricalBuffer<>(length);
+				return new UInt16NominalBuffer(ColumnType.NOMINAL,length);
 			case SIGNED_INT32:
-				return new Int32CategoricalBuffer<>(length);
+				return new Int32NominalBuffer(ColumnType.NOMINAL, length);
 			default:
 				throw new IllegalArgumentException("Unsupported format");
 		}
@@ -85,18 +86,18 @@ public class CategoricalBufferTests {
 		return data;
 	}
 
-	private static int[] getData(CategoricalBuffer buffer, IntegerFormats.Format format) {
+	private static int[] getData(NominalBuffer buffer, IntegerFormats.Format format) {
 		switch (format) {
 			case SIGNED_INT32:
-				return ((Int32CategoricalBuffer) buffer).getData();
+				return ((Int32NominalBuffer) buffer).getData();
 			case UNSIGNED_INT16:
-				return toIntArray(((UInt16CategoricalBuffer) buffer).getData());
+				return toIntArray(((UInt16NominalBuffer) buffer).getData());
 			case UNSIGNED_INT8:
-				return toIntArray(((UInt8CategoricalBuffer) buffer).getData());
+				return toIntArray(((UInt8NominalBuffer) buffer).getData());
 			case UNSIGNED_INT4:
-				return toIntArray(((UInt4CategoricalBuffer) buffer).getData());
+				return toIntArray(((UInt4NominalBuffer) buffer).getData());
 			case UNSIGNED_INT2:
-				return toIntArray(((UInt2CategoricalBuffer) buffer).getData());
+				return toIntArray(((UInt2NominalBuffer) buffer).getData());
 			default:
 				throw new IllegalArgumentException("Unsupported format");
 		}
@@ -148,27 +149,27 @@ public class CategoricalBufferTests {
 			return Arrays.asList(IntegerFormats.Format.values());
 		}
 
-		private CategoricalBuffer<String> buffer(int length) {
-			return CategoricalBufferTests.buffer(length, format);
+		private NominalBuffer buffer(int length) {
+			return NominalBufferTests.buffer(length, format);
 		}
 
 		private int[] random(int n) {
-			return CategoricalBufferTests.random(n, format);
+			return NominalBufferTests.random(n, format);
 		}
 
-		private int[] getData(CategoricalBuffer buffer) {
-			return CategoricalBufferTests.getData(buffer, format);
+		private int[] getData(NominalBuffer buffer) {
+			return NominalBufferTests.getData(buffer, format);
 		}
 
 		@Test
 		public void testBufferLength() {
-			CategoricalBuffer buffer = buffer(197);
+			NominalBuffer buffer = buffer(197);
 			assertEquals(197, buffer.size());
 		}
 
 		@Test
 		public void testZeroBufferLength() {
-			CategoricalBuffer buffer = buffer(0);
+			NominalBuffer buffer = buffer(0);
 			assertEquals(0, buffer.size());
 		}
 
@@ -176,7 +177,7 @@ public class CategoricalBufferTests {
 		public void testSet() {
 			int n = 1234;
 			int[] testData = random(n);
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, "value" + testData[i]);
 			}
@@ -194,7 +195,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testMappingOrder() {
 			int n = Math.min(14, format.maxValue());
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, "value" + i);
 			}
@@ -208,7 +209,7 @@ public class CategoricalBufferTests {
 		public void testSetAfterFreeze() {
 			int n = 12;
 			int[] testData = random(n);
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, "value" + testData[i]);
 			}
@@ -219,7 +220,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testCategories() {
 			int n = Math.min(142, format.maxValue());
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.setSave(i, "value" + i);
 			}
@@ -233,14 +234,14 @@ public class CategoricalBufferTests {
 
 		@Test
 		public void testCompressionFormat() {
-			CategoricalBuffer<String> buffer = buffer(123);
+			NominalBuffer buffer = buffer(123);
 			assertEquals(format, buffer.indexFormat());
 		}
 
 		@Test
 		public void testDifferentValues() {
 			int n = Math.min(14, format.maxValue());
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, "value" + i);
 			}
@@ -250,7 +251,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testSameValueInParallel() throws InterruptedException {
 			int n = 17;
-			CategoricalBuffer<String> buffer = buffer(n * 3);
+			NominalBuffer buffer = buffer(n * 3);
 
 			CyclicBarrier barrier = new CyclicBarrier(n);
 			ExecutorService pool = Executors.newFixedThreadPool(n);
@@ -277,7 +278,7 @@ public class CategoricalBufferTests {
 		public void testGetSetInParallel() throws InterruptedException {
 			int n = 5;
 			int size = 10_000;
-			CategoricalBuffer<String> buffer = buffer(size);
+			NominalBuffer buffer = buffer(size);
 
 			CountDownLatch latch = new CountDownLatch(1);
 			ExecutorService pool = Executors.newFixedThreadPool(n + 1);
@@ -329,14 +330,14 @@ public class CategoricalBufferTests {
 					IntegerFormats.Format.UNSIGNED_INT8, IntegerFormats.Format.UNSIGNED_INT16);
 		}
 
-		private CategoricalBuffer<String> buffer(int length) {
-			return CategoricalBufferTests.buffer(length, format);
+		private NominalBuffer buffer(int length) {
+			return NominalBufferTests.buffer(length, format);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetMore() {
 			int n = format.maxValue() + 1;
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i, "value" + i);
 			}
@@ -345,7 +346,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testSetSaveMore() {
 			int n = format.maxValue();
-			CategoricalBuffer<String> buffer = buffer(n);
+			NominalBuffer buffer = buffer(n);
 			for (int i = 0; i < n; i++) {
 				assertTrue(buffer.setSave(i, "value" + i));
 			}
@@ -355,7 +356,7 @@ public class CategoricalBufferTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testSetOverwriteMore() {
 			int n = format.maxValue() + 1;
-			CategoricalBuffer<String> buffer = buffer(3);
+			NominalBuffer buffer = buffer(3);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i % 3, "value" + i);
 			}
@@ -364,7 +365,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testSetSaveOverwriteMore() {
 			int n = format.maxValue();
-			CategoricalBuffer<String> buffer = buffer(3);
+			NominalBuffer buffer = buffer(3);
 			for (int i = 0; i < n; i++) {
 				assertTrue(buffer.setSave(i % 3, "value" + i));
 			}
@@ -375,7 +376,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testSetOverwrite() {
 			int n = format.maxValue();
-			CategoricalBuffer<String> buffer = buffer(3);
+			NominalBuffer buffer = buffer(3);
 			for (int i = 0; i < n; i++) {
 				buffer.set(i % 3, "value" + i);
 			}
@@ -394,14 +395,14 @@ public class CategoricalBufferTests {
 			return Arrays.asList(IntegerFormats.Format.values());
 		}
 
-		private CategoricalBuffer<String> buffer(int length) {
-			return CategoricalBufferTests.buffer(length, format);
+		private NominalBuffer buffer(int length) {
+			return NominalBufferTests.buffer(length, format);
 		}
 
 		@Test
 		public void testToStringSmall() {
 			int[] data = {1, 2, 3, 1, 1, 3, 1};
-			CategoricalBuffer<String> buffer = buffer(8);
+			NominalBuffer buffer = buffer(8);
 			for (int i = 0; i < data.length; i++) {
 				buffer.set(i, "value" + data[i]);
 			}
@@ -413,7 +414,7 @@ public class CategoricalBufferTests {
 		@Test
 		public void testToStringMaxFit() {
 			int[] datablock = {1, 2, 3, 1, 3, 3, 2, 2};
-			CategoricalBuffer<String> buffer = buffer(32);
+			NominalBuffer buffer = buffer(32);
 			for (int i = 0; i < buffer.size(); i++) {
 				buffer.set(i, "value" + datablock[i % datablock.length]);
 			}
@@ -431,7 +432,7 @@ public class CategoricalBufferTests {
 		public void testToStringBigger() {
 			int[] datablock = {1, 2, 3, 1, 3, 3, 2, 2};
 			int length = 33;
-			CategoricalBuffer<String> buffer = buffer(length);
+			NominalBuffer buffer = buffer(length);
 			for (int i = 0; i < buffer.size() - 1; i++) {
 				buffer.set(i, "value" + datablock[i % datablock.length]);
 			}
@@ -450,7 +451,7 @@ public class CategoricalBufferTests {
 		public void testToStringBiggerLastMissing() {
 			int[] datablock = {1, 2, 3, 1, 3, 3, 2, 2};
 			int length = 33;
-			CategoricalBuffer<String> buffer = buffer(length);
+			NominalBuffer buffer = buffer(length);
 			for (int i = 0; i < buffer.size() - 1; i++) {
 				buffer.set(i, "value" + datablock[i % datablock.length]);
 			}
@@ -469,7 +470,7 @@ public class CategoricalBufferTests {
 	@RunWith(Parameterized.class)
 	public static class Bounds {
 
-		ColumnType<Double> TYPE = ColumnTypes.categoricalType("custom", Double.class, null);
+		ColumnType<String> TYPE = ColumnTestUtils.categoricalType(String.class, null);
 
 		@Parameter
 		public IntegerFormats.Format targetFormat;
@@ -482,17 +483,17 @@ public class CategoricalBufferTests {
 					Format.UNSIGNED_INT16);
 		}
 
-		private List<Double> getMapping(int elements) {
+		private List<String> getMapping(int elements) {
 			Double[] data = new Double[elements];
 			Arrays.setAll(data, Double::valueOf);
 			data[0] = Double.NaN;
-			return Arrays.asList(data);
+			return Arrays.stream(data).map(Objects::toString).collect(Collectors.toList());
 		}
 
 		private Column getColumn(int length, int categories) {
 			int[] data = new int[length];
 			Arrays.setAll(data, i -> i % categories);
-			List<Double> mapping = getMapping(categories);
+			List<String> mapping = getMapping(categories);
 			return ColumnAccessor.get().newCategoricalColumn(TYPE, data, mapping);
 		}
 
@@ -504,10 +505,10 @@ public class CategoricalBufferTests {
 				case UNSIGNED_INT2:
 				case UNSIGNED_INT4:
 				case UNSIGNED_INT8:
-					new UInt8CategoricalBuffer<>(column, Double.class, targetFormat);
+					new UInt8NominalBuffer(column, ColumnTestUtils.categoricalType(String.class, null), targetFormat);
 					break;
 				case UNSIGNED_INT16:
-					new UInt16CategoricalBuffer<>(column, Double.class);
+					new UInt16NominalBuffer(column, ColumnTestUtils.categoricalType(String.class, null));
 					break;
 				default:
 					throw new AssertionError();
@@ -522,10 +523,10 @@ public class CategoricalBufferTests {
 				case UNSIGNED_INT2:
 				case UNSIGNED_INT4:
 				case UNSIGNED_INT8:
-					new UInt8CategoricalBuffer<>(column, Double.class, targetFormat);
+					new UInt8NominalBuffer(column, ColumnTestUtils.categoricalType(String.class, null), targetFormat);
 					break;
 				case UNSIGNED_INT16:
-					new UInt16CategoricalBuffer<>(column, Double.class);
+					new UInt16NominalBuffer(column, ColumnTestUtils.categoricalType(String.class, null));
 				default:
 					throw new AssertionError();
 			}
@@ -567,8 +568,8 @@ public class CategoricalBufferTests {
 					new Object[]{Format.SIGNED_INT32, Format.SIGNED_INT32, Format.SIGNED_INT32});
 		}
 
-		private static final ColumnType<String> TYPE = ColumnTypes.categoricalType(
-				"com.rapidminer.belt.column.test.stringcolumn", String.class, null);
+		private static final ColumnType<String> TYPE = ColumnTestUtils.categoricalType(
+				String.class, null);
 
 		static Column column(int[] data, Format format) {
 			switch (format) {
@@ -585,18 +586,18 @@ public class CategoricalBufferTests {
 			}
 		}
 
-		static CategoricalBuffer<String> buffer(Column column, Format bufferFormat, Format targetFormat) {
+		static NominalBuffer buffer(Column column, Format bufferFormat, Format targetFormat) {
 			switch (bufferFormat) {
 				case UNSIGNED_INT2:
 				case UNSIGNED_INT4:
 					throw new AssertionError();
 				case UNSIGNED_INT8:
-					return new UInt8CategoricalBuffer<>(column, String.class, targetFormat);
+					return new UInt8NominalBuffer(column, ColumnType.NOMINAL, targetFormat);
 				case UNSIGNED_INT16:
-					return new UInt16CategoricalBuffer<>(column, String.class);
+					return new UInt16NominalBuffer(column, ColumnType.NOMINAL);
 				case SIGNED_INT32:
 				default:
-					return new Int32CategoricalBuffer<>(column, String.class);
+					return new Int32NominalBuffer(column, ColumnType.NOMINAL);
 			}
 		}
 
@@ -653,15 +654,15 @@ public class CategoricalBufferTests {
 			return data;
 		}
 
-		private int[] getData(CategoricalBuffer buffer) {
-			return CategoricalBufferTests.getData(buffer, bufferFormat);
+		private int[] getData(NominalBuffer buffer) {
+			return NominalBufferTests.getData(buffer, bufferFormat);
 		}
 
 		@Test
 		public void testConversionObjects() {
 			int[] data = random(177);
 			Column column = column(data, columnFormat);
-			CategoricalBuffer<String> buffer = buffer(column, bufferFormat, targetFormat);
+			NominalBuffer buffer = buffer(column, bufferFormat, targetFormat);
 			Object[] expected = new Object[column.size()];
 			column.fill(expected, 0);
 			Object[] actual = new Object[buffer.size()];
@@ -673,7 +674,7 @@ public class CategoricalBufferTests {
 		public void testConversionCategories() {
 			int[] data = random(177);
 			Column column = column(data, columnFormat);
-			CategoricalBuffer<String> buffer = buffer(column, bufferFormat, targetFormat);
+			NominalBuffer buffer = buffer(column, bufferFormat, targetFormat);
 			int[] expected = new int[column.size()];
 			column.fill(expected, 0);
 			int[] actual = getData(buffer);
@@ -705,49 +706,40 @@ public class CategoricalBufferTests {
 		}
 
 
-		static CategoricalBuffer<?> buffer(Column column, IntegerFormats.Format format, Class<?> clazz) {
+		static NominalBuffer buffer(Column column, IntegerFormats.Format format, ColumnType<String> clazz) {
 			switch (format) {
 				case UNSIGNED_INT2:
 				case UNSIGNED_INT4:
 					throw new AssertionError();
 				case UNSIGNED_INT8:
-					return new UInt8CategoricalBuffer<>(column, clazz);
+					return new UInt8NominalBuffer(column, clazz);
 				case UNSIGNED_INT16:
-					return new UInt16CategoricalBuffer<>(column, clazz);
+					return new UInt16NominalBuffer(column, clazz);
 				case SIGNED_INT32:
 				default:
-					return new Int32CategoricalBuffer<>(column, clazz);
+					return new Int32NominalBuffer(column, clazz);
 			}
-		}
-
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testNotSuperclass() {
-			int[] data = random(177);
-			Column column = FromColumnAllowed.column(data, columnFormat);
-			buffer(column, columnFormat, Integer.class);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testNumericColumn() {
 			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[101]);
-			buffer(column, columnFormat, Integer.class);
+			buffer(column, columnFormat, ColumnTestUtils.categoricalType(String.class, null));
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testFreeColumn() {
-			Column column = ColumnAccessor.get().newObjectColumn(ColumnTypes.categoricalType("com.rapidminer.belt" +
-							".column.test.objectcolumn",
+			Column column = ColumnAccessor.get().newObjectColumn(ColumnTestUtils.categoricalType(
 					Object.class, null), new Object[0]
 			);
-			buffer(column, columnFormat, String.class);
+			buffer(column, columnFormat, ColumnType.NOMINAL);
 		}
 
 		@Test
 		public void testConversionObjects() {
 			int[] data = random(177);
 			Column column = FromColumnAllowed.column(data, columnFormat);
-			CategoricalBuffer<?> buffer = buffer(column, columnFormat, Object.class);
+			NominalBuffer buffer = buffer(column, columnFormat, ColumnTestUtils.categoricalType(String.class, null));
 			Object[] expected = new Object[column.size()];
 			column.fill(expected, 0);
 			Object[] actual = new Object[buffer.size()];
@@ -760,97 +752,80 @@ public class CategoricalBufferTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testUnlimitedBufferOfInvalidSize() {
-			Buffers.categoricalBuffer(-1);
+			Buffers.nominalBuffer(-1);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testLimitedBufferOfInvalidSize() {
-			Buffers.categoricalBuffer(-1, 100);
+			Buffers.nominalBuffer(-1, 100);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testInvalidBound() {
-			Buffers.categoricalBuffer(100, -1);
+			Buffers.nominalBuffer(100, -1);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullColumn() {
-			Buffers.categoricalBuffer(null, String.class);
+			Buffers.nominalBuffer(null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchingColumn() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, new double[]{});
-			Buffers.categoricalBuffer(column, String.class);
+			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, new double[]{});
+			Buffers.nominalBuffer(column);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[]{}, Collections.emptyList());
-			Buffers.categoricalBuffer(column, null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testMismatchingType() {
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[]{}, Collections.emptyList());
-			Buffers.categoricalBuffer(column, Double.class);
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[]{}, Collections.emptyList());
+			new UInt16NominalBuffer(column, null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullColumnWithBound() {
-			Buffers.categoricalBuffer(null, String.class, 100);
+			Buffers.nominalBuffer(null, 100);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchingColumnWithBound() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, new double[]{});
-			Buffers.categoricalBuffer(column, String.class, 100);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullTypeWithBound() {
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[]{}, Collections.emptyList());
-			Buffers.categoricalBuffer(column, null, 100);
-		}
-		@Test(expected = IllegalArgumentException.class)
-		public void testMismatchingTypeWithBound() {
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[]{}, Collections.emptyList());
-			Buffers.categoricalBuffer(column, Double.class, 100);
+			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, new double[]{});
+			Buffers.nominalBuffer(column, 100);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testInvalidBoundWithColumn() {
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, new int[]{}, Collections.emptyList());
-			Buffers.categoricalBuffer(column, String.class, -1);
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, new int[]{}, Collections.emptyList());
+			Buffers.nominalBuffer(column, -1);
 		}
 
 		@Test
 		public void testUnboundedBuffer() {
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(100);
+			NominalBuffer buffer = Buffers.nominalBuffer(100);
 			assertEquals(Format.SIGNED_INT32, buffer.indexFormat());
 		}
 
 		@Test
 		public void testTinyBuffer() {
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(100, 0);
+			NominalBuffer buffer = Buffers.nominalBuffer(100, 0);
 			assertEquals(Format.UNSIGNED_INT8, buffer.indexFormat());
 		}
 
 		@Test
 		public void testByteBuffer() {
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(100, Format.UNSIGNED_INT8.maxValue());
+			NominalBuffer buffer = Buffers.nominalBuffer(100, Format.UNSIGNED_INT8.maxValue());
 			assertEquals(Format.UNSIGNED_INT8, buffer.indexFormat());
 		}
 
 		@Test
 		public void testShortBuffer() {
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(100, Format.UNSIGNED_INT16.maxValue());
+			NominalBuffer buffer = Buffers.nominalBuffer(100, Format.UNSIGNED_INT16.maxValue());
 			assertEquals(Format.UNSIGNED_INT16, buffer.indexFormat());
 		}
 
 		@Test
 		public void testIntBuffer() {
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(100, Format.SIGNED_INT32.maxValue());
+			NominalBuffer buffer = Buffers.nominalBuffer(100, Format.SIGNED_INT32.maxValue());
 			assertEquals(Format.SIGNED_INT32, buffer.indexFormat());
 		}
 
@@ -864,8 +839,8 @@ public class CategoricalBufferTests {
 			Arrays.setAll(indices, i -> i % nValues);
 			Arrays.setAll(values, String::valueOf);
 
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices, Arrays.asList(values));
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(column, String.class);
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices, Arrays.asList(values));
+			NominalBuffer buffer = Buffers.nominalBuffer(column);
 
 			assertEquals(Format.SIGNED_INT32, buffer.indexFormat());
 		}
@@ -880,8 +855,8 @@ public class CategoricalBufferTests {
 			Arrays.setAll(indices, i -> i % nValues);
 			Arrays.setAll(values, String::valueOf);
 
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices, Arrays.asList(values));
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(column, String.class, nValues);
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices, Arrays.asList(values));
+			NominalBuffer buffer = Buffers.nominalBuffer(column, nValues);
 
 			assertEquals(Format.UNSIGNED_INT8, buffer.indexFormat());
 		}
@@ -896,8 +871,8 @@ public class CategoricalBufferTests {
 			Arrays.setAll(indices, i -> i % nValues);
 			Arrays.setAll(values, String::valueOf);
 
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices, Arrays.asList(values));
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(column, String.class,
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices, Arrays.asList(values));
+			NominalBuffer buffer = Buffers.nominalBuffer(column,
 					Format.UNSIGNED_INT8.maxValue());
 
 			assertEquals(Format.UNSIGNED_INT8, buffer.indexFormat());
@@ -913,8 +888,8 @@ public class CategoricalBufferTests {
 			Arrays.setAll(indices, i -> i % nValues);
 			Arrays.setAll(values, String::valueOf);
 
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices, Arrays.asList(values));
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(column, String.class,
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices, Arrays.asList(values));
+			NominalBuffer buffer = Buffers.nominalBuffer(column,
 					Format.UNSIGNED_INT16.maxValue());
 
 			assertEquals(Format.UNSIGNED_INT16, buffer.indexFormat());
@@ -930,8 +905,8 @@ public class CategoricalBufferTests {
 			Arrays.setAll(indices, i -> i % nValues);
 			Arrays.setAll(values, String::valueOf);
 
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices, Arrays.asList(values));
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(column, String.class,
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices, Arrays.asList(values));
+			NominalBuffer buffer = Buffers.nominalBuffer(column,
 					Format.SIGNED_INT32.maxValue());
 
 			assertEquals(Format.SIGNED_INT32, buffer.indexFormat());
@@ -949,9 +924,9 @@ public class CategoricalBufferTests {
 			Arrays.setAll(values, String::valueOf);
 
 			// Request a buffer with support for only a few categories.
-			CategoricalColumn<String> column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, indices,
+			CategoricalColumn column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, indices,
 					Arrays.asList(values));
-			CategoricalBuffer<String> buffer = Buffers.categoricalBuffer(column, String.class, 10);
+			NominalBuffer buffer = Buffers.nominalBuffer(column, 10);
 
 			// Factory method should ignore the specified number of categories and select the format based on the given
 			// columns' dictionary size instead.
@@ -965,8 +940,6 @@ public class CategoricalBufferTests {
 
 		private static int BUFFER_LENGTH = 100;
 
-		private static final ColumnType<String> TYPE_FREE_TEXT = ColumnTypes.objectType("custom", String.class, null);
-
 		@Parameter
 		public Format bufferFormat;
 
@@ -987,18 +960,18 @@ public class CategoricalBufferTests {
 			);
 		}
 
-		private CategoricalBuffer<String> getBuffer() {
+		private NominalBuffer getBuffer(ColumnType<String> columnType) {
 			switch (bufferFormat) {
 				case UNSIGNED_INT2:
-					return new UInt2CategoricalBuffer<>(BUFFER_LENGTH);
+					return new UInt2NominalBuffer(columnType, BUFFER_LENGTH);
 				case UNSIGNED_INT4:
-					return new UInt4CategoricalBuffer<>(BUFFER_LENGTH);
+					return new UInt4NominalBuffer(columnType, BUFFER_LENGTH);
 				case UNSIGNED_INT8:
-					return new UInt8CategoricalBuffer<>(BUFFER_LENGTH, targetFormat);
+					return new UInt8NominalBuffer(columnType, BUFFER_LENGTH, targetFormat);
 				case UNSIGNED_INT16:
-					return new UInt16CategoricalBuffer<>(BUFFER_LENGTH);
+					return new UInt16NominalBuffer(columnType, BUFFER_LENGTH);
 				case SIGNED_INT32:
-					return new Int32CategoricalBuffer<>(BUFFER_LENGTH);
+					return new Int32NominalBuffer(columnType, BUFFER_LENGTH);
 				default:
 					throw new AssertionError();
 			}
@@ -1006,29 +979,29 @@ public class CategoricalBufferTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullColumnType() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer(null);
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
-			buffer.toColumn(null);
+			buffer.toColumn();
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNonCategoricalColumnType() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer(ColumnType.TEXT);
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
-			buffer.toColumn(TYPE_FREE_TEXT);
+			buffer.toColumn();
 		}
 
 		@Test
 		public void testEmptyMapping() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer(ColumnType.NOMINAL);
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
-			CategoricalColumn<String> column = buffer.toColumn(ColumnTypes.NOMINAL);
+			CategoricalColumn column = buffer.toColumn();
 			assertEquals(column.getFormat(), targetFormat);
 
-			assertEquals(0, column.getDictionary(String.class).size());
+			assertEquals(0, column.getDictionary().size());
 		}
 
 	}
@@ -1038,8 +1011,6 @@ public class CategoricalBufferTests {
 
 		private static int BUFFER_LENGTH = 100;
 
-		private static final ColumnType<String> TYPE_FREE_TEXT = ColumnTypes.objectType("custom", String.class, null);
-
 		@Parameter
 		public Format bufferFormat;
 
@@ -1060,81 +1031,73 @@ public class CategoricalBufferTests {
 			);
 		}
 
-		private CategoricalBuffer<String> getBuffer() {
+		private NominalBuffer getBuffer() {
 			switch (bufferFormat) {
 				case UNSIGNED_INT2:
-					return new UInt2CategoricalBuffer<>(BUFFER_LENGTH);
+					return new UInt2NominalBuffer(ColumnType.NOMINAL, BUFFER_LENGTH);
 				case UNSIGNED_INT4:
-					return new UInt4CategoricalBuffer<>(BUFFER_LENGTH);
+					return new UInt4NominalBuffer(ColumnType.NOMINAL, BUFFER_LENGTH);
 				case UNSIGNED_INT8:
-					return new UInt8CategoricalBuffer<>(BUFFER_LENGTH, targetFormat);
+					return new UInt8NominalBuffer(ColumnType.NOMINAL, BUFFER_LENGTH, targetFormat);
 				case UNSIGNED_INT16:
-					return new UInt16CategoricalBuffer<>(BUFFER_LENGTH);
+					return new UInt16NominalBuffer(ColumnType.NOMINAL, BUFFER_LENGTH);
 				case SIGNED_INT32:
-					return new Int32CategoricalBuffer<>(BUFFER_LENGTH);
+					return new Int32NominalBuffer(ColumnType.NOMINAL, BUFFER_LENGTH);
 				default:
 					throw new AssertionError();
 			}
 		}
 
-		@Test(expected = NullPointerException.class)
-		public void testNullColumnType() {
-			CategoricalBuffer<String> buffer = getBuffer();
-			assertEquals(buffer.indexFormat(), bufferFormat);
-
-			buffer.toBooleanColumn(null, "positive");
-		}
-
 		@Test(expected = IllegalArgumentException.class)
 		public void testNonCategoricalColumnType() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
-			buffer.toBooleanColumn(TYPE_FREE_TEXT, "positive");
+			buffer.toBooleanColumn("positive");
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMissingPositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
-			buffer.toBooleanColumn(ColumnTypes.NOMINAL, "positive");
+			buffer.toBooleanColumn("positive");
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testTooManyValues() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
 			buffer.set(0, "one");
 			buffer.set(1, "two");
 			buffer.set(2, "three");
 
-			buffer.toBooleanColumn(ColumnTypes.NOMINAL, null);
+			buffer.toBooleanColumn(null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNullOfTwoPositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 			assertEquals(buffer.indexFormat(), bufferFormat);
 
 			buffer.set(0, "one");
 			buffer.set(1, "two");
 
-			buffer.toBooleanColumn(ColumnTypes.NOMINAL, null);
+			buffer.toBooleanColumn(null);
 		}
 
 		@Test
 		public void testFirstOfTwoPositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 
 			buffer.set(0, "one");
 			buffer.set(1, "two");
 
-			CategoricalColumn<String> column = buffer.toBooleanColumn(ColumnTypes.NOMINAL, "one");
+			CategoricalColumn column = buffer.toBooleanColumn("one");
 			assertEquals(column.getFormat(), targetFormat);
 
-			Dictionary<String> dictionary = column.getDictionary(String.class);
+			Dictionary dictionary = column.getDictionary();
 			assertTrue(dictionary.isBoolean());
 			assertTrue(dictionary.hasNegative());
 			assertTrue(dictionary.hasPositive());
@@ -1144,15 +1107,15 @@ public class CategoricalBufferTests {
 
 		@Test
 		public void testSecondOfTwoPositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 
 			buffer.set(0, "one");
 			buffer.set(1, "two");
 
-			CategoricalColumn<String> column = buffer.toBooleanColumn(ColumnTypes.NOMINAL, "two");
+			CategoricalColumn column = buffer.toBooleanColumn("two");
 			assertEquals(column.getFormat(), targetFormat);
 
-			Dictionary<String> dictionary = column.getDictionary(String.class);
+			Dictionary dictionary = column.getDictionary();
 			assertTrue(dictionary.isBoolean());
 			assertTrue(dictionary.hasNegative());
 			assertTrue(dictionary.hasPositive());
@@ -1162,14 +1125,14 @@ public class CategoricalBufferTests {
 
 		@Test
 		public void testNullOfOnePositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 
 			buffer.set(0, "one");
 
-			CategoricalColumn<String> column = buffer.toBooleanColumn(ColumnTypes.NOMINAL, null);
+			CategoricalColumn column = buffer.toBooleanColumn(null);
 			assertEquals(column.getFormat(), targetFormat);
 
-			Dictionary<String> dictionary = column.getDictionary(String.class);
+			Dictionary dictionary = column.getDictionary();
 			assertTrue(dictionary.isBoolean());
 			assertTrue(dictionary.hasNegative());
 			assertFalse(dictionary.hasPositive());
@@ -1179,14 +1142,14 @@ public class CategoricalBufferTests {
 
 		@Test
 		public void testFirstOfOnePositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 
 			buffer.set(0, "one");
 
-			CategoricalColumn<String> column = buffer.toBooleanColumn(ColumnTypes.NOMINAL, "one");
+			CategoricalColumn column = buffer.toBooleanColumn("one");
 			assertEquals(column.getFormat(), targetFormat);
 
-			Dictionary<String> dictionary = column.getDictionary(String.class);
+			Dictionary dictionary = column.getDictionary();
 			assertTrue(dictionary.isBoolean());
 			assertFalse(dictionary.hasNegative());
 			assertTrue(dictionary.hasPositive());
@@ -1196,12 +1159,12 @@ public class CategoricalBufferTests {
 
 		@Test
 		public void testNoValuePositiveValue() {
-			CategoricalBuffer<String> buffer = getBuffer();
+			NominalBuffer buffer = getBuffer();
 
-			CategoricalColumn<String> column = buffer.toBooleanColumn(ColumnTypes.NOMINAL, null);
+			CategoricalColumn column = buffer.toBooleanColumn(null);
 			assertEquals(column.getFormat(), targetFormat);
 
-			Dictionary<String> dictionary = column.getDictionary(String.class);
+			Dictionary dictionary = column.getDictionary();
 			assertTrue(dictionary.isBoolean());
 			assertFalse(dictionary.hasNegative());
 			assertFalse(dictionary.hasPositive());

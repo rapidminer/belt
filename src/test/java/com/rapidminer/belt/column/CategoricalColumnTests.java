@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -36,7 +37,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.rapidminer.belt.buffer.BufferTestUtils;
 import com.rapidminer.belt.buffer.Buffers;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
 import com.rapidminer.belt.buffer.NumericBuffer;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.reader.NumericReader;
@@ -216,21 +217,21 @@ public class CategoricalColumnTests {
 		return bytes;
 	}
 
-	private static final ColumnType<String> TYPE = ColumnTypes.categoricalType(
-			"com.rapidminer.belt.column.test.stringcolumn", String.class, null);
+	private static final ColumnType<String> TYPE = ColumnTestUtils.categoricalType(
+			String.class, null);
 
 	private static Column column(String columnImplementation, int[] data, Format format) {
 		return getColumn(columnImplementation, data, format, -1, false);
 	}
 
-	private static CategoricalColumn<?> booleanColumn(String columnImplementation, int[] data, Format format, int positiveIndex) {
+	private static CategoricalColumn booleanColumn(String columnImplementation, int[] data, Format format, int positiveIndex) {
 		return getColumn(columnImplementation, data, format, positiveIndex, true);
 	}
 
-	private static CategoricalColumn<?> getColumn(String columnImplementation, int[] data, Format format,
+	private static CategoricalColumn getColumn(String columnImplementation, int[] data, Format format,
 												  int positiveIndex, boolean booleanMapping) {
-		Dictionary<String> mappingList = booleanMapping ? new BooleanDictionary<>(getBooleanMappingList(),
-				positiveIndex) : new Dictionary<>(getMappingList());
+		Dictionary mappingList = booleanMapping ? new BooleanDictionary(getBooleanMappingList(),
+				positiveIndex) : new Dictionary(getMappingList());
 		switch (columnImplementation) {
 			case IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING:
 				switch (format) {
@@ -240,12 +241,12 @@ public class CategoricalColumnTests {
 						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
-						return new CategoricalSparseColumn<>(TYPE, packed, mappingList, packed.data().length > 0 ? packed.data()[0] : 0);
+						return new CategoricalSparseColumn(TYPE, packed, mappingList, packed.data().length > 0 ? packed.data()[0] : 0);
 					case UNSIGNED_INT16:
-						return new CategoricalSparseColumn<>(TYPE, toShortArray(data), mappingList, data.length > 0 ? (short) data[0] : 0);
+						return new CategoricalSparseColumn(TYPE, toShortArray(data), mappingList, data.length > 0 ? (short) data[0] : 0);
 					case SIGNED_INT32:
 					default:
-						return new CategoricalSparseColumn<>(TYPE, data, mappingList, data.length > 0 ? data[0] : 0);
+						return new CategoricalSparseColumn(TYPE, data, mappingList, data.length > 0 ? data[0] : 0);
 				}
 			case IMPL_SIMPLE_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING:
 				switch (format) {
@@ -255,12 +256,12 @@ public class CategoricalColumnTests {
 						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
-						return new CategoricalSparseColumn<>(TYPE, packed, mappingList, (byte) 0);
+						return new CategoricalSparseColumn(TYPE, packed, mappingList, (byte) 0);
 					case UNSIGNED_INT16:
-						return new CategoricalSparseColumn<>(TYPE, toShortArray(data), mappingList, (short) 0);
+						return new CategoricalSparseColumn(TYPE, toShortArray(data), mappingList, (short) 0);
 					case SIGNED_INT32:
 					default:
-						return new CategoricalSparseColumn<>(TYPE, data, mappingList, 0);
+						return new CategoricalSparseColumn(TYPE, data, mappingList, 0);
 				}
 			case IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING: {
 				// Create random dictionary mapping and apply the inverse such that the values returned by the
@@ -271,8 +272,8 @@ public class CategoricalColumnTests {
 				for (int i = 1; i < remapping.length; i++) {
 					remappedDictionary.set(remapping[i], dictList.get(i));
 				}
-				Dictionary<String> remappedDic = booleanMapping ? new BooleanDictionary<>(remappedDictionary,
-						positiveIndex) : new Dictionary<>(remappedDictionary);
+				Dictionary remappedDic = booleanMapping ? new BooleanDictionary(remappedDictionary,
+						positiveIndex) : new Dictionary(remappedDictionary);
 				switch (format) {
 					case UNSIGNED_INT2:
 						Assert.fail("Test case INT2 does not make sense for sparse categorical column.");
@@ -280,12 +281,12 @@ public class CategoricalColumnTests {
 						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
-						return new RemappedCategoricalSparseColumn<>(TYPE, packed, remappedDic, remapping, packed.data().length > 0 ? packed.data()[0] : 0);
+						return new RemappedCategoricalSparseColumn(TYPE, packed, remappedDic, remapping, packed.data().length > 0 ? packed.data()[0] : 0);
 					case UNSIGNED_INT16:
-						return new RemappedCategoricalSparseColumn<>(TYPE, toShortArray(data), remappedDic, remapping, data.length > 0 ? (short) data[0] : 0);
+						return new RemappedCategoricalSparseColumn(TYPE, toShortArray(data), remappedDic, remapping, data.length > 0 ? (short) data[0] : 0);
 					case SIGNED_INT32:
 					default:
-						return new RemappedCategoricalSparseColumn<>(TYPE, data, remappedDic, remapping, data.length > 0 ? data[0] : 0);
+						return new RemappedCategoricalSparseColumn(TYPE, data, remappedDic, remapping, data.length > 0 ? data[0] : 0);
 				}
 			}
 			case IMPL_REMAPPED_CATEGORICAL_SPARSE_STRING_DEFAULT_IS_MISSING: {
@@ -297,8 +298,8 @@ public class CategoricalColumnTests {
 				for (int i = 1; i < remapping.length; i++) {
 					remappedDictionary.set(remapping[i], dictList.get(i));
 				}
-				Dictionary<String> remappedDic = booleanMapping ? new BooleanDictionary<>(remappedDictionary,
-						positiveIndex) : new Dictionary<>(remappedDictionary);
+				Dictionary remappedDic = booleanMapping ? new BooleanDictionary(remappedDictionary,
+						positiveIndex) : new Dictionary(remappedDictionary);
 				switch (format) {
 					case UNSIGNED_INT2:
 						Assert.fail("Test case INT2 does not make sense for sparse categorical column.");
@@ -306,12 +307,12 @@ public class CategoricalColumnTests {
 						Assert.fail("Test case INT4 does not make sense for sparse categorical column.");
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
-						return new RemappedCategoricalSparseColumn<>(TYPE, packed, remappedDic, remapping, (byte) 0);
+						return new RemappedCategoricalSparseColumn(TYPE, packed, remappedDic, remapping, (byte) 0);
 					case UNSIGNED_INT16:
-						return new RemappedCategoricalSparseColumn<>(TYPE, toShortArray(data), remappedDic, remapping, (short) 0);
+						return new RemappedCategoricalSparseColumn(TYPE, toShortArray(data), remappedDic, remapping, (short) 0);
 					case SIGNED_INT32:
 					default:
-						return new RemappedCategoricalSparseColumn<>(TYPE, data, remappedDic, remapping, 0);
+						return new RemappedCategoricalSparseColumn(TYPE, data, remappedDic, remapping, 0);
 				}
 			}
 			case IMPL_SIMPLE_CATEGORICAL_STRING:
@@ -320,12 +321,12 @@ public class CategoricalColumnTests {
 					case UNSIGNED_INT4:
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
-						return new SimpleCategoricalColumn<>(TYPE, packed, mappingList);
+						return new SimpleCategoricalColumn(TYPE, packed, mappingList);
 					case UNSIGNED_INT16:
-						return new SimpleCategoricalColumn<>(TYPE, toShortArray(data), mappingList);
+						return new SimpleCategoricalColumn(TYPE, toShortArray(data), mappingList);
 					case SIGNED_INT32:
 					default:
-						return new SimpleCategoricalColumn<>(TYPE, data, mappingList);
+						return new SimpleCategoricalColumn(TYPE, data, mappingList);
 				}
 			case IMPL_REMAPPED_CATEGORICAL_STRING: {
 				// Create random dictionary mapping and apply the inverse such that the values returned by the
@@ -336,20 +337,20 @@ public class CategoricalColumnTests {
 				for (int i = 1; i < remapping.length; i++) {
 					remappedDictionary.set(remapping[i], dictList.get(i));
 				}
-				Dictionary<String> remappedDic = booleanMapping ? new BooleanDictionary<>(remappedDictionary,
-						positiveIndex) : new Dictionary<>(remappedDictionary);
+				Dictionary remappedDic = booleanMapping ? new BooleanDictionary(remappedDictionary,
+						positiveIndex) : new Dictionary(remappedDictionary);
 
 				switch (format) {
 					case UNSIGNED_INT2:
 					case UNSIGNED_INT4:
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(data, format), format, data.length);
-						return new RemappedCategoricalColumn<>(TYPE, packed, remappedDic, remapping);
+						return new RemappedCategoricalColumn(TYPE, packed, remappedDic, remapping);
 					case UNSIGNED_INT16:
-						return new RemappedCategoricalColumn<>(TYPE, toShortArray(data), remappedDic, remapping);
+						return new RemappedCategoricalColumn(TYPE, toShortArray(data), remappedDic, remapping);
 					case SIGNED_INT32:
 					default:
-						return new RemappedCategoricalColumn<>(TYPE, data, remappedDic, remapping);
+						return new RemappedCategoricalColumn(TYPE, data, remappedDic, remapping);
 				}
 			}
 			case IMPL_MAPPED_CATEGORICAL_STRING: {
@@ -366,12 +367,12 @@ public class CategoricalColumnTests {
 					case UNSIGNED_INT4:
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(mappedData, format), format, mappedData.length);
-						return new MappedCategoricalColumn<>(TYPE, packed, mappingList, mapping);
+						return new MappedCategoricalColumn(TYPE, packed, mappingList, mapping);
 					case UNSIGNED_INT16:
-						return new MappedCategoricalColumn<>(TYPE, toShortArray(mappedData), mappingList, mapping);
+						return new MappedCategoricalColumn(TYPE, toShortArray(mappedData), mappingList, mapping);
 					case SIGNED_INT32:
 					default:
-						return new MappedCategoricalColumn<>(TYPE, mappedData, mappingList, mapping);
+						return new MappedCategoricalColumn(TYPE, mappedData, mappingList, mapping);
 				}
 			}
 			case IMPL_REMAPPED_MAPPED_CATEGORICAL_STRING: {
@@ -383,8 +384,8 @@ public class CategoricalColumnTests {
 				for (int i = 1; i < remapping.length; i++) {
 					remappedDictionary.set(remapping[i], dictList.get(i));
 				}
-				Dictionary<String> remappedDic = booleanMapping ? new BooleanDictionary<>(remappedDictionary,
-						positiveIndex) : new Dictionary<>(remappedDictionary);
+				Dictionary remappedDic = booleanMapping ? new BooleanDictionary(remappedDictionary,
+						positiveIndex) : new Dictionary(remappedDictionary);
 
 				// Create random index mapping and apply the inverse such that the values returned by the mapped column
 				// match the input data.
@@ -400,14 +401,14 @@ public class CategoricalColumnTests {
 					case UNSIGNED_INT8:
 						PackedIntegers packed = new PackedIntegers(toByteArray(mappedData, format), format,
 								mappedData.length);
-						return new RemappedMappedCategoricalColumn<>(TYPE, packed, remappedDic, remapping,
+						return new RemappedMappedCategoricalColumn(TYPE, packed, remappedDic, remapping,
 								mapping);
 					case UNSIGNED_INT16:
-						return new RemappedMappedCategoricalColumn<>(TYPE, toShortArray(mappedData),
+						return new RemappedMappedCategoricalColumn(TYPE, toShortArray(mappedData),
 								remappedDic, remapping, mapping);
 					case SIGNED_INT32:
 					default:
-						return new RemappedMappedCategoricalColumn<>(TYPE, mappedData, remappedDic, remapping,
+						return new RemappedMappedCategoricalColumn(TYPE, mappedData, remappedDic, remapping,
 								mapping);
 				}
 			}
@@ -443,7 +444,7 @@ public class CategoricalColumnTests {
 			Column stripped = column.stripData();
 			assertEquals(0, stripped.size());
 			assertEquals(column.type(), stripped.type());
-			assertEquals(column.getDictionary(String.class), stripped.getDictionary(String.class));
+			assertEquals(column.getDictionary(), stripped.getDictionary());
 		}
 
 		@Test
@@ -455,47 +456,7 @@ public class CategoricalColumnTests {
 			Column stripped = column.map(new int[]{5, 3, 17}, true).stripData();
 			assertEquals(0, stripped.size());
 			assertEquals(column.type(), stripped.type());
-			assertEquals(column.getDictionary(String.class), stripped.getDictionary(String.class));
-		}
-
-	}
-
-	@RunWith(Parameterized.class)
-	public static class CategoricalMapping {
-
-		@Parameter
-		public String columnImplementation;
-
-		@Parameter(value = 1)
-		public Format format;
-
-		@Parameters(name = "{0}_({1})")
-		public static Iterable<Object[]> columnImplementations() {
-			return MINIMAL_CATEGORICAL_COLUMNS;
-		}
-
-		private Column column(int[] data) {
-			return CategoricalColumnTests.column(columnImplementation, data, format);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testWrongType() {
-			int nValues = 1605;
-			int[] data = random(nValues);
-			Column column = column(data);
-			column.getDictionary(int[].class);
-		}
-
-		@Test
-		public void testSuperType() {
-			int nValues = 1325;
-			int[] data = random(nValues);
-			Column column = column(data);
-			Dictionary<Object> superMapping = column.getDictionary(Object.class);
-			Dictionary<String> stringMapping = column.getDictionary(String.class);
-			for (int i = 0; i < superMapping.size(); i++) {
-				assertEquals(stringMapping.get(i), superMapping.get(i));
-			}
+			assertEquals(column.getDictionary(), stripped.getDictionary());
 		}
 
 	}
@@ -514,8 +475,8 @@ public class CategoricalColumnTests {
 			return MINIMAL_CATEGORICAL_COLUMNS;
 		}
 
-		private CategoricalColumn<String> column(int[] data) {
-			return (CategoricalColumn<String>) CategoricalColumnTests.column(columnImplementation, data, format);
+		private CategoricalColumn column(int[] data) {
+			return (CategoricalColumn) CategoricalColumnTests.column(columnImplementation, data, format);
 		}
 
 		@Test
@@ -596,7 +557,7 @@ public class CategoricalColumnTests {
 		public void testSubset() {
 			int nValues = 2375;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> dictionary = getMappingList();
 
@@ -605,7 +566,7 @@ public class CategoricalColumnTests {
 				newDictionary.add(dictionary.get(i));
 			}
 
-			Column remapped = column.remap(new Dictionary<>(newDictionary));
+			Column remapped = column.remap(new Dictionary(newDictionary));
 
 			assertEquals(nValues, remapped.size());
 			assertEquals(newDictionary, ((CategoricalColumn) remapped).getDictionary().getValueList());
@@ -627,7 +588,7 @@ public class CategoricalColumnTests {
 		public void testSubsetMerge() {
 			int nValues = 2375;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> dictionary = getMappingList();
 
@@ -636,7 +597,7 @@ public class CategoricalColumnTests {
 				newDictionary.add(dictionary.get(i));
 			}
 
-			Column remapped = column.mergeDictionaries(new Dictionary<>(newDictionary));
+			Column remapped = column.mergeDictionaries(new Dictionary(newDictionary));
 
 			assertEquals(nValues, remapped.size());
 
@@ -651,7 +612,7 @@ public class CategoricalColumnTests {
 		public void testSuperset() {
 			int nValues = 1243;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> dictionary = getMappingList();
 
@@ -664,7 +625,7 @@ public class CategoricalColumnTests {
 				}
 			}
 
-			Column remapped = column.remap(new Dictionary<>(newDictionary));
+			Column remapped = column.remap(new Dictionary(newDictionary));
 
 			assertEquals(nValues, remapped.size());
 			assertEquals(newDictionary, ((CategoricalColumn) remapped).getDictionary().getValueList());
@@ -686,7 +647,7 @@ public class CategoricalColumnTests {
 		public void testSupersetMerge() {
 			int nValues = 1243;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> dictionary = getMappingList();
 
@@ -699,7 +660,7 @@ public class CategoricalColumnTests {
 				}
 			}
 
-			Column remapped = column.mergeDictionaries(new Dictionary<>(newDictionary));
+			Column remapped = column.mergeDictionaries(new Dictionary(newDictionary));
 
 			assertEquals(nValues, remapped.size());
 			assertEquals(newDictionary, ((CategoricalColumn) remapped).getDictionary().getValueList());
@@ -721,10 +682,10 @@ public class CategoricalColumnTests {
 		public void testMinimalDictionary() {
 			int nValues = 133;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> newDictionary = Collections.singletonList(null);
-			Column remappedColumn = column.remap(new Dictionary<>(newDictionary));
+			Column remappedColumn = column.remap(new Dictionary(newDictionary));
 
 			int[] expected = new int[nValues];
 			int[] remapped = new int[nValues];
@@ -736,10 +697,10 @@ public class CategoricalColumnTests {
 		public void testMinimalDictionaryMerge() {
 			int nValues = 133;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> newDictionary = Collections.singletonList(null);
-			Column remappedColumn = column.mergeDictionaries(new Dictionary<>(newDictionary));
+			Column remappedColumn = column.mergeDictionaries(new Dictionary(newDictionary));
 
 			assertEquals(column.getDictionary(), ((CategoricalColumn) remappedColumn).getDictionary());
 
@@ -756,10 +717,10 @@ public class CategoricalColumnTests {
 		public void testRemappedType() {
 			int nValues = 12;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			int[] identity = new int[MAX_VALUES];
-			Column mappedColumn = column.remap(new Dictionary<>(getMappingList()), identity);
+			Column mappedColumn = column.remap(new Dictionary(getMappingList()), identity);
 
 			assertEquals(column.type(), mappedColumn.type());
 		}
@@ -769,15 +730,15 @@ public class CategoricalColumnTests {
 		public void testChained() {
 			int nValues = 3237;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			// Apply reverse mapping four times
 			int[] mapping = new int[nValues];
 			Arrays.setAll(mapping, i -> nValues - i - 1);
-			Column mappedColumn = column.remap(new Dictionary<>(Collections.emptyList()), mapping)
-					.remap(new Dictionary<>(Collections.emptyList()), mapping)
-					.remap(new Dictionary<>(Collections.emptyList()), mapping)
-					.remap(new Dictionary<>(Collections.emptyList()), mapping);
+			Column mappedColumn = column.remap(new Dictionary(Collections.emptyList()), mapping)
+					.remap(new Dictionary(Collections.emptyList()), mapping)
+					.remap(new Dictionary(Collections.emptyList()), mapping)
+					.remap(new Dictionary(Collections.emptyList()), mapping);
 
 			int[] expected = new int[nValues];
 			column.fill(expected, 0);
@@ -792,7 +753,7 @@ public class CategoricalColumnTests {
 		public void testCommutativityWithMap() {
 			int nValues = 1257;
 			int[] data = randomMax(nValues, format);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 
 			List<String> dictionary = column.getDictionary().getValueList();
 			int[] permutation = zeroFixPermutation(dictionary.size());
@@ -804,9 +765,9 @@ public class CategoricalColumnTests {
 			int[] mapping = permutation(nValues);
 			mapping[52] = -1;
 
-			Column mappedRemapped = column.remap(new Dictionary<>(remappedDictionary), permutation).map(mapping, true);
-			CategoricalColumn<String> map = (CategoricalColumn<String>) column.map(mapping, true);
-			Column remappedMapped = map.remap(new Dictionary<>(remappedDictionary), permutation);
+			Column mappedRemapped = column.remap(new Dictionary(remappedDictionary), permutation).map(mapping, true);
+			CategoricalColumn map = (CategoricalColumn) column.map(mapping, true);
+			Column remappedMapped = map.remap(new Dictionary(remappedDictionary), permutation);
 
 			int[] expected = new int[nValues];
 			mappedRemapped.fill(expected, 0);
@@ -839,24 +800,24 @@ public class CategoricalColumnTests {
 		}
 
 		@SuppressWarnings("unchecked")
-		private CategoricalColumn<String> column(int[] data) {
-			return (CategoricalColumn<String>) CategoricalColumnTests.column(columnImplementation, data, Format.SIGNED_INT32);
+		private CategoricalColumn column(int[] data) {
+			return (CategoricalColumn) CategoricalColumnTests.column(columnImplementation, data, Format.SIGNED_INT32);
 		}
 
-		private Int32CategoricalBuffer<String> toCategoricalBuffer(Column column) {
-			return BufferTestUtils.getInt32Buffer(column, String.class);
+		private Int32NominalBuffer toCategoricalBuffer(Column column) {
+			return BufferTestUtils.getInt32Buffer(column, ColumnType.NOMINAL);
 		}
 
 		private ObjectBuffer<String> toFreeBuffer(Column column) {
-			return Buffers.objectBuffer(column, String.class);
+			return BufferTestUtils.getObjectBuffer(column, ColumnType.TEXT);
 		}
 
 		@Test
 		public void testCategorical() {
 			int nValues = 1605;
 			int[] data = random(nValues);
-			CategoricalColumn<String> column = column(data);
-			Int32CategoricalBuffer<String> buffer = toCategoricalBuffer(column);
+			CategoricalColumn column = column(data);
+			Int32NominalBuffer buffer = toCategoricalBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
 			ObjectReader reader = Readers.objectReader(column, String.class);
@@ -871,7 +832,7 @@ public class CategoricalColumnTests {
 			int nValues = 1703;
 			int[] data = random(nValues);
 			Column column = column(data);
-			NumericBuffer buffer = Buffers.integerBuffer(column);
+			NumericBuffer buffer = Buffers.integer53BitBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
 			NumericReader reader = Readers.numericReader(column, column.size());
@@ -886,7 +847,7 @@ public class CategoricalColumnTests {
 		public void testFree() {
 			int nValues = 1404;
 			int[] data = random(nValues);
-			CategoricalColumn<String> column = column(data);
+			CategoricalColumn column = column(data);
 			ObjectBuffer<String> buffer = toFreeBuffer(column);
 			assertEquals(column.size(), buffer.size());
 
@@ -912,7 +873,7 @@ public class CategoricalColumnTests {
 			return MINIMAL_CATEGORICAL_COLUMNS;
 		}
 
-		private CategoricalColumn<?> column(int[] data) {
+		private CategoricalColumn column(int[] data) {
 			return CategoricalColumnTests.booleanColumn(columnImplementation, data, format, Math.random() > 0.5 ? 2 : 1);
 		}
 
@@ -921,12 +882,12 @@ public class CategoricalColumnTests {
 			int nValues = 1172;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<?> column = column(data);
+			CategoricalColumn column = column(data);
 			int[] mapping = permutation(nValues);
 
 			Column mappedColumn = column.map(mapping, true);
-			Dictionary<?> dictionary = column.getDictionary();
-			Dictionary<?> mappedDictionary = mappedColumn.getDictionary(Object.class);
+			Dictionary dictionary = column.getDictionary();
+			Dictionary mappedDictionary = mappedColumn.getDictionary();
 			assertEquals(dictionary.getNegativeIndex(), mappedDictionary.getNegativeIndex());
 			assertEquals(dictionary.getPositiveIndex(), mappedDictionary.getPositiveIndex());
 		}
@@ -936,13 +897,13 @@ public class CategoricalColumnTests {
 			int nValues = 1132;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<?> column = column(data);
+			CategoricalColumn column = column(data);
 			int[] mapping = permutation(nValues / 100);
 
 			Column mappedColumn = column.map(mapping, false);
 
-			Dictionary<?> dictionary = column.getDictionary();
-			Dictionary<?> mappedDictionary = mappedColumn.getDictionary(Object.class);
+			Dictionary dictionary = column.getDictionary();
+			Dictionary mappedDictionary = mappedColumn.getDictionary();
 			assertEquals(dictionary.getNegativeIndex(), mappedDictionary.getNegativeIndex());
 			assertEquals(dictionary.getPositiveIndex(), mappedDictionary.getPositiveIndex());
 		}
@@ -952,16 +913,16 @@ public class CategoricalColumnTests {
 			int nValues = 117;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<String> column = (CategoricalColumn<String>) column(data);
+			CategoricalColumn column = (CategoricalColumn) column(data);
 
 			List<String> dictionary = getBooleanMappingList();
 			String pos1 = dictionary.get(1);
 			dictionary.set(1, dictionary.get(2));
 			dictionary.set(2, pos1);
 
-			Column remapped = column.remap(new BooleanDictionary<>(dictionary, 1));
-			assertTrue(remapped.getDictionary(Object.class).isBoolean());
-			assertEquals(1, remapped.getDictionary(String.class).getPositiveIndex());
+			Column remapped = column.remap(new BooleanDictionary(dictionary, 1));
+			assertTrue(remapped.getDictionary().isBoolean());
+			assertEquals(1, remapped.getDictionary().getPositiveIndex());
 		}
 
 		@Test
@@ -969,13 +930,13 @@ public class CategoricalColumnTests {
 			int nValues = 115;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<String> column = (CategoricalColumn<String>) column(data);
+			CategoricalColumn column = (CategoricalColumn) column(data);
 
 			List<String> dictionary = getBooleanMappingList();
 			dictionary.set(1, "x");
 
-			Column remapped = column.mergeDictionaries(new BooleanDictionary<>(dictionary, 1));
-			assertFalse(remapped.getDictionary(Object.class).isBoolean());
+			Column remapped = column.mergeDictionaries(new BooleanDictionary(dictionary, 1));
+			assertFalse(remapped.getDictionary().isBoolean());
 		}
 
 		@Test
@@ -983,15 +944,15 @@ public class CategoricalColumnTests {
 			int nValues = 115;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<String> column = (CategoricalColumn<String>) column(data);
+			CategoricalColumn column = (CategoricalColumn) column(data);
 
 			List<String> dictionary = getBooleanMappingList();
 			dictionary.set(1, dictionary.get(2));
 			dictionary.remove(2);
 
-			Column remapped = column.mergeDictionaries(new BooleanDictionary<>(dictionary, 1));
-			assertTrue(remapped.getDictionary(Object.class).isBoolean());
-			assertEquals(1, remapped.getDictionary(String.class).getPositiveIndex());
+			Column remapped = column.mergeDictionaries(new BooleanDictionary(dictionary, 1));
+			assertTrue(remapped.getDictionary().isBoolean());
+			assertEquals(1, remapped.getDictionary().getPositiveIndex());
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
@@ -1000,7 +961,7 @@ public class CategoricalColumnTests {
 			int[] data = randomBoolean(nValues);
 
 			Column column = CategoricalColumnTests.column(columnImplementation, data, format);
-			column.getDictionary(Object.class).hasPositive();
+			column.getDictionary().hasPositive();
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
@@ -1009,7 +970,7 @@ public class CategoricalColumnTests {
 			int[] data = randomBoolean(nValues);
 
 			Column column = CategoricalColumnTests.column(columnImplementation, data, format);
-			column.getDictionary(Object.class).hasNegative();
+			column.getDictionary().hasNegative();
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
@@ -1018,7 +979,7 @@ public class CategoricalColumnTests {
 			int[] data = randomBoolean(nValues);
 
 			Column column = CategoricalColumnTests.column(columnImplementation, data, format);
-			column.getDictionary(Object.class).getPositiveIndex();
+			column.getDictionary().getPositiveIndex();
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
@@ -1027,8 +988,8 @@ public class CategoricalColumnTests {
 			int[] data = randomBoolean(nValues);
 
 			Column column = CategoricalColumnTests.column(columnImplementation, data, format);
-			assertFalse(column.getDictionary(Object.class).isBoolean());
-			column.getDictionary(Object.class).getNegativeIndex();
+			assertFalse(column.getDictionary().isBoolean());
+			column.getDictionary().getNegativeIndex();
 		}
 
 		@Test
@@ -1036,12 +997,12 @@ public class CategoricalColumnTests {
 			int nValues = 172;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<Object> column = (CategoricalColumn<Object>) column(data);
+			CategoricalColumn column = (CategoricalColumn) column(data);
 
-			Dictionary<Object> dictionary = column.getDictionary();
-			CategoricalColumn<Object> booleanColumn = column.toBoolean(dictionary.get(1));
+			Dictionary dictionary = column.getDictionary();
+			CategoricalColumn booleanColumn = column.toBoolean(dictionary.get(1));
 
-			Dictionary<Object> booleanDictionary = booleanColumn.getDictionary();
+			Dictionary booleanDictionary = booleanColumn.getDictionary();
 			assertEquals(2, booleanDictionary.getNegativeIndex());
 			assertEquals(1, booleanDictionary.getPositiveIndex());
 		}
@@ -1051,13 +1012,13 @@ public class CategoricalColumnTests {
 			int nValues = 132;
 			int[] data = randomBoolean(nValues);
 
-			CategoricalColumn<Object> column = (CategoricalColumn<Object>) column(data);
+			CategoricalColumn column = (CategoricalColumn) column(data);
 
-			Dictionary<Object> dictionary = column.getDictionary();
-			CategoricalColumn<Object> booleanColumn = column.toBoolean(dictionary.get(1));
+			Dictionary dictionary = column.getDictionary();
+			CategoricalColumn booleanColumn = column.toBoolean(dictionary.get(1));
 			booleanColumn = booleanColumn.toBoolean(dictionary.get(2));
 
-			Dictionary<Object> booleanDictionary = booleanColumn.getDictionary();
+			Dictionary booleanDictionary = booleanColumn.getDictionary();
 			assertEquals(1, booleanDictionary.getNegativeIndex());
 			assertEquals(2, booleanDictionary.getPositiveIndex());
 		}

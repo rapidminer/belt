@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -33,9 +34,9 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.DateTimeColumn;
 import com.rapidminer.belt.column.TimeColumn;
 import com.rapidminer.belt.reader.NumericReader;
@@ -51,8 +52,6 @@ import junit.framework.TestCase;
  */
 @RunWith(Enclosed.class)
 public class ComplexRowWriterTests {
-
-	private static final ColumnType<String> TEXT = ColumnTypes.objectType("text", String.class, null);
 
 	private static double[] random(int n) {
 		double[] numbers = new double[n];
@@ -104,7 +103,7 @@ public class ComplexRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME));
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] * 5));
@@ -140,8 +139,8 @@ public class ComplexRowWriterTests {
 			double[] ninth = random(numberOfRows);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h", "i"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME, ColumnTypes.DATETIME,
-							ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME));
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME, TypeId.DATE_TIME,
+							TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME));
 			for (int i = 0; i < NumericReader.SMALL_BUFFER_SIZE + 10; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] % 1000));
@@ -236,8 +235,8 @@ public class ComplexRowWriterTests {
 			double[] ninth = random(numberOfRows);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h", "i"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME, ColumnTypes.NOMINAL,
-							ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME));
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME, TypeId.NOMINAL,
+							TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME));
 			for (int i = 0; i < NumericReader.SMALL_BUFFER_SIZE + 10; i++) {
 				writer.move();
 				writer.set(0, Double.isNaN(first[i]) ? null : "" + Math.round(first[i] % 1000));
@@ -332,7 +331,7 @@ public class ComplexRowWriterTests {
 			double[] forth = sparseRandom(numberOfRows, false);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME));
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME));
 			for (int i = 0; i < numberOfRows - 1; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] % 1000));
@@ -388,7 +387,7 @@ public class ComplexRowWriterTests {
 			System.arraycopy(sparseRandom(firstNumberOfRows, false), 0, third, 0, firstNumberOfRows);
 			System.arraycopy(sparseRandom(firstNumberOfRows, false), 0, forth, 0, firstNumberOfRows);
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME));
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME));
 			for (int i = 0; i < firstNumberOfRows; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] % 1000));
@@ -448,7 +447,7 @@ public class ComplexRowWriterTests {
 			System.arraycopy(sparseRandom(firstNumberOfRows, -100), 0, third, 0, firstNumberOfRows);
 			System.arraycopy(sparseRandom(firstNumberOfRows, 42), 0, forth, 0, firstNumberOfRows);
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME));
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME));
 			for (int i = 0; i < firstNumberOfRows; i++) {
 				writer.move();
 				writer.set(0, Double.isNaN(first[i]) ? null : "" + Math.round(first[i] % 1000));
@@ -520,7 +519,7 @@ public class ComplexRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME), numberOfRows /
+					Arrays.asList(TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME), numberOfRows /
 					2);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
@@ -551,7 +550,7 @@ public class ComplexRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, TEXT, ColumnTypes.TIME), numberOfRows);
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TEXT, TypeId.TIME), numberOfRows);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "" + first[i]);
@@ -581,7 +580,7 @@ public class ComplexRowWriterTests {
 
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, TEXT, ColumnTypes.TIME), numberOfRows *
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TEXT, TypeId.TIME), numberOfRows *
 					2);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
@@ -610,7 +609,7 @@ public class ComplexRowWriterTests {
 		public void testIllegalStateSparseCategorical() {
 			int numberOfRows = NumericReader.SMALL_BUFFER_SIZE + 10;
 
-			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a"), Arrays.asList(ColumnTypes.NOMINAL));
+			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a"), Arrays.asList(TypeId.NOMINAL));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "defaultValue");
@@ -629,7 +628,7 @@ public class ComplexRowWriterTests {
 			int numberOfRows = NumericReader.SMALL_BUFFER_SIZE + 10;
 
 			Instant defaultValue = Instant.ofEpochSecond(398523);
-			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a"), Arrays.asList(ColumnTypes.DATETIME));
+			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a"), Arrays.asList(TypeId.DATE_TIME));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, defaultValue);
@@ -648,7 +647,7 @@ public class ComplexRowWriterTests {
 			int numberOfRows = NumericReader.SMALL_BUFFER_SIZE + 10;
 
 			LocalTime defaultValue = LocalTime.ofNanoOfDay(398523);
-			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a"), Arrays.asList(ColumnTypes.TIME));
+			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a"), Arrays.asList(TypeId.TIME));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, defaultValue);
@@ -671,7 +670,7 @@ public class ComplexRowWriterTests {
 
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, TEXT, ColumnTypes.TIME), numberOfRows *
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TEXT, TypeId.TIME), numberOfRows *
 					2);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
@@ -686,7 +685,7 @@ public class ComplexRowWriterTests {
 		@Test(expected = IllegalStateException.class)
 		public void testCreateTwiceDatetime() {
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("b", "c", "d"),
-					Arrays.asList(ColumnTypes.DATETIME, TEXT, ColumnTypes.TIME), 2);
+					Arrays.asList(TypeId.DATE_TIME, TypeId.TEXT, TypeId.TIME), 2);
 			writer.create();
 			writer.create();
 		}
@@ -694,7 +693,7 @@ public class ComplexRowWriterTests {
 		@Test(expected = IllegalStateException.class)
 		public void testCreateTwiceFree() {
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("c", "d"),
-					Arrays.asList(TEXT, ColumnTypes.TIME), 2);
+					Arrays.asList(TypeId.TEXT, TypeId.TIME), 2);
 			writer.create();
 			writer.create();
 		}
@@ -702,7 +701,7 @@ public class ComplexRowWriterTests {
 		@Test(expected = IllegalStateException.class)
 		public void testCreateTwiceTime() {
 			ComplexRowWriter writer = new ComplexRowWriter(Collections.singletonList("d"),
-					Collections.singletonList(ColumnTypes.TIME), 2);
+					Collections.singletonList(TypeId.TIME), 2);
 			writer.create();
 			writer.create();
 		}
@@ -713,13 +712,13 @@ public class ComplexRowWriterTests {
 		@Test
 		public void testUnknownRows() {
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, ColumnTypes.TIME, TEXT));
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TIME, TypeId.TEXT));
 			Table table = writer.create();
 
-			assertEquals(ColumnTypes.NOMINAL, table.column(0).type());
-			assertEquals(ColumnTypes.DATETIME, table.column(1).type());
-			assertEquals(ColumnTypes.TIME, table.column(2).type());
-			assertEquals(TEXT, table.column(3).type());
+			assertEquals(ColumnType.NOMINAL, table.column(0).type());
+			assertEquals(ColumnType.DATETIME, table.column(1).type());
+			assertEquals(ColumnType.TIME, table.column(2).type());
+			assertEquals(ColumnType.TEXT, table.column(3).type());
 		}
 
 
@@ -730,7 +729,7 @@ public class ComplexRowWriterTests {
 			double[] third = random(numberOfRows);
 
 			ComplexRowWriter writer = new ComplexRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, ColumnTypes.TIME, TEXT), numberOfRows /
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TIME, TypeId.TEXT), numberOfRows /
 					2);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
@@ -740,10 +739,10 @@ public class ComplexRowWriterTests {
 			}
 			Table table = writer.create();
 
-			assertEquals(ColumnTypes.NOMINAL, table.column(0).type());
-			assertEquals(ColumnTypes.DATETIME, table.column(1).type());
-			assertEquals(ColumnTypes.TIME, table.column(2).type());
-			assertEquals(TEXT, table.column(3).type());
+			assertEquals(ColumnType.NOMINAL, table.column(0).type());
+			assertEquals(ColumnType.DATETIME, table.column(1).type());
+			assertEquals(ColumnType.TIME, table.column(2).type());
+			assertEquals(ColumnType.TEXT, table.column(3).type());
 		}
 
 	}
@@ -755,7 +754,7 @@ public class ComplexRowWriterTests {
 			int numberOfRows = 2354;
 			String defaultValue = "defaultValue";
 			Int32CategoricalWriterSparse writer =
-					new Int32CategoricalWriterSparse<>(ColumnTypes.NOMINAL, defaultValue);
+					new Int32CategoricalWriterSparse(ColumnType.NOMINAL, defaultValue);
 			assertEquals(2, writer.getValueLookup().size());
 			assertNull(writer.getValueLookup().get(0));
 			assertEquals(defaultValue, writer.getValueLookup().get(1));
@@ -774,7 +773,7 @@ public class ComplexRowWriterTests {
 			int numberOfRows = 2354;
 			String defaultValue = null;
 			Int32CategoricalWriterSparse writer =
-					new Int32CategoricalWriterSparse<>(ColumnTypes.NOMINAL, defaultValue);
+					new Int32CategoricalWriterSparse(ColumnType.NOMINAL, defaultValue);
 			assertEquals(1, writer.getValueLookup().size());
 			assertNull(writer.getValueLookup().get(0));
 			assertNull(writer.getDefaultValue());
@@ -793,7 +792,7 @@ public class ComplexRowWriterTests {
 		@Test
 		public void testNoRows() {
 			ComplexRowWriter writer =
-					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.NOMINAL));
+					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.NOMINAL));
 			String expected = "Object row writer (0x2)";
 			assertEquals(expected, writer.toString());
 		}
@@ -801,7 +800,7 @@ public class ComplexRowWriterTests {
 		@Test
 		public void testNoRowsMoved() {
 			ComplexRowWriter writer =
-					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.NOMINAL));
+					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.NOMINAL));
 			writer.move();
 			writer.move();
 			writer.move();
@@ -812,7 +811,7 @@ public class ComplexRowWriterTests {
 		@Test
 		public void testExpectedRows() {
 			ComplexRowWriter writer =
-					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.NOMINAL),
+					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.NOMINAL),
 							19);
 			String expected = "Object row writer (0x2)";
 			assertEquals(expected, writer.toString());
@@ -821,7 +820,7 @@ public class ComplexRowWriterTests {
 		@Test
 		public void testExpectedMoved() {
 			ComplexRowWriter writer =
-					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.NOMINAL),
+					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.NOMINAL),
 							19);
 			writer.move();
 			writer.move();
@@ -833,7 +832,7 @@ public class ComplexRowWriterTests {
 		@Test
 		public void testWidth() {
 			ComplexRowWriter writer =
-					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.NOMINAL));
+					new ComplexRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.NOMINAL));
 			String expected = "Object row writer (0x" + writer.width() + ")";
 			assertEquals(expected, writer.toString());
 		}

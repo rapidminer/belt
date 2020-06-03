@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -103,15 +103,15 @@ public class NumericColumnTests {
 			case IMPL_DOUBLE_ARRAY:
 				return new DoubleArrayColumn(TypeId.REAL, data);
 			case IMPL_DOUBLE_ARRAY_INT:
-				return new DoubleArrayColumn(TypeId.INTEGER, data);
+				return new DoubleArrayColumn(TypeId.INTEGER_53_BIT, data);
 			case IMPL_DOUBLE_SPARSE_COLUMN:
 				return new DoubleSparseColumn(TypeId.REAL, ColumnTestUtils.getMostFrequentValue(data, -0.00001d), data);
 			case IMPL_DOUBLE_SPARSE_COLUMN_INT:
-				return new DoubleSparseColumn(TypeId.INTEGER, ColumnTestUtils.getMostFrequentValue(data, 17d), data);
+				return new DoubleSparseColumn(TypeId.INTEGER_53_BIT, ColumnTestUtils.getMostFrequentValue(data, 17d), data);
 			case IMPL_DOUBLE_SPARSE_COLUMN_DEFAULT_IS_NAN:
 				return new DoubleSparseColumn(TypeId.REAL, Double.NaN, data);
 			case IMPL_DOUBLE_SPARSE_COLUMN_INT_DEFAULT_IS_NAN:
-				return new DoubleSparseColumn(TypeId.INTEGER, Double.NaN, data);
+				return new DoubleSparseColumn(TypeId.INTEGER_53_BIT, Double.NaN, data);
 			case IMPL_DOUBLE_SPARSE_COLUMN_DEFAULT_NOT_IN_DATA:
 				return new DoubleSparseColumn(TypeId.REAL, Math.random(), data);
 			case IMPL_MAPPED_DOUBLE_ARRAY:
@@ -131,7 +131,7 @@ public class NumericColumnTests {
 				for (int i = 0; i < data.length; i++) {
 					mappedData[mapping[i]] = data[i];
 				}
-				return new MappedDoubleArrayColumn(Column.TypeId.INTEGER, mappedData, mapping);
+				return new MappedDoubleArrayColumn(Column.TypeId.INTEGER_53_BIT, mappedData, mapping);
 			default:
 				throw new IllegalStateException("Unknown column implementation");
 		}
@@ -186,7 +186,7 @@ public class NumericColumnTests {
 			Arrays.setAll(data, i -> sparsity > random.nextDouble() ? paramDefaultValue : random.nextDouble());
 			double dataSparsity = Arrays.stream(data).map(x -> doubleEquals(x, paramDefaultValue) ? 1 : 0).sum() / data.length;
 			for (int i = 0; i < ITERATIONS; i++) {
-				Column column = columns.createNumericColumn(Math.random() > 0.5 ? TypeId.REAL : TypeId.INTEGER, data, random);
+				Column column = columns.createNumericColumn(Math.random() > 0.5 ? TypeId.REAL : TypeId.INTEGER_53_BIT, data, random);
 				if (column instanceof DoubleSparseColumn) {
 					assertTrue(dataSparsity >= InternalColumnsImpl.MIN_SPARSITY_64BIT);
 					assertTrue(doubleEquals(((DoubleSparseColumn) column).getDefaultValue(), paramDefaultValue));
@@ -351,8 +351,8 @@ public class NumericColumnTests {
 		}
 
 		private NumericBuffer toBuffer(Column column) {
-			if (column.type().id() == Column.TypeId.INTEGER) {
-				return Buffers.integerBuffer(column);
+			if (column.type().id() == Column.TypeId.INTEGER_53_BIT) {
+				return Buffers.integer53BitBuffer(column);
 			} else {
 				return Buffers.realBuffer(column);
 			}
@@ -811,7 +811,7 @@ public class NumericColumnTests {
 			double[] data = {5, 7.1, 3.56, 1.1111, 4, 4.7, 8.99};
 			Column column = column(data);
 
-			String expected = Column.TypeId.INTEGER + " Column (" + data.length + ")\n(" + "5, 7, 4, 1, 4, 5, 9)";
+			String expected = Column.TypeId.INTEGER_53_BIT + " Column (" + data.length + ")\n(" + "5, 7, 4, 1, 4, 5, 9)";
 
 			assertEquals(expected, column.toString());
 		}
@@ -825,7 +825,7 @@ public class NumericColumnTests {
 			}
 			Column column = column(data);
 
-			String expected = Column.TypeId.INTEGER + " Column (" + data.length + ")\n(" + "5, 7, 4, 1, 4, 5, 9, 10, "
+			String expected = Column.TypeId.INTEGER_53_BIT + " Column (" + data.length + ")\n(" + "5, 7, 4, 1, 4, 5, 9, 10, "
 					+ "5, 7, 4, 1, 4, 5, 9, 10, "
 					+ "5, 7, 4, 1, 4, 5, 9, 10, "
 					+ "5, 7, 4, 1, 4, 5, 9, 10)";
@@ -843,7 +843,7 @@ public class NumericColumnTests {
 			data[32] = 100;
 			Column column = column(data);
 
-			String expected = TypeId.INTEGER + " Column (" + data.length + ")\n(" + "5, 7, 4, 1, 4, 5, 9, 10, "
+			String expected = TypeId.INTEGER_53_BIT + " Column (" + data.length + ")\n(" + "5, 7, 4, 1, 4, 5, 9, 10, "
 					+ "5, 7, 4, 1, 4, 5, 9, 10, "
 					+ "5, 7, 4, 1, 4, 5, 9, 10, "
 					+ "5, 7, 4, 1, 4, 5, ..., 100)";
@@ -855,7 +855,7 @@ public class NumericColumnTests {
 		public void testNotFinite() {
 			double[] data = {Double.NaN, Double.NEGATIVE_INFINITY, Double.NaN, Double.POSITIVE_INFINITY};
 			Column column = column(data);
-			String expected = TypeId.INTEGER + " Column (" + data.length + ")\n(" + "?, -Infinity, ?, Infinity)";
+			String expected = TypeId.INTEGER_53_BIT + " Column (" + data.length + ")\n(" + "?, -Infinity, ?, Infinity)";
 
 			assertEquals(expected, column.toString());
 		}

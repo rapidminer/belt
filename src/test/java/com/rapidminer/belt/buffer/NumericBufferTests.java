@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -49,7 +49,7 @@ public class NumericBufferTests {
 			case IMPL_FIXED_BUFFER:
 				return Buffers.realBuffer(length, initialize);
 			case IMPL_FIXED_INT_BUFFER:
-				return Buffers.integerBuffer(length, initialize);
+				return Buffers.integer53BitBuffer(length, initialize);
 			default:
 				throw new IllegalStateException("Unknown column implementation");
 		}
@@ -60,7 +60,7 @@ public class NumericBufferTests {
 			case IMPL_FIXED_BUFFER:
 				return Buffers.realBuffer(length);
 			case IMPL_FIXED_INT_BUFFER:
-				return Buffers.integerBuffer(length);
+				return Buffers.integer53BitBuffer(length);
 			default:
 				throw new IllegalStateException("Unknown column implementation");
 		}
@@ -276,7 +276,7 @@ public class NumericBufferTests {
 			Arrays.setAll(data, i -> rng.nextDouble(-10, 10));
 			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, data);
 
-			NumericBuffer buffer = Buffers.integerBuffer(column);
+			NumericBuffer buffer = Buffers.integer53BitBuffer(column);
 			buffer.freeze();
 
 			double[] expected = new double[100];
@@ -397,7 +397,7 @@ public class NumericBufferTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullInt(){
-			Buffers.integerBuffer(null);
+			Buffers.integer53BitBuffer(null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -407,7 +407,7 @@ public class NumericBufferTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testWrongTypeInt(){
-			Buffers.integerBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null));
+			Buffers.integer53BitBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null));
 		}
 	}
 }

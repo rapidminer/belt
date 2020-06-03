@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -28,14 +28,14 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.util.Belt;
 import com.rapidminer.belt.table.Builders;
 import com.rapidminer.belt.table.Table;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
 import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.Workload;
 
@@ -65,12 +65,12 @@ public class CategoricalColumnReducerTests {
 		return getColumn(data);
 	}
 
-	private static CategoricalColumn<String> getColumn(String[] data) {
-		Int32CategoricalBuffer<String> buffer = BufferAccessor.get().newInt32Buffer(data.length);
+	private static CategoricalColumn getColumn(String[] data) {
+		Int32NominalBuffer buffer = BufferAccessor.get().newInt32Buffer(ColumnType.NOMINAL, data.length);
 		for (int i = 0; i < data.length; i++) {
 			buffer.set(i, data[i]);
 		}
-		return buffer.toColumn(ColumnTypes.NOMINAL);
+		return buffer.toColumn();
 	}
 
 	private static String[] random(int n) {
@@ -112,7 +112,7 @@ public class CategoricalColumnReducerTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
 			Table table2 = Builders.newTableBuilder(table).add("x", ColumnTestUtils.getObjectColumn(
-					ColumnTypes.objectType("test", String.class, null), new Object[table.height()])).build(CTX);
+					ColumnType.TEXT, new Object[table.height()])).build(CTX);
 			table2.transform(2).reduceCategorical(ArrayList::new, ArrayList::add, ArrayList::addAll, CTX);
 		}
 
@@ -148,14 +148,14 @@ public class CategoricalColumnReducerTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
 			Table table2 = Builders.newTableBuilder(table).add("x", ColumnTestUtils.getObjectColumn(
-					ColumnTypes.objectType("test", String.class, null),new Object[table.height()])).build(CTX);
+					ColumnType.TEXT,new Object[table.height()])).build(CTX);
 			table2.transform(2).reduceCategorical(0, Integer::sum, CTX);
 		}
 
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumnCombiner() {
 			Table table2 = Builders.newTableBuilder(table).add("x", ColumnTestUtils.getObjectColumn(
-					ColumnTypes.objectType("test", String.class, null),new Object[table.height()])).build(CTX);
+					ColumnType.TEXT,new Object[table.height()])).build(CTX);
 			table2.transform(2).reduceCategorical(0, Integer::sum, Integer::sum, CTX);
 		}
 
@@ -194,7 +194,7 @@ public class CategoricalColumnReducerTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
 			Table table2 = Builders.newTableBuilder(table).add("x", ColumnTestUtils.getObjectColumn(
-					ColumnTypes.objectType("test", String.class, null), new Object[table.height()])).build(CTX);
+					ColumnType.TEXT, new Object[table.height()])).build(CTX);
 			table2.transform(new int[]{0, 2}).reduceCategorical(ArrayList::new, (t, r) -> t.add(r.get(0) + r.get(1)),
 					ArrayList::addAll, CTX);
 		}
@@ -208,8 +208,8 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumn() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
-			int mappingSize = column.getDictionary(Object.class).size()+1;
+			CategoricalColumn column = getColumn(data);
+			int mappingSize = column.getDictionary().size()+1;
 			CategoricalColumnReducer<int[]> calculator = new CategoricalColumnReducer<>(column, () -> new int[mappingSize],
 					(t, d) -> t[d] += 1,
 					(t1, t2) -> {
@@ -239,7 +239,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumnInt() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 			CategoricalColumnReducerInt calculator = new CategoricalColumnReducerInt(column, 0,
 					(d, e) -> d + e + d * e);
 			calculator.init(1);
@@ -258,7 +258,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumnCombiner() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 			CategoricalColumnReducerInt calculator = new CategoricalColumnReducerInt(column, 0,
 					(count, d) -> d > 2 ? count + 1 : count, (count1, count2) -> count1 + count2);
 			calculator.init(2);
@@ -280,8 +280,8 @@ public class CategoricalColumnReducerTests {
 			int size = 75;
 			String[] data = random(size);
 			String[] data2 = random(size);
-			CategoricalColumn<String> column = getColumn(data);
-			CategoricalColumn<String> column2 = getColumn(data2);
+			CategoricalColumn column = getColumn(data);
+			CategoricalColumn column2 = getColumn(data2);
 			NumericColumnsReducer<int[]> calculator = new NumericColumnsReducer<>(Arrays.asList(column,
 					column2), () -> new int[2],
 					(t, row) -> {
@@ -319,9 +319,9 @@ public class CategoricalColumnReducerTests {
 			String[] data = random(size);
 			String[] data2 = random(size);
 			String[] data3 = random(size);
-			CategoricalColumn<String> column = getColumn(data);
-			CategoricalColumn<String> column2 = getColumn(data2);
-			CategoricalColumn<String> column3 = getColumn(data3);
+			CategoricalColumn column = getColumn(data);
+			CategoricalColumn column2 = getColumn(data2);
+			CategoricalColumn column3 = getColumn(data3);
 			NumericColumnsReducer<int[]> calculator = new NumericColumnsReducer<>(Arrays.asList(column,
 					column2, column3), () -> new int[2],
 					(t, row) -> {
@@ -368,7 +368,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumn() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			Transformer transformer = new Transformer(column);
 			MutableDouble result = transformer.workload(Workload.LARGE)
@@ -383,7 +383,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumnInt() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			Transformer transformer = new Transformer(column);
 			int result = transformer.workload(Workload.LARGE)
@@ -398,7 +398,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumnCombiner() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			Transformer transformer = new Transformer(column);
 			int result = transformer.reduceCategorical(0, (count, d) -> d > 2 ? count + 1 : count,
@@ -413,11 +413,11 @@ public class CategoricalColumnReducerTests {
 		public void testThreeColumns() {
 			int size = 75;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 			String[] data2 = random(size);
-			CategoricalColumn<String> column2 = getColumn(data2);
+			CategoricalColumn column2 = getColumn(data2);
 			String[] data3 = random(size);
-			CategoricalColumn<String> column3 = getColumn(data3);
+			CategoricalColumn column3 = getColumn(data3);
 
 			RowTransformer transformer = new RowTransformer(Arrays.asList(column, column2, column3));
 			MutableDouble result = transformer.reduceCategorical(MutableDouble::new,
@@ -435,7 +435,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumnZeroHeight() {
 			int size = 0;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			Transformer transformer = new Transformer(column);
 			MutableDouble result = transformer.workload(Workload.SMALL)
@@ -452,7 +452,7 @@ public class CategoricalColumnReducerTests {
 		public void testOneColumnIntZeroHeight() {
 			int size = 0;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			Transformer transformer = new Transformer(column);
 			int result = transformer.workload(Workload.LARGE)
@@ -465,7 +465,7 @@ public class CategoricalColumnReducerTests {
 		public void testThreeColumnsZeroHeight() {
 			int size = 0;
 			String[] data = random(size);
-			CategoricalColumn<String> column = getColumn(data);
+			CategoricalColumn column = getColumn(data);
 
 			RowTransformer transformer = new RowTransformer(Arrays.asList(column, column, column));
 			MutableDouble result = transformer.reduceCategorical(() -> {

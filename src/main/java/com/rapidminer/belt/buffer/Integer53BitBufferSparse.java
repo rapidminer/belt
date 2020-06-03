@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -20,12 +21,15 @@ import com.rapidminer.belt.column.Column.TypeId;
 
 
 /**
- * Sparse integer buffer implementation with fixed length, internally storing double values. The buffer is write only.
- * The {@link #setNext(double)} method can be used to set the next free position in the buffer to the given value. The
- * {@link #setNext(int, double)} method can be used to set a specific position to the given value. In this case all
- * values at smaller indices (that have not already been set) will be set to the buffer's default value. This is more
- * efficient than calling {@link #setNext(double)} for every default value. Please note that values, once they are set,
- * cannot be modified.
+ * Sparse integer buffer implementation with fixed length, internally storing double values. Finite double values are
+ * rounded via {@link Math#round(double)}. Whole numbers between {@code +/- 2^53-1} can be stored without loss of
+ * information.
+ * <p>
+ * The buffer is write only. The {@link #setNext(double)} method can be used to set the next free position in the buffer
+ * to the given value. The {@link #setNext(int, double)} method can be used to set a specific position to the given
+ * value. In this case all values at smaller indices (that have not already been set) will be set to the buffer's
+ * default value. This is more efficient than calling {@link #setNext(double)} for every default value. Please note that
+ * values, once they are set, cannot be modified.
  * <p>
  * Please note that the buffer implementation is thread safe but accessing it from multiple threads will be slow.
  * <p>
@@ -34,31 +38,31 @@ import com.rapidminer.belt.column.Column.TypeId;
  * recommended not to use it for very small data ({@code <1024} data points).
  *
  * @author Kevin Majchrzak
- * @see IntegerBuffer
+ * @see Integer53BitBuffer
  * @see Buffers
  */
-public final class IntegerBufferSparse extends RealBufferSparse {
+public final class Integer53BitBufferSparse extends RealBufferSparse {
 
 	/**
-	 * Creates a sparse buffer of the given length to create a sparse {@link Column} of type id {@link TypeId#INTEGER}.
+	 * Creates a sparse buffer of the given length to create a sparse {@link Column} of type id {@link TypeId#INTEGER_53_BIT}.
 	 *
 	 * @param defaultValue
 	 * 		the data's (usually most common) default value.
 	 * @param length
 	 * 		the length of the buffer
 	 */
-	IntegerBufferSparse(double defaultValue, int length) {
+	Integer53BitBufferSparse(double defaultValue, int length) {
 		super(Double.isFinite(defaultValue) ? Math.round(defaultValue) : defaultValue, length);
 	}
 
 	/**
 	 * Returns the buffer's {@link TypeId}.
 	 *
-	 * @return {@link TypeId#INTEGER}.
+	 * @return {@link TypeId#INTEGER_53_BIT}.
 	 */
 	@Override
 	public TypeId type() {
-		return TypeId.INTEGER;
+		return TypeId.INTEGER_53_BIT;
 	}
 
 	@Override

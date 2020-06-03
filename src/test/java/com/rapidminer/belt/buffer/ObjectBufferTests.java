@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,7 +27,8 @@ import org.junit.Test;
 import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
 
@@ -52,7 +53,7 @@ public class ObjectBufferTests {
 	}
 
 	private ObjectBuffer<String> toFreeBuffer(Column column) {
-		return new ObjectBuffer<>(String.class, column);
+		return new ObjectBuffer<>(ColumnType.TEXT, column);
 	}
 
 	private static int[] permutation(int n) {
@@ -70,19 +71,23 @@ public class ObjectBufferTests {
 
 	@Test
 	public void testBufferLength() {
-		ObjectBuffer buffer = new ObjectBuffer<String>(197);
+		ObjectBuffer buffer = new ObjectBuffer<String>(ColumnType.TEXT,197);
 		assertEquals(197, buffer.size());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBufferNegativeLength() {
-		Buffers.<String>objectBuffer(-5);
+		Buffers.textsetBuffer(-5);
 	}
 
+	@Test(expected = IllegalArgumentException.class)
+	public void testBufferNegativeLengthText() {
+		Buffers.textBuffer(-1);
+	}
 
 	@Test
 	public void testZeroBufferLength() {
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(0);;
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT,0);;
 		assertEquals(0, buffer.size());
 	}
 
@@ -90,7 +95,7 @@ public class ObjectBufferTests {
 	public void testSet() {
 		int n = 123;
 		int[] testData = random(n);
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(n);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT,n);
 		for (int i = 0; i < n; i++) {
 			buffer.set(i, "value" + testData[i]);
 		}
@@ -105,7 +110,7 @@ public class ObjectBufferTests {
 	@Test
 	public void testGetData() {
 		int n = 142;
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(n);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT, n);
 		for (int i = 0; i < n; i++) {
 			buffer.set(i, "value" + i);
 		}
@@ -119,12 +124,12 @@ public class ObjectBufferTests {
 	@Test
 	public void testFromCategoricalColumn() {
 		int n = 142;
-		UInt8CategoricalBuffer<String> nominalBuffer = new UInt8CategoricalBuffer<>(n);
+		UInt8NominalBuffer nominalBuffer = new UInt8NominalBuffer(ColumnType.NOMINAL, n);
 		for (int i = 0; i < n; i++) {
 			nominalBuffer.set(i, "value" + i);
 		}
 		nominalBuffer.set(42, null);
-		CategoricalColumn<String> column = nominalBuffer.toColumn(ColumnTypes.NOMINAL);
+		CategoricalColumn column = nominalBuffer.toColumn();
 
 		ObjectBuffer<String> buffer = toFreeBuffer(column);
 
@@ -138,9 +143,7 @@ public class ObjectBufferTests {
 	public void testFromFreeColumn() {
 		int nValues = 165;
 		String[] data = randomStrings(nValues);
-		Column column = ColumnAccessor.get().newObjectColumn(ColumnTypes.objectType("com.rapidminer.belt.column.test" +
-						".stringcolumn",
-				String.class, null), data);
+		Column column = ColumnAccessor.get().newObjectColumn(ColumnType.TEXT, data);
 		ObjectBuffer buffer = toFreeBuffer(column);
 		assertEquals(column.size(), buffer.size());
 
@@ -160,9 +163,7 @@ public class ObjectBufferTests {
 		for (int i = 0; i < data.length; i++) {
 			mappedData[mapping[i]] = data[i];
 		}
-		Column column = ColumnTestUtils.getMappedObjectColumn(ColumnTypes.objectType(
-				"com.rapidminer.belt.column.test.stringcolumn", String.class, null),
-				mappedData, mapping);
+		Column column = ColumnTestUtils.getMappedObjectColumn(ColumnType.TEXT, mappedData, mapping);
 		ObjectBuffer buffer = toFreeBuffer(column);
 		assertEquals(column.size(), buffer.size());
 
@@ -176,20 +177,20 @@ public class ObjectBufferTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testFromColumnWrongType() {
 		int n = 142;
-		UInt8CategoricalBuffer<String> nominalBuffer = new UInt8CategoricalBuffer<>(n);
+		UInt8NominalBuffer nominalBuffer = new UInt8NominalBuffer(ColumnType.NOMINAL, n);
 		for (int i = 0; i < n; i++) {
 			nominalBuffer.set(i, "value" + i);
 		}
 		nominalBuffer.set(42, null);
-		CategoricalColumn<String> column = nominalBuffer.toColumn(ColumnTypes.NOMINAL);
+		CategoricalColumn column = nominalBuffer.toColumn();
 
-		new ObjectBuffer<>(Integer.class, column) ;
+		new ObjectBuffer<>(ColumnType.TEXTSET, column) ;
 	}
 
 	@Test(expected = IllegalStateException.class)
 	public void testSetAfterFreeze() {
 		int n = 12;
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(n);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT, n);
 		for (int i = 0; i < n; i++) {
 			buffer.set(i, "value" + i);
 		}
@@ -200,7 +201,7 @@ public class ObjectBufferTests {
 	@Test
 	public void testToStringSmall() {
 		int[] data = {5, 7, 3, 1, 4, 4, 8};
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(8);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT,8);
 		for (int i = 0; i < data.length; i++) {
 			buffer.set(i, "value" + data[i]);
 		}
@@ -212,7 +213,7 @@ public class ObjectBufferTests {
 	@Test
 	public void testToStringMaxFit() {
 		int[] datablock = {5, 7, 3, 1, 4, 4, 8, 10};
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(32);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT, 32);
 		for (int i = 0; i < buffer.size(); i++) {
 			buffer.set(i, "value" + datablock[i % datablock.length]);
 		}
@@ -230,7 +231,7 @@ public class ObjectBufferTests {
 	public void testToStringBigger() {
 		int[] datablock = {5, 7, 3, 1, 4, 4, 8, 10};
 		int length = 33;
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(length);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT, length);
 		for (int i = 0; i < buffer.size() - 1; i++) {
 			buffer.set(i, "value" + datablock[i % datablock.length]);
 		}
@@ -248,7 +249,7 @@ public class ObjectBufferTests {
 	public void testToStringBiggerLastMissing() {
 		int[] datablock = {5, 7, 3, 1, 4, 4, 8, 10};
 		int length = 33;
-		ObjectBuffer<String> buffer = new ObjectBuffer<>(length);
+		ObjectBuffer<String> buffer = new ObjectBuffer<>(ColumnType.TEXT, length);
 		for (int i = 0; i < buffer.size() - 1; i++) {
 			buffer.set(i, "value" + datablock[i % datablock.length]);
 		}
@@ -265,22 +266,67 @@ public class ObjectBufferTests {
 
 	@Test(expected = NullPointerException.class)
 	public void testNullColumn() {
-		Buffers.objectBuffer(null, String.class);
+		Buffers.textsetBuffer( null);
+	}
+
+	@Test
+	public void testFromColumn() {
+		Column column = Buffers.textsetBuffer(13).toColumn();
+		ObjectBuffer<StringSet> buffer = Buffers.textsetBuffer(column);
+		assertEquals(13, buffer.size());
 	}
 
 	@Test(expected = NullPointerException.class)
 	public void testNullType() {
-		Buffers.objectBuffer(Buffers.objectBuffer(3).toColumn(ColumnTypes.objectType("bla", Object.class, null)), null);
+		new ObjectBuffer<>(null, Buffers.textsetBuffer(3).toColumn());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testWrongCapability() {
-		Buffers.objectBuffer(Buffers.realBuffer(4).toColumn(), Void.class);
+		Buffers.textsetBuffer(Buffers.realBuffer(4).toColumn());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testWrongType() {
-		Buffers.objectBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null), String.class);
+		Buffers.textsetBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null));
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void testNullColumnText() {
+		Buffers.textBuffer( null);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void testNullTypeText() {
+		new ObjectBuffer<>(null, Buffers.textBuffer(3).toColumn());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testWrongCapabilityText() {
+		Buffers.textBuffer(Buffers.realBuffer(4).toColumn());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testWrongTypeText() {
+		Buffers.textBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null));
+	}
+
+	@Test
+	public void testFromColumnText() {
+		Column column = Buffers.textBuffer(13).toColumn();
+		ObjectBuffer<String> buffer = Buffers.textBuffer(column);
+		assertEquals(13, buffer.size());
+	}
+
+	@Test
+	public void testFromNominalColumnText() {
+		NominalBuffer nominalBuffer = Buffers.nominalBuffer(17, 3);
+		for (int i = 0; i < nominalBuffer.size(); i++) {
+			nominalBuffer.set(i, "val"+(i%3));
+		}
+
+		ObjectBuffer<String> buffer = Buffers.textBuffer(nominalBuffer.toColumn());
+		assertEquals(17, buffer.size());
 	}
 
 }

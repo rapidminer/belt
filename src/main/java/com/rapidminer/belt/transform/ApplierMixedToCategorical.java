@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -20,11 +20,12 @@ package com.rapidminer.belt.transform;
 import java.util.List;
 import java.util.function.Function;
 
-import com.rapidminer.belt.buffer.CategoricalBuffer;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt16CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt8CategoricalBuffer;
+import com.rapidminer.belt.buffer.NominalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
+import com.rapidminer.belt.buffer.UInt16NominalBuffer;
+import com.rapidminer.belt.buffer.UInt8NominalBuffer;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.MixedRow;
 import com.rapidminer.belt.reader.MixedRowReader;
 import com.rapidminer.belt.reader.Readers;
@@ -32,23 +33,25 @@ import com.rapidminer.belt.util.IntegerFormats;
 
 
 /**
- * Maps arbitrary {@link Column}s to a {@link CategoricalBuffer} using a given mapping operator.
+ * Maps arbitrary {@link Column}s to a {@link NominalBuffer} using a given mapping operator.
  *
  * @author Gisa Meier
  */
-final class ApplierMixedToCategorical<T> implements Calculator<CategoricalBuffer<T>> {
+final class ApplierMixedToCategorical implements Calculator<NominalBuffer> {
 
 
-	private CategoricalBuffer<T> target;
+	private NominalBuffer target;
 	private final List<Column> sources;
-	private final Function<MixedRow, T> operator;
+	private final Function<MixedRow, String> operator;
 	private final IntegerFormats.Format format;
+	private final ColumnType<String> targetType;
 
-	ApplierMixedToCategorical(List<Column> sources, Function<MixedRow, T> operator, IntegerFormats.Format
-			format) {
+	ApplierMixedToCategorical(List<Column> sources, Function<MixedRow, String> operator, IntegerFormats.Format
+			format, ColumnType<String> targetType) {
 		this.sources = sources;
 		this.operator = operator;
 		this.format = format;
+		this.targetType = targetType;
 	}
 
 
@@ -58,14 +61,14 @@ final class ApplierMixedToCategorical<T> implements Calculator<CategoricalBuffer
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				target = BufferAccessor.get().newUInt8Buffer(sources.get(0).size(), format);
+				target = BufferAccessor.get().newUInt8Buffer(targetType, sources.get(0).size(), format);
 				break;
 			case UNSIGNED_INT16:
-				target = BufferAccessor.get().newUInt16Buffer(sources.get(0).size());
+				target = BufferAccessor.get().newUInt16Buffer(targetType, sources.get(0).size());
 				break;
 			case SIGNED_INT32:
 			default:
-				target = BufferAccessor.get().newInt32Buffer(sources.get(0).size());
+				target = BufferAccessor.get().newInt32Buffer(targetType, sources.get(0).size());
 		}
 	}
 
@@ -80,19 +83,19 @@ final class ApplierMixedToCategorical<T> implements Calculator<CategoricalBuffer
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				mapPart(sources, operator, (UInt8CategoricalBuffer<T>) target, from, to);
+				mapPart(sources, operator, (UInt8NominalBuffer) target, from, to);
 				break;
 			case UNSIGNED_INT16:
-				mapPart(sources, operator, (UInt16CategoricalBuffer<T>) target, from, to);
+				mapPart(sources, operator, (UInt16NominalBuffer) target, from, to);
 				break;
 			case SIGNED_INT32:
 			default:
-				mapPart(sources, operator, (Int32CategoricalBuffer<T>) target, from, to);
+				mapPart(sources, operator, (Int32NominalBuffer) target, from, to);
 		}
 	}
 
 	@Override
-	public CategoricalBuffer<T> getResult() {
+	public NominalBuffer getResult() {
 		return target;
 	}
 
@@ -100,14 +103,14 @@ final class ApplierMixedToCategorical<T> implements Calculator<CategoricalBuffer
 	 * Maps every index between from (inclusive) and to (exclusive) of the source columns using the operator and stores
 	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT2}.
 	 */
-	private static <T> void mapPart(List<Column> sources, Function<MixedRow, T> operator,
-									Int32CategoricalBuffer<T> target,
+	private static void mapPart(List<Column> sources, Function<MixedRow, String> operator,
+									Int32NominalBuffer target,
 									int from, int to) {
 		final MixedRowReader reader = Readers.mixedRowReader(sources);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();
-			T value = operator.apply(reader);
+			String value = operator.apply(reader);
 			target.set(i, value);
 		}
 	}
@@ -116,14 +119,14 @@ final class ApplierMixedToCategorical<T> implements Calculator<CategoricalBuffer
 	 * Maps every index between from (inclusive) and to (exclusive) of the source columns using the operator and stores
 	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT4}.
 	 */
-	private static <T> void mapPart(List<Column> sources, Function<MixedRow, T> operator,
-									UInt16CategoricalBuffer<T> target,
+	private static void mapPart(List<Column> sources, Function<MixedRow, String> operator,
+									UInt16NominalBuffer target,
 									int from, int to) {
 		final MixedRowReader reader =Readers.mixedRowReader(sources);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();
-			T value = operator.apply(reader);
+			String value = operator.apply(reader);
 			target.set(i, value);
 		}
 	}
@@ -132,14 +135,14 @@ final class ApplierMixedToCategorical<T> implements Calculator<CategoricalBuffer
 	 * Maps every index between from (inclusive) and to (exclusive) of the source columns using the operator and stores
 	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT8}.
 	 */
-	private static <T> void mapPart(List<Column> sources, Function<MixedRow, T> operator,
-									UInt8CategoricalBuffer<T> target,
+	private static void mapPart(List<Column> sources, Function<MixedRow, String> operator,
+									UInt8NominalBuffer target,
 									int from, int to) {
 		final MixedRowReader reader = Readers.mixedRowReader(sources);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();
-			T value = operator.apply(reader);
+			String value = operator.apply(reader);
 			target.set(i, value);
 		}
 	}

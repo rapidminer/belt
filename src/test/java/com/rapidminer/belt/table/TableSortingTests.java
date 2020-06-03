@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -36,7 +36,7 @@ import org.junit.runners.Parameterized;
 
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.reader.NumericReader;
 import com.rapidminer.belt.reader.ObjectReader;
@@ -299,8 +299,8 @@ public class TableSortingTests {
 
 		@Test
 		public void testStandardTypesAreSortable() {
-			for (ColumnType type : new ColumnType[]{ColumnTypes.REAL, ColumnTypes.INTEGER, ColumnTypes.NOMINAL,
-					ColumnTypes.TIME, ColumnTypes.DATETIME}) {
+			for (ColumnType type : new ColumnType[]{ColumnType.REAL, ColumnType.INTEGER_53_BIT, ColumnType.NOMINAL,
+					ColumnType.TIME, ColumnType.DATETIME}) {
 				assertTrue(type.hasCapability(Column.Capability.SORTABLE));
 			}
 		}

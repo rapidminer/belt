@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -21,8 +22,8 @@ import java.util.Optional;
 import java.util.SplittableRandom;
 
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.ColumnUtils;
 import com.rapidminer.belt.reader.NumericReader;
 
@@ -67,9 +68,9 @@ final class ComplexRowWriter {
 	 * @param columnLabels
 	 * 		the names for the columns to construct
 	 * @param types
-	 * 		the types of the columns to construct
+	 * 		the type ids of the columns to construct
 	 */
-	ComplexRowWriter(List<String> columnLabels, List<ColumnType<?>> types) {
+	ComplexRowWriter(List<String> columnLabels, List<TypeId> types) {
 		int numberOfColumns = columnLabels.size();
 		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(NumericRowWriter.MAX_CHECK_FOR_SPARSITY_ROW,
 				NumericRowWriter.MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
@@ -77,7 +78,8 @@ final class ComplexRowWriter {
 		classes = new Class<?>[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
 		for (int i = 0; i < numberOfColumns; i++) {
-			ColumnType<?> type = Objects.requireNonNull(types.get(i), "column type must not be null");
+			TypeId typeId = Objects.requireNonNull(types.get(i), "column type must not be null");
+			ColumnType<?> type = ColumnType.forId(typeId);
 			columns[i] = getObjectBufferForType(type);
 			classes[i] = type.elementType();
 		}
@@ -90,11 +92,11 @@ final class ComplexRowWriter {
 	 * @param columnLabels
 	 * 		the names for the columns to construct
 	 * @param types
-	 * 		the types of the columns to construct
+	 * 		the type ids of the columns to construct
 	 * @param expectedRows
 	 * 		the expected number of rows
 	 */
-	ComplexRowWriter(List<String> columnLabels, List<ColumnType<?>> types, int expectedRows) {
+	ComplexRowWriter(List<String> columnLabels, List<TypeId> types, int expectedRows) {
 		int numberOfColumns = columnLabels.size();
 		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(NumericRowWriter.MAX_CHECK_FOR_SPARSITY_ROW,
 				NumericRowWriter.MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
@@ -102,7 +104,8 @@ final class ComplexRowWriter {
 		classes = new Class<?>[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
 		for (int i = 0; i < numberOfColumns; i++) {
-			ColumnType<?> type = Objects.requireNonNull(types.get(i), "column type must not be null");
+			TypeId typeId = Objects.requireNonNull(types.get(i), "column type must not be null");
+			ColumnType<?> type = ColumnType.forId(typeId);
 			columns[i] = getObjectBufferForType(type, expectedRows);
 			classes[i] = type.elementType();
 		}
@@ -204,12 +207,18 @@ final class ComplexRowWriter {
 	}
 
 	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType) {
-		if (ColumnTypes.DATETIME.equals(columnType)) {
+		if (ColumnType.DATETIME.equals(columnType)) {
 			return new NanosecondsDateTimeWriter();
-		} else if (ColumnTypes.TIME.equals(columnType)) {
+		} else if (ColumnType.TIME.equals(columnType)) {
 			return new TimeColumnWriter();
 		} else if (columnType.category() == Column.Category.CATEGORICAL) {
-			return new Int32CategoricalWriter<>(columnType);
+			if (!columnType.elementType().equals(String.class)) {
+				throw new AssertionError("non-String categorical column");
+			}
+			//cast is safe since element type was checked above
+			@SuppressWarnings("unchecked")
+			ColumnType<String> stringColumnType = (ColumnType<String>) columnType;
+			return new Int32CategoricalWriter(stringColumnType);
 		} else if (columnType.category() == Column.Category.OBJECT) {
 			return new ObjectWriter<>(columnType);
 		} else {
@@ -218,12 +227,18 @@ final class ComplexRowWriter {
 	}
 
 	private ComplexWriter getObjectBufferForType(ColumnType<?> columnType, int length) {
-		if (ColumnTypes.DATETIME.equals(columnType)) {
+		if (ColumnType.DATETIME.equals(columnType)) {
 			return new NanosecondsDateTimeWriter(length);
-		} else if (ColumnTypes.TIME.equals(columnType)) {
+		} else if (ColumnType.TIME.equals(columnType)) {
 			return new TimeColumnWriter(length);
 		} else if (columnType.category() == Column.Category.CATEGORICAL) {
-			return new Int32CategoricalWriter<>(columnType, length);
+			if (!columnType.elementType().equals(String.class)) {
+				throw new AssertionError("non-String categorical column");
+			}
+			//cast is safe since element type was checked above
+			@SuppressWarnings("unchecked")
+			ColumnType<String> stringColumnType = (ColumnType<String>) columnType;
+			return new Int32CategoricalWriter(stringColumnType, length);
 		} else if (columnType.category() == Column.Category.OBJECT) {
 			return new ObjectWriter<>(columnType, length);
 		} else {

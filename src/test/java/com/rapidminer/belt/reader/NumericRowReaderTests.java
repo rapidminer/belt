@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -83,6 +83,11 @@ public class NumericRowReaderTests {
 		@Test(expected = NullPointerException.class)
 		public void testNullTable() {
 			Readers.numericRowReader((Table) null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testUnbufferedNullTable() {
+			SmallReaders.unbufferedNumericRowReader(null);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -312,6 +317,29 @@ public class NumericRowReaderTests {
 			assertArrayEquals(input2, outputs[0], EPSILON);
 			assertArrayEquals(input1, outputs[1], EPSILON);
 			assertArrayEquals(input0, outputs[2], EPSILON);
+		}
+
+		@Test
+		public void testUnbufferedReading() {
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
+
+			double[] input0 = randomNumbers(nRows);
+			double[] input1 = randomNumbers(nRows);
+			double[] input2 = randomNumbers(nRows);
+			String[] labels = new String[]{"a", "b", "c"};
+			Column[] columns = new Column[]{ColumnTestUtils.getNumericColumn(TypeId.REAL, input0),
+					ColumnTestUtils.getNumericColumn(TypeId.REAL, input1),
+					ColumnTestUtils.getNumericColumn(TypeId.REAL, input2)};
+
+			Table table = TableTestUtils.newTable(columns, labels);
+
+			NumericRowReader reader = SmallReaders.unbufferedNumericRowReader(table);
+			double[][] outputs = readAllColumnsToArrays(reader);
+
+			assertEquals(3, outputs.length);
+			assertArrayEquals(input0, outputs[0], EPSILON);
+			assertArrayEquals(input1, outputs[1], EPSILON);
+			assertArrayEquals(input2, outputs[2], EPSILON);
 		}
 
 		@Test

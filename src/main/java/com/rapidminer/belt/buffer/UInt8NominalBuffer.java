@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -24,10 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.rapidminer.belt.column.BooleanDictionary;
 import com.rapidminer.belt.column.CategoricalColumn;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.CategoricalReader;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.Category;
-import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.column.Dictionary;
 import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.util.IntegerFormats;
@@ -36,20 +36,20 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 
 /**
- * Implementation of a {@link CategoricalBuffer} with category index format {@link Format#UNSIGNED_INT8} that can
+ * Implementation of a {@link NominalBuffer} with category index format {@link Format#UNSIGNED_INT8} that can
  * hold {@code 255} different categories. The category indices are stored as {@code byte}.
  *
  * @author Gisa Meier
  */
-public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
+public class UInt8NominalBuffer extends NominalBuffer {
 
 
 	private final byte[] data;
 	private final Format targetFormat;
 	private final int maxCategories;
 	private boolean frozen = false;
-	private final Map<T, Byte> indexLookup = new ConcurrentHashMap<>();
-	private final List<T> valueLookup = new ArrayList<>();
+	private final Map<String, Byte> indexLookup = new ConcurrentHashMap<>();
+	private final List<String> valueLookup = new ArrayList<>();
 
 	/**
 	 * Creates a buffer of the given length.
@@ -57,8 +57,8 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * @param length
 	 * 		the length of the buffer
 	 */
-	UInt8CategoricalBuffer(int length) {
-		this(length, Format.UNSIGNED_INT8);
+	UInt8NominalBuffer(ColumnType<String> type, int length) {
+		this(type, length, Format.UNSIGNED_INT8);
 	}
 
 	/**
@@ -68,11 +68,11 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 *
 	 * @param column
 	 * 		the column to convert to a buffer
-	 * @param elementType
+	 * @param type
 	 * 		the desired type of the buffer, must be a super type of the column type
 	 */
-	UInt8CategoricalBuffer(Column column, Class<T> elementType) {
-		this(column, elementType, Format.UNSIGNED_INT8);
+	UInt8NominalBuffer(Column column, ColumnType<String> type) {
+		this(column, type, Format.UNSIGNED_INT8);
 	}
 
 	/**
@@ -83,7 +83,8 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * @param targetFormat
 	 * 		the format of the final column
 	 */
-	UInt8CategoricalBuffer(int length, Format targetFormat) {
+	UInt8NominalBuffer(ColumnType<String> type, int length, Format targetFormat) {
+		super(type);
 		this.data = new byte[length];
 		this.targetFormat = targetFormat;
 		this.maxCategories = Integer.min(targetFormat.maxValue(), Format.UNSIGNED_INT8.maxValue());
@@ -97,17 +98,18 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 *
 	 * @param column
 	 * 		the column to convert to a buffer
-	 * @param elementType
+	 * @param type
 	 * 		the desired type of the buffer, must be a super type of the column type
 	 * @param targetFormat
 	 * 		the format of the final column
 	 */
-	UInt8CategoricalBuffer(Column column, Class<T> elementType, Format targetFormat) {
+	UInt8NominalBuffer(Column column, ColumnType<String> type, Format targetFormat) {
+		super(type);
 		if (column instanceof CategoricalColumn) {
 			this.targetFormat = targetFormat;
 			this.maxCategories = Integer.min(targetFormat.maxValue(), Format.UNSIGNED_INT8.maxValue());
-			CategoricalColumn<?> categoricalColumn = (CategoricalColumn) column;
-			Dictionary<T> dictionary = categoricalColumn.getDictionary(elementType);
+			CategoricalColumn categoricalColumn = (CategoricalColumn) column;
+			Dictionary dictionary = categoricalColumn.getDictionary();
 			if (dictionary.maximalIndex() < maxCategories) {
 				if (categoricalColumn.getFormat() == Format.UNSIGNED_INT8) {
 					// Same format: directly copy the data
@@ -129,17 +131,17 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 		}
 	}
 
-	private void fillStructures(Dictionary<T> values) {
+	private void fillStructures(Dictionary values) {
 		valueLookup.add(null);
 		for (int i = 1; i <= values.maximalIndex(); i++) {
-			T value = values.get(i);
+			String value = values.get(i);
 			valueLookup.add(value);
 			indexLookup.put(value, (byte) i);
 		}
 	}
 
 	@Override
-	public T get(int index) {
+	public String get(int index) {
 		int valueIndex = Byte.toUnsignedInt(data[index]);
 		synchronized (valueLookup) {
 			return valueLookup.get(valueIndex);
@@ -150,7 +152,7 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * {@inheritDoc} This method is thread-safe.
 	 */
 	@Override
-	public void set(int index, T value) {
+	public void set(int index, String value) {
 		if (!setSave(index, value)) {
 			throw new IllegalArgumentException("More than " + maxCategories + " different values.");
 		}
@@ -160,7 +162,7 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * {@inheritDoc} This method is thread-safe.
 	 */
 	@Override
-	public boolean setSave(int index, T value) {
+	public boolean setSave(int index, String value) {
 		if (frozen) {
 			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
@@ -221,7 +223,7 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 
 
 	@Override
-	List<T> getMapping() {
+	List<String> getMapping() {
 		return valueLookup;
 	}
 
@@ -231,12 +233,8 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	}
 
 	@Override
-	public CategoricalColumn<T> toColumn(ColumnType<T> type) {
+	public CategoricalColumn toColumn() {
 		freeze();
-		Objects.requireNonNull(type, "Column type must not be null");
-		if (type.category() != Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Column type must be categorical");
-		}
 		PackedIntegers packed;
 		switch (targetFormat) {
 			case UNSIGNED_INT2:
@@ -254,12 +252,8 @@ public class UInt8CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	}
 
 	@Override
-	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
+	public CategoricalColumn toBooleanColumn(String positiveValue) {
 		freeze();
-		Objects.requireNonNull(type, "Column type must not be null");
-		if (type.category() != Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Column type must be categorical");
-		}
 		if (valueLookup.size() > BooleanDictionary.MAXIMAL_RAW_SIZE) {
 			throw new IllegalArgumentException("Boolean column must have 2 values or less");
 		}

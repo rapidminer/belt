@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -24,7 +25,6 @@ import java.util.SplittableRandom;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.ColumnUtils;
 import com.rapidminer.belt.reader.NumericReader;
 
@@ -122,19 +122,19 @@ public final class NumericRowWriter {
 	 * @param columnLabels
 	 * 		the names for the columns to construct
 	 * @param types
-	 * 		the types of the columns to construct, either {@link ColumnTypes#INTEGER} or {@link ColumnTypes#REAL}
+	 * 		the types of the columns to construct, either {@link ColumnType#INTEGER_53_BIT} or {@link ColumnType#REAL}
 	 * @param initialize
 	 * 		if this is {@code true} every value that is not explicitly set is missing, if this is {@link false} values
 	 * 		for	indices that are not explicitly set are undetermined
 	 */
-	NumericRowWriter(List<String> columnLabels, List<ColumnType<Void>> types, boolean initialize) {
+	NumericRowWriter(List<String> columnLabels, List<TypeId> types, boolean initialize) {
 		int numberOfColumns = columnLabels.size();
 		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(MAX_CHECK_FOR_SPARSITY_ROW,
 				MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
 		columns = new NumericColumnWriter[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
 		for (int i = 0; i < numberOfColumns; i++) {
-			columns[i] = getBufferForType(Objects.requireNonNull(types.get(i), "column type must not be null").id());
+			columns[i] = getBufferForType(Objects.requireNonNull(types.get(i), "column type must not be null"));
 		}
 		bufferWidth = numberOfColumns;
 		this.initialize = initialize;
@@ -172,21 +172,21 @@ public final class NumericRowWriter {
 	 * @param columnLabels
 	 * 		the names for the columns to construct
 	 * @param types
-	 * 		the types of the columns to construct, either {@link ColumnTypes#INTEGER} or {@link ColumnTypes#REAL}
+	 * 		the types of the columns to construct, either {@link ColumnType#INTEGER_53_BIT} or {@link ColumnType#REAL}
 	 * @param expectedRows
 	 * 		the expected number of rows
 	 * @param initialize
 	 * 		if this is {@code true} every value that is not explicitly set is missing, if this is {@link false} values
 	 * 		for	indices that are not explicitly set are undetermined
 	 */
-	NumericRowWriter(List<String> columnLabels, List<ColumnType<Void>> types, int expectedRows, boolean initialize) {
+	NumericRowWriter(List<String> columnLabels, List<TypeId> types, int expectedRows, boolean initialize) {
 		int numberOfColumns = columnLabels.size();
 		checkForSparsityRow = Math.max(BUFFER_HEIGHT + 1, Math.min(MAX_CHECK_FOR_SPARSITY_ROW,
 				MAX_CHECK_FOR_SPARSITY_OVERALL_ROWS / numberOfColumns));
 		columns = new NumericColumnWriter[numberOfColumns];
 		this.columnLabels = columnLabels.toArray(new String[0]);
 		for (int i = 0; i < numberOfColumns; i++) {
-			columns[i] = getBufferForType(Objects.requireNonNull(types.get(i), "column type must not be null").id(),
+			columns[i] = getBufferForType(Objects.requireNonNull(types.get(i), "column type must not be null"),
 					expectedRows);
 		}
 		bufferWidth = numberOfColumns;
@@ -292,8 +292,8 @@ public final class NumericRowWriter {
 	 * Returns an integer or real growing column buffer without set length.
 	 */
 	private NumericColumnWriter getBufferForType(TypeId type) {
-		if (type == TypeId.INTEGER) {
-			return new IntegerColumnWriter();
+		if (type == TypeId.INTEGER_53_BIT) {
+			return new Integer53BitColumnWriter();
 		} else if (type == TypeId.REAL) {
 			return new RealColumnWriter();
 		}
@@ -305,8 +305,8 @@ public final class NumericRowWriter {
 	 * Returns an integer or real growing column buffer with the given length.
 	 */
 	private NumericColumnWriter getBufferForType(TypeId type, int expectedRows) {
-		if (type == TypeId.INTEGER) {
-			return new IntegerColumnWriter(expectedRows);
+		if (type == TypeId.INTEGER_53_BIT) {
+			return new Integer53BitColumnWriter(expectedRows);
 		} else if (type == TypeId.REAL) {
 			return new RealColumnWriter(expectedRows);
 		}
@@ -325,13 +325,13 @@ public final class NumericRowWriter {
 	static void checkForSparsity(NumericColumnWriter[] columns, int length) {
 		for (int i = 0; i < columns.length; i++) {
 			NumericColumnWriter column = columns[i];
-			if (column instanceof IntegerColumnWriter) {
-				IntegerColumnWriter writer = (IntegerColumnWriter) column;
+			if (column instanceof Integer53BitColumnWriter) {
+				Integer53BitColumnWriter writer = (Integer53BitColumnWriter) column;
 				double[] data = writer.getData();
 				Optional<Double> defaultValue = estimateDefaultValue(data, length);
 				if (defaultValue.isPresent()) {
 					// replace the dense column writer by its sparse version
-					column = new IntegerColumnWriterSparse(defaultValue.get());
+					column = new Integer53BitColumnWriterSparse(defaultValue.get());
 					columns[i] = column;
 					column.fill(data, 0, 0, 1, length);
 				}

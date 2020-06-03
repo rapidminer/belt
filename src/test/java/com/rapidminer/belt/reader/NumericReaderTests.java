@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -70,6 +70,16 @@ public class NumericReaderTests {
 		@Test(expected = NullPointerException.class)
 		public void testNullColumn() {
 			Readers.numericReader(null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullColumnSmall() {
+			SmallReaders.smallNumericReader(null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullColumnUnbuffered() {
+			SmallReaders.unbufferedNumericReader(null);
 		}
 
 		@Test
@@ -200,6 +210,30 @@ public class NumericReaderTests {
 			int reads = 16;
 			Column column = ColumnTestUtils.getNumericColumn(TypeId.REAL, new double[n]);
 			NumericReader reader = new NumericReader(column, 10, column.size());
+			for (int i = 0; i < reads; i++) {
+				reader.read();
+			}
+			assertEquals(reads - 1, reader.position());
+		}
+
+		@Test
+		public void testGetBufferSmall() {
+			int n = 64;
+			int reads = 16;
+			Column column = ColumnTestUtils.getNumericColumn(TypeId.REAL, new double[n]);
+			NumericReader reader = SmallReaders.smallNumericReader(column);
+			for (int i = 0; i < reads; i++) {
+				reader.read();
+			}
+			assertEquals(reads - 1, reader.position());
+		}
+
+		@Test
+		public void testGetBufferMinimal() {
+			int n = 64;
+			int reads = 16;
+			Column column = ColumnTestUtils.getNumericColumn(TypeId.REAL, new double[n]);
+			NumericReader reader = SmallReaders.unbufferedNumericReader(column);
 			for (int i = 0; i < reads; i++) {
 				reader.read();
 			}

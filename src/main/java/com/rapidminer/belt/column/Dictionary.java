@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -16,6 +16,7 @@
 
 package com.rapidminer.belt.column;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,23 +28,23 @@ import com.rapidminer.belt.reader.CategoricalReader;
 
 
 /**
- * A dictionary is a one-to-one mapping of category indices to complex values. Returns {@code null} for unknown
+ * A dictionary is a one-to-one mapping of category indices to distinct String values. Returns {@code null} for unknown
  * indices such as {@link CategoricalReader#MISSING_CATEGORY}. All known indices are mapped to distinct object values.
  * <p>
  * In case it has at most two non-null object values, a dictionary can be boolean, see {@link #isBoolean()}.
  *
  * @author Gisa Meier
  */
-public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
+public class Dictionary implements Iterable<Dictionary.Entry> {
 
 	/**
 	 * An entry of a {@link Dictionary}, consisting of a category index and the associated object value. The entries
 	 * are mutable and will be reused in iterators, therefore they should not be stored.
 	 */
-	public static final class Entry<T> {
+	public static final class Entry {
 
 		private int index;
-		private T value;
+		private String value;
 
 		/**
 		 * Returns the category index.
@@ -59,20 +60,20 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 		 *
 		 * @return the object value
 		 */
-		public T getValue() {
+		public String getValue() {
 			return value;
 		}
 	}
 
 
-	private final List<T> dictionary;
+	private final List<String> dictionary;
 	private final int unused;
 
 	/**
 	 * @param dictionary
 	 * 		list with {@code null} at first place and no other entries {@code null}
 	 */
-	Dictionary(List<T> dictionary) {
+	Dictionary(List<String> dictionary) {
 		this.dictionary = dictionary;
 		unused = 0;
 	}
@@ -83,7 +84,7 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	 * @param unused
 	 * 		the number of {@code null} entries in the list apart from the first entry
 	 */
-	Dictionary(List<T> dictionary, int unused) {
+	Dictionary(List<String> dictionary, int unused) {
 		this.dictionary = dictionary;
 		this.unused = unused;
 	}
@@ -96,7 +97,7 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	 * 		the index for which to retrieve the value from this dictionary
 	 * @return the value associated to the category index
 	 */
-	public T get(int categoryIndex) {
+	public String get(int categoryIndex) {
 		if (categoryIndex < 0 || categoryIndex >= dictionary.size()) {
 			return null;
 		}
@@ -109,8 +110,8 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	 *
 	 * @return the inverse of the dictionary
 	 */
-	public Map<T, Integer> createInverse() {
-		Map<T, Integer> inverseDictionary = new HashMap<>();
+	public Map<String, Integer> createInverse() {
+		Map<String, Integer> inverseDictionary = new HashMap<>();
 		for (int i = 1; i < dictionary.size(); i++) {
 			inverseDictionary.put(dictionary.get(i), i);
 		}
@@ -125,13 +126,13 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	 * @return an iterator for the dictionary values which never returns {@code null}
 	 */
 	@Override
-	public Iterator<Entry<T>> iterator() {
-		Iterator<T> iterator = dictionary.iterator();
+	public Iterator<Entry> iterator() {
+		Iterator<String> iterator = dictionary.iterator();
 		iterator.next();
-		return new Iterator<Entry<T>>() {
+		return new Iterator<Entry>() {
 
 			private int index = 1;
-			private Entry<T> entry = new Entry<>();
+			private Entry entry = new Entry();
 
 			@Override
 			public boolean hasNext() {
@@ -139,7 +140,7 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 			}
 
 			@Override
-			public Entry<T> next() {
+			public Entry next() {
 				do {
 					entry.index = index++;
 					entry.value = iterator.next();
@@ -205,7 +206,7 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	/**
 	 * Returns the positive index if this dictionary {@link #hasPositive()} or {@link BooleanDictionary#NO_ENTRY}.
 	 *
-	 * @return whether a positive index exists
+	 * @return the positive index or {@link BooleanDictionary#NO_ENTRY}
 	 * @throws UnsupportedOperationException
 	 * 		if {@link #isBoolean()} returns {@code false}
 	 */
@@ -225,13 +226,15 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	}
 
 	/**
-	 * Creates a new boolean dictionary with the given positive value.
+	 * Creates a new boolean dictionary with the given positive value. If the positive value is not part of the
+	 * dictionary yet, it is added to the dictionary. The dictionary needs to be compact because boolean dictionaries do
+	 * not allow gaps. You can call {@link Columns#compactDictionary(Column)} to get a compact dictionary.
 	 *
 	 * @param positiveValue
 	 * 		the new positive value
 	 * @return a boolean dictionary with the given positive index
 	 */
-	BooleanDictionary<T> toBoolean(T positiveValue) {
+	BooleanDictionary toBoolean(String positiveValue) {
 		int positiveIndex = BooleanDictionary.NO_ENTRY;
 		if(positiveValue!=null) {
 			for (int i = 0; i < dictionary.size(); i++) {
@@ -240,8 +243,14 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 					break;
 				}
 			}
+			if (positiveIndex == BooleanDictionary.NO_ENTRY && size() < 2) {
+				List<String> newDictionary = new ArrayList<>(dictionary);
+				newDictionary.add(positiveValue);
+				positiveIndex = newDictionary.size() - 1;
+				return new BooleanDictionary(newDictionary, positiveIndex);
+			}
 		}
-		return new BooleanDictionary<>(dictionary, positiveIndex);
+		return new BooleanDictionary(dictionary, positiveIndex);
 	}
 
 	/**
@@ -249,7 +258,7 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 	 *
 	 * @return the immutable list of object values
 	 */
-	List<T> getValueList() {
+	List<String> getValueList() {
 		return Collections.unmodifiableList(dictionary);
 	}
 
@@ -266,7 +275,7 @@ public class Dictionary<T> implements Iterable<Dictionary.Entry<T>> {
 		if (o == null || getClass() != o.getClass()) {
 			return false;
 		}
-		Dictionary<?> that = (Dictionary<?>) o;
+		Dictionary that = (Dictionary) o;
 		return Objects.equals(dictionary, that.dictionary);
 	}
 

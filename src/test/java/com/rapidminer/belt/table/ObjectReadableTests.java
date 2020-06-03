@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -26,12 +26,13 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.SplittableRandom;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -43,7 +44,6 @@ import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.DateTimeColumn;
 import com.rapidminer.belt.column.TimeColumn;
 import com.rapidminer.belt.reader.ObjectReader;
@@ -350,32 +350,34 @@ public class ObjectReadableTests {
 		return mapping;
 	}
 
-	private final static ColumnType<Object> OBJECT_TYPE = ColumnTypes.categoricalType(
-			"com.rapidminer.belt.column.test.objectcolumn", Object.class, null);
+	private final static ColumnType<String> STRING_TYPE = ColumnTestUtils.categoricalType(
+			String.class, null);
 
 	private static Column categorical2BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		byte[] byteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt2(byteData, i, data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(OBJECT_TYPE, packed, mapping);
+		return ColumnAccessor.get().newCategoricalColumn(STRING_TYPE, packed, newMapping);
 	}
 
 	private static Column remappedCategorical2BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] remapping = zeroFixPermutation(mapping.size());
-		List<Object> reMapping = reDictionary(mapping, remapping);
+		List<String> reMapping = reDictionary(newMapping, remapping);
 
 		byte[] byteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt2(byteData, i, data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, packed, reMapping, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, packed, reMapping, remapping);
 	}
 
-	private static List<Object> reDictionary(List<Object> mapping, int[] remapping) {
-		List<Object> remappedDictionary = new ArrayList<>(mapping);
+	private static List<String> reDictionary(List<String> mapping, int[] remapping) {
+		List<String> remappedDictionary = new ArrayList<>(mapping);
 		for (int i = 1; i < remapping.length; i++) {
 			remappedDictionary.set(remapping[i], mapping.get(i));
 		}
@@ -383,23 +385,25 @@ public class ObjectReadableTests {
 	}
 
 	private static Column categorical4BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		byte[] byteData = new byte[data.length % 2 == 0 ? data.length / 2 : data.length / 2 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt4(byteData, i, data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnAccessor.get().newCategoricalColumn(OBJECT_TYPE, packed, mapping);
+		return ColumnAccessor.get().newCategoricalColumn(STRING_TYPE, packed, newMapping);
 	}
 
 	private static Column remappedCategorical4BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] remapping = zeroFixPermutation(mapping.size());
-		List<Object> reMapping = reDictionary(mapping, remapping);
+		List<String> reMapping = reDictionary(newMapping, remapping);
 		byte[] byteData = new byte[data.length % 2 == 0 ? data.length / 2 : data.length / 2 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt4(byteData, i, data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, packed, reMapping, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, packed, reMapping, remapping);
 	}
 
 	private static Column sparseCategorical8BitColumn(int[] data, List<Object> mapping) {
@@ -439,6 +443,7 @@ public class ObjectReadableTests {
 	}
 
 	private static Column remappedCategoricalSparse16BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int max = -1;
 		short[] shortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
@@ -448,10 +453,11 @@ public class ObjectReadableTests {
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedCategoricalSparseColumn(OBJECT_TYPE, shortData, mapping, remapping, ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(STRING_TYPE, shortData, newMapping, remapping, ColumnTestUtils.getMostFrequentValue(shortData, (short) 0));
 	}
 
 	private static Column remappedCategoricalSparse8BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int max = -1;
 		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
@@ -462,68 +468,75 @@ public class ObjectReadableTests {
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getRemappedCategoricalSparseColumn(OBJECT_TYPE, packed, mapping, remapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(STRING_TYPE, packed, newMapping, remapping, ColumnTestUtils.getMostFrequentValue(byteData, (byte) 0));
 	}
 
 	private static Column remappedCategoricalSparse32BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int max = -1;
 		for (int i = 0; i < data.length; i++) {
 			max = Math.max(max, i);
 		}
 		int[] remapping = new int[max + 1];
 		Arrays.setAll(remapping, i -> i);
-		return ColumnTestUtils.getRemappedCategoricalSparseColumn(OBJECT_TYPE, data, mapping, remapping, ColumnTestUtils.getMostFrequentValue(data, 0));
+		return ColumnTestUtils.getRemappedCategoricalSparseColumn(STRING_TYPE, data, newMapping, remapping, ColumnTestUtils.getMostFrequentValue(data, 0));
 	}
 
 	private static CategoricalColumn categorical8BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
 			byteData[i] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
 		long seed = 7704491377044913L;
-		return ColumnTestUtils.getCategoricalColumn(seed, OBJECT_TYPE, packed, mapping);
+		return ColumnTestUtils.getCategoricalColumn(seed, STRING_TYPE, packed, newMapping);
 	}
 
 	private static Column remappedCategorical8BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		byte[] byteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
 			byteData[i] = (byte) data[i];
 		}
 		int[] remapping = zeroFixPermutation(mapping.size());
-		List<Object> reMapping = reDictionary(mapping, remapping);
+		List<String> reMapping = reDictionary(newMapping, remapping);
 		PackedIntegers packed = new PackedIntegers(byteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, packed, reMapping, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, packed, reMapping, remapping);
 	}
 
 	private static CategoricalColumn categorical16BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		short[] shortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
 			shortData[i] = (short) data[i];
 		}
 		long seed = 7704491377044913L;
-		return ColumnTestUtils.getCategoricalColumn(seed, OBJECT_TYPE, shortData, mapping);
+		return ColumnTestUtils.getCategoricalColumn(seed, STRING_TYPE, shortData, newMapping);
 	}
 
 	private static Column remappedCategorical16BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		short[] shortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
 			shortData[i] = (short) data[i];
 		}
 		int[] remapping = zeroFixPermutation(mapping.size());
-		List<Object> reMapping = reDictionary(mapping, remapping);
-		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, shortData, reMapping, remapping);
+		List<String> reMapping = reDictionary(newMapping, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, shortData, reMapping, remapping);
 	}
 
 	private static CategoricalColumn categorical32BitColumn(int[] data, List<Object> mapping) {
 		long seed = 7704491377044913L;
-		return ColumnTestUtils.getCategoricalColumn(seed, OBJECT_TYPE, data, mapping);
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
+		return ColumnTestUtils.getCategoricalColumn(seed, STRING_TYPE, data, newMapping);
 	}
 
 	private static Column remappedCategorical32BitColumn(int[] data, List<Object> mapping) {
+		List<String> newMapping = mapping.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] remapping = zeroFixPermutation(mapping.size());
-		List<Object> reMapping = reDictionary(mapping, remapping);
-		return ColumnTestUtils.getRemappedCategoricalColumn(OBJECT_TYPE, data, reMapping, remapping);
+		List<String> reMapping = reDictionary(newMapping, remapping);
+		return ColumnTestUtils.getRemappedCategoricalColumn(STRING_TYPE, data, reMapping, remapping);
 	}
 
 	private static int[] permutation(int n) {
@@ -555,111 +568,122 @@ public class ObjectReadableTests {
 	}
 
 	private static Column mappedCategorical2BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary =
+				dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		byte[] mappedByteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt2(mappedByteData, mapping[i], data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnTestUtils.getMappedCategoricalColumn(OBJECT_TYPE, packed, dictionary, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, packed, newDictionary, mapping);
 	}
 
 	private static Column remappedMappedCategorical2BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		byte[] mappedByteData = new byte[data.length % 4 == 0 ? data.length / 4 : data.length / 4 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt2(mappedByteData, mapping[i], data[i]);
 		}
 		int[] remapping = zeroFixPermutation(dictionary.size());
-		List<Object> reDictionary = reDictionary(dictionary, remapping);
+		List<String> reDictionary = reDictionary(newDictionary, remapping);
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT2, data.length);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(OBJECT_TYPE, packed, reDictionary, remapping,
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, packed, reDictionary, remapping,
 				mapping);
 	}
 
 	private static Column mappedCategorical4BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		byte[] mappedByteData = new byte[data.length % 2 == 0 ? data.length / 2 : data.length / 2 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt4(mappedByteData, mapping[i], data[i]);
 		}
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnTestUtils.getMappedCategoricalColumn(OBJECT_TYPE, packed, dictionary, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, packed, newDictionary, mapping);
 	}
 
 	private static Column remappedMappedCategorical4BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		byte[] mappedByteData = new byte[data.length % 2 == 0 ? data.length / 2 : data.length / 2 + 1];
 		for (int i = 0; i < data.length; i++) {
 			IntegerFormats.writeUInt4(mappedByteData, mapping[i], data[i]);
 		}
 		int[] remapping = zeroFixPermutation(dictionary.size());
-		List<Object> reDictionary = reDictionary(dictionary, remapping);
+		List<String> reDictionary = reDictionary(newDictionary, remapping);
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT4, data.length);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(OBJECT_TYPE, packed, reDictionary, remapping, mapping);
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, packed, reDictionary, remapping, mapping);
 	}
 
 	private static Column mappedCategorical8BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		byte[] mappedByteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
 			mappedByteData[mapping[i]] = (byte) data[i];
 		}
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getMappedCategoricalColumn(OBJECT_TYPE, packed, dictionary, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, packed, newDictionary, mapping);
 	}
 
 	private static Column remappedMappedCategorical8BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		byte[] mappedByteData = new byte[data.length];
 		for (int i = 0; i < data.length; i++) {
 			mappedByteData[mapping[i]] = (byte) data[i];
 		}
 		int[] remapping = zeroFixPermutation(dictionary.size());
-		List<Object> reDictionary = reDictionary(dictionary, remapping);
+		List<String> reDictionary = reDictionary(newDictionary, remapping);
 		PackedIntegers packed = new PackedIntegers(mappedByteData, Format.UNSIGNED_INT8, data.length);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(OBJECT_TYPE, packed, reDictionary, remapping, mapping);
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, packed, reDictionary, remapping, mapping);
 	}
 
 	private static Column mappedCategorical16BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		short[] mappedShortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
 			mappedShortData[mapping[i]] = (short) data[i];
 		}
-		return ColumnTestUtils.getMappedCategoricalColumn(OBJECT_TYPE, mappedShortData, dictionary, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, mappedShortData, newDictionary, mapping);
 	}
 
 	private static Column remappedMappedCategorical16BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		short[] mappedShortData = new short[data.length];
 		for (int i = 0; i < data.length; i++) {
 			mappedShortData[mapping[i]] = (short) data[i];
 		}
 		int[] remapping = zeroFixPermutation(dictionary.size());
-		List<Object> reDictionary = reDictionary(dictionary, remapping);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(OBJECT_TYPE, mappedShortData, reDictionary,
+		List<String> reDictionary = reDictionary(newDictionary, remapping);
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, mappedShortData, reDictionary,
 				remapping, mapping);
 	}
 
 	private static Column mappedCategorical32BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		int[] mappedIntData = new int[data.length];
 		for (int i = 0; i < data.length; i++) {
 			mappedIntData[mapping[i]] = data[i];
 		}
-		return ColumnTestUtils.getMappedCategoricalColumn(OBJECT_TYPE, mappedIntData, dictionary, mapping);
+		return ColumnTestUtils.getMappedCategoricalColumn(STRING_TYPE, mappedIntData, newDictionary, mapping);
 	}
 
 	private static Column remappedMappedCategorical32BitColumn(int[] data, List<Object> dictionary) {
+		List<String> newDictionary = dictionary.stream().map(o -> Objects.toString(o, null)).collect(Collectors.toList());
 		int[] mapping = permutation(data.length);
 		int[] mappedIntData = new int[data.length];
 		for (int i = 0; i < data.length; i++) {
 			mappedIntData[mapping[i]] = data[i];
 		}
 		int[] remapping = zeroFixPermutation(dictionary.size());
-		List<Object> reDictionary = reDictionary(dictionary, remapping);
-		return ColumnTestUtils.getRemappedMappedCategoricalColumn(OBJECT_TYPE, mappedIntData, reDictionary,
+		List<String> reDictionary = reDictionary(newDictionary, remapping);
+		return ColumnTestUtils.getRemappedMappedCategoricalColumn(STRING_TYPE, mappedIntData, reDictionary,
 				remapping, mapping);
 	}
 
@@ -668,8 +692,7 @@ public class ObjectReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			objectData[i] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 		}
-		return ColumnAccessor.get().newObjectColumn(ColumnTypes.categoricalType("com.rapidminer.belt.column.test.objectcolumn",
-				Object.class, null), objectData);
+		return ColumnAccessor.get().newObjectColumn(ColumnTestUtils.OBJECT_DUMMY_TYPE, objectData);
 	}
 
 	private static Column mappedFree(int[] data, List<Object> categoricalMapping) {
@@ -678,8 +701,7 @@ public class ObjectReadableTests {
 		for (int i = 0; i < data.length; i++) {
 			mappedObjectData[mapping[i]] = data[i] == 0 ? null : categoricalMapping.get(data[i]);
 		}
-		return ColumnTestUtils.getMappedObjectColumn(ColumnTypes.objectType(
-				"com.rapidminer.belt.column.test.objectcolumn", Object.class, null),
+		return ColumnTestUtils.getMappedObjectColumn(ColumnTestUtils.OBJECT_DUMMY_TYPE,
 				mappedObjectData, mapping);
 	}
 
@@ -840,6 +862,11 @@ public class ObjectReadableTests {
 			Object[] buffer = new Object[end];
 			column.fill(buffer, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertArrayEquals(expected, buffer);
 		}
 
@@ -857,6 +884,11 @@ public class ObjectReadableTests {
 			Column column = impl.getBuilder().build(indices, mapping);
 			Object[] buffer = new Object[end - start];
 			column.fill(buffer, start);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, buffer.length - start));
 		}
@@ -876,6 +908,11 @@ public class ObjectReadableTests {
 			Object[] buffer = new Object[end - start];
 			column.fill(buffer, start);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			// The first 10 elements that have been read should be equal to the last 10 elements of data.
 			// The rest of the read elements is undefined (see javadoc of fill).
 			assertArrayEquals(expected, buffer);
@@ -893,6 +930,11 @@ public class ObjectReadableTests {
 			Object[] expected = Arrays.copyOfRange(fill(indices, mapping), start, end);
 
 			Column column = impl.getBuilder().build(indices, mapping);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			for (int i = 0; i < nReads; i++) {
 				Object[] buffer = new Object[end - start];
@@ -952,9 +994,15 @@ public class ObjectReadableTests {
 			Object[] expected = Arrays.copyOf(flattenAndFillTable(table, mapping), 128);
 
 			Object[] buffer = new Object[bufferSize];
+			Column column = null;
 			for (int i = 0; i < nColumns; i++) {
-				Column column = impl.getBuilder().build(table[i], mapping);
+				column = impl.getBuilder().build(table[i], mapping);
 				column.fill(buffer, 0, i, nColumns);
+			}
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
 			}
 
 			assertArrayEquals(expected, buffer);
@@ -976,9 +1024,10 @@ public class ObjectReadableTests {
 			Object expected[] = Arrays.copyOf(flattenAndFillTable(table, mapping), bufferSize);
 
 			Object[] buffer = new Object[bufferSize];
+			Column column = null;
 			try {
 				for (int i = 0; i < nColumns; i++) {
-					Column column = impl.getBuilder().build(table[i], mapping);
+					column = impl.getBuilder().build(table[i], mapping);
 					column.fill(buffer, 0, i, nColumns);
 				}
 			} catch (AssertionError e) {
@@ -989,6 +1038,10 @@ public class ObjectReadableTests {
 				return;
 			}
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 			assertArrayEquals(expected, buffer);
 		}
 
@@ -1008,9 +1061,10 @@ public class ObjectReadableTests {
 			Object expected[] = Arrays.copyOf(flattenAndFillTable(table, mapping), bufferSize);
 
 			Object[] buffer = new Object[bufferSize];
+			Column column = null;
 			try {
 				for (int i = 0; i < nColumns; i++) {
-					Column column = impl.getBuilder().build(table[i], mapping);
+					column = impl.getBuilder().build(table[i], mapping);
 					column.fill(buffer, 0, i, nColumns);
 				}
 			} catch (AssertionError e) {
@@ -1019,6 +1073,11 @@ public class ObjectReadableTests {
 				// Therefore, the test would fail for non-sparse columns at this point.
 				// We do not care about these cases as we want to test the sparse columns with this test.
 				return;
+			}
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
 			}
 
 			assertArrayEquals(expected, buffer);
@@ -1037,9 +1096,15 @@ public class ObjectReadableTests {
 					startIndex * nColumns + bufferSize);
 
 			Object[] buffer = new Object[bufferSize];
+			Column column = null;
 			for (int i = 0; i < nColumns; i++) {
-				Column column = impl.getBuilder().build(table[i], mapping);
+				column = impl.getBuilder().build(table[i], mapping);
 				column.fill(buffer, startIndex, i, nColumns);
+			}
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
 			}
 
 			assertArrayEquals(expected, buffer);
@@ -1057,9 +1122,15 @@ public class ObjectReadableTests {
 			Object expected[] = Arrays.copyOf(flattenAndFillTable(table, mapping), bufferSize);
 
 			Object[] buffer = new Object[bufferSize];
+			Column column = null;
 			for (int i = 0; i < nColumns; i++) {
-				Column column = impl.getBuilder().build(table[i], mapping);
+				column = impl.getBuilder().build(table[i], mapping);
 				column.fill(buffer, 0, i, nColumns);
+			}
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
 			}
 
 			assertArrayEquals(expected, buffer);
@@ -1079,9 +1150,15 @@ public class ObjectReadableTests {
 					startIndex * nColumns + bufferSize);
 
 			Object[] buffer = new Object[bufferSize];
+			Column column = null;
 			for (int i = 0; i < nColumns; i++) {
-				Column column = impl.getBuilder().build(table[i], mapping);
+				column = impl.getBuilder().build(table[i], mapping);
 				column.fill(buffer, startIndex, i, nColumns);
+			}
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
 			}
 
 			assertArrayEquals(expected, buffer);
@@ -1097,6 +1174,12 @@ public class ObjectReadableTests {
 			int[][] table = generateTable(97074107L, nColumns, nRows);
 			List<Object> mapping = impl.getMapping().generate();
 			Object[] expected = Arrays.copyOf(flattenAndFillTable(table, mapping), 128);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			Column col = impl.getBuilder().build(table[0], mapping);
+			if (col.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			Object[] buffer = new Object[bufferSize];
 			for (int run = 0; run < nRuns; run++) {
@@ -1123,6 +1206,11 @@ public class ObjectReadableTests {
 			Column column = impl.getBuilder().build(table[0], mapping);
 			column.fill(buffer, nValues / 2, 0, 1);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			// The values that are out of range are undefined (see javadoc of fill).
 			// Therefore, we only check the values that are in bounds.
 			assertArrayEquals(expected, Arrays.copyOfRange(buffer, 0, nValues / 2));
@@ -1143,6 +1231,11 @@ public class ObjectReadableTests {
 			Column column = impl.getBuilder().build(table[0], mapping);
 			Object[] buffer = new Object[end - start];
 			column.fill(buffer, start, 0, 1);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			// The values that are out of range are undefined (see javadoc of fill).
 			// Therefore, we only check the values that are in bounds.
@@ -1237,6 +1330,11 @@ public class ObjectReadableTests {
 			Object[] mapped = new Object[nValues];
 			mappedColumn.fill(mapped, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertArrayEquals(expected, mapped);
 		}
 
@@ -1254,6 +1352,11 @@ public class ObjectReadableTests {
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(indices, categoricalMapping), mapping, false);
 			Object[] mapped = new Object[nValues];
 			mappedColumn.fill(mapped, 0);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(data, i -> Objects.toString(data[i], null));
+			}
 
 			assertArrayEquals(data, mapped);
 		}
@@ -1276,6 +1379,11 @@ public class ObjectReadableTests {
 			Object[] mapped = new Object[nValues];
 			mappedColumn.fill(mapped, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertArrayEquals(expected, mapped);
 		}
 
@@ -1296,6 +1404,11 @@ public class ObjectReadableTests {
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(indices, categoricalMapping), mapping, false);
 			Object[] mapped = new Object[nValues];
 			mappedColumn.fill(mapped, 0);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			assertArrayEquals(expected, mapped);
 		}
@@ -1320,6 +1433,11 @@ public class ObjectReadableTests {
 			Object[] mapped = new Object[nSubsetValues];
 			mappedColumn.fill(mapped, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertEquals(nSubsetValues, mappedColumn.size());
 			assertArrayEquals(expected, mapped);
 		}
@@ -1343,6 +1461,11 @@ public class ObjectReadableTests {
 			Object[] mapped = new Object[nSupersetValues];
 			mappedColumn.fill(mapped, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertEquals(nSupersetValues, mappedColumn.size());
 			assertArrayEquals(expected, mapped);
 		}
@@ -1365,6 +1488,11 @@ public class ObjectReadableTests {
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(indices, categoricalMapping), mapping, false);
 			Object[] mapped = new Object[nSupersetValues];
 			mappedColumn.fill(mapped, 0);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			assertEquals(nSupersetValues, mappedColumn.size());
 			assertArrayEquals(expected, mapped);
@@ -1390,6 +1518,11 @@ public class ObjectReadableTests {
 			Object[] mapped = new Object[nSupersetValues];
 			mappedColumn.fill(mapped, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertEquals(nSupersetValues, mappedColumn.size());
 			assertArrayEquals(expected, mapped);
 		}
@@ -1413,6 +1546,11 @@ public class ObjectReadableTests {
 			Column mappedColumn = ColumnAccessor.get().map(impl.builder.build(indices, categoricalMapping), mapping, false);
 			Object[] mapped = new Object[nSupersetValues];
 			mappedColumn.fill(mapped, 0, 0, 1);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			assertEquals(nSupersetValues, mappedColumn.size());
 			assertArrayEquals(expected, mapped);
@@ -1454,6 +1592,11 @@ public class ObjectReadableTests {
 
 			Object[] mapped = new Object[nValues];
 			mappedColumn.fill(mapped, 0);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (mappedColumn.type().elementType().equals(String.class)) {
+				Arrays.setAll(data, i -> Objects.toString(data[i], null));
+			}
 
 			assertArrayEquals(data, mapped);
 		}
@@ -1590,6 +1733,11 @@ public class ObjectReadableTests {
 			Column mapped = ((CacheMappedColumn) column).map(mapping, false, cache);
 			mapped.fill(buffer, 0);
 
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
+
 			assertArrayEquals(expected, buffer);
 		}
 
@@ -1619,6 +1767,11 @@ public class ObjectReadableTests {
 			Object[] buffer = new Object[nValues];
 			Column mapped = ((CacheMappedColumn) column).map(mapping, true, cache);
 			mapped.fill(buffer, 0);
+
+			//fix for categorical columns that cannot have integer element type any longer
+			if (column.type().elementType().equals(String.class)) {
+				Arrays.setAll(expected, i -> Objects.toString(expected[i], null));
+			}
 
 			assertArrayEquals(expected, buffer);
 		}
@@ -1678,7 +1831,9 @@ public class ObjectReadableTests {
 			Column column = impl.builder.build(data, categoricalMapping);
 			Object[] array = new Object[10];
 			column.fill(array, nValues - 1);
-			assertEquals(categoricalMapping.get(data[nValues - 1]), array[0]);
+			Object actual = array[0];
+			actual = actual instanceof String ? Integer.parseInt((String) actual) : actual;
+			assertEquals(categoricalMapping.get(data[nValues - 1]), actual);
 		}
 
 		@Test
@@ -1879,7 +2034,7 @@ public class ObjectReadableTests {
 			int[] data = {5, 7, 3, 1, 0, 5, 4};
 			Column column = column(data);
 
-			String expected = Column.TypeId.CUSTOM + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4)";
+			String expected = Column.TypeId.TEXT_SET + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4)";
 
 			assertEquals(expected, column.toString());
 		}
@@ -1893,7 +2048,7 @@ public class ObjectReadableTests {
 			}
 			Column column = column(data);
 
-			String expected = Column.TypeId.CUSTOM + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4, 11, "
+			String expected = Column.TypeId.TEXT_SET + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11)";
@@ -1911,7 +2066,7 @@ public class ObjectReadableTests {
 			data[32] = 23;
 			Column column = column(data);
 
-			String expected = Column.TypeId.CUSTOM + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4, 11, "
+			String expected = Column.TypeId.TEXT_SET + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, ..., 23)";
@@ -1929,7 +2084,7 @@ public class ObjectReadableTests {
 			data[32] = 0;
 			Column column = column(data);
 
-			String expected = Column.TypeId.CUSTOM + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4, 11, "
+			String expected = Column.TypeId.TEXT_SET + " Column (" + data.length + ")\n(" + "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, 4, 11, "
 					+ "5, 7, 3, 1, ?, 5, ..., ?)";

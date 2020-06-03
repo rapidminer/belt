@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -81,83 +82,95 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 
 
 	@Override
-	public <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, int[] data,
-														 List<T> dictionary) {
-		return createCategoricalColumn(type, data, new Dictionary<>(dictionary), new SplittableRandom());
+	public CategoricalColumn newCategoricalColumn(ColumnType<String> type, int[] data,
+												  List<String> dictionary) {
+		return createCategoricalColumn(type, data, new Dictionary(dictionary), new SplittableRandom());
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, short[] data,
-														 List<T> dictionary) {
-		return createCategoricalColumn(type, data, new Dictionary<>(dictionary), new SplittableRandom());
+	public CategoricalColumn newCategoricalColumn(ColumnType<String> type, short[] data,
+												  List<String> dictionary) {
+		return createCategoricalColumn(type, data, new Dictionary(dictionary), new SplittableRandom());
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type,
-														 IntegerFormats.PackedIntegers bytes,
-														 List<T> dictionary) {
-		return createCategoricalColumn(type, bytes, new Dictionary<>(dictionary), new SplittableRandom());
+	public CategoricalColumn newCategoricalColumn(ColumnType<String> type,
+												  IntegerFormats.PackedIntegers bytes,
+												  List<String> dictionary) {
+		return createCategoricalColumn(type, bytes, new Dictionary(dictionary), new SplittableRandom());
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, int[] data,
-														 List<T> dictionary, int positiveIndex) {
-		return createCategoricalColumn(type, data, new BooleanDictionary<>(dictionary, positiveIndex), new SplittableRandom());
+	public CategoricalColumn newCategoricalColumn(ColumnType<String> type, int[] data,
+												  List<String> dictionary, int positiveIndex) {
+		return createCategoricalColumn(type, data, new BooleanDictionary(dictionary, positiveIndex),
+				new SplittableRandom());
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, short[] data,
-														 List<T> dictionary, int positiveIndex) {
-		return createCategoricalColumn(type, data, new BooleanDictionary<>(dictionary, positiveIndex), new SplittableRandom());
+	public CategoricalColumn newCategoricalColumn(ColumnType<String> type, short[] data,
+												  List<String> dictionary, int positiveIndex) {
+		return createCategoricalColumn(type, data, new BooleanDictionary(dictionary, positiveIndex),
+				new SplittableRandom());
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type,
-														 IntegerFormats.PackedIntegers bytes,
-														 List<T> dictionary, int positiveIndex) {
-		return createCategoricalColumn(type, bytes, new BooleanDictionary<>(dictionary, positiveIndex), new SplittableRandom());
+	public CategoricalColumn newCategoricalColumn(ColumnType<String> type,
+												  IntegerFormats.PackedIntegers bytes,
+												  List<String> dictionary, int positiveIndex) {
+		return createCategoricalColumn(type, bytes, new BooleanDictionary(dictionary, positiveIndex),
+				new SplittableRandom());
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices, int[] nonDefaultValues,
-															   List<T> dictionary, int defaultValue, int size) {
-		return new CategoricalSparseColumn<>(type, nonDefaultIndices, nonDefaultValues, new Dictionary<>(dictionary),
-				defaultValue, size);
-	}
-
-	@Override
-	public <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices, short[] nonDefaultValues,
-															   List<T> dictionary, short defaultValue, int size) {
+	public CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+														int[] nonDefaultValues,
+														List<String> dictionary, int defaultValue, int size) {
 		return new CategoricalSparseColumn(type, nonDefaultIndices, nonDefaultValues, new Dictionary(dictionary),
 				defaultValue, size);
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices, byte[] nonDefaultValues,
-															   List<T> dictionary, byte defaultValue, int size) {
+	public CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+														short[] nonDefaultValues,
+														List<String> dictionary, short defaultValue, int size) {
 		return new CategoricalSparseColumn(type, nonDefaultIndices, nonDefaultValues, new Dictionary(dictionary),
 				defaultValue, size);
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices, int[] nonDefaultValues,
-															   List<T> dictionary, int defaultValue, int size, int positiveIndex) {
-		return new CategoricalSparseColumn<>(type, nonDefaultIndices, nonDefaultValues,
-				new BooleanDictionary<>(dictionary, positiveIndex), defaultValue, size);
+	public CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+														byte[] nonDefaultValues,
+														List<String> dictionary, byte defaultValue, int size) {
+		return new CategoricalSparseColumn(type, nonDefaultIndices, nonDefaultValues, new Dictionary(dictionary),
+				defaultValue, size);
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices, short[] nonDefaultValues,
-															   List<T> dictionary, short defaultValue, int size, int positiveIndex) {
+	public CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+														int[] nonDefaultValues,
+														List<String> dictionary, int defaultValue, int size,
+														int positiveIndex) {
 		return new CategoricalSparseColumn(type, nonDefaultIndices, nonDefaultValues,
 				new BooleanDictionary(dictionary, positiveIndex), defaultValue, size);
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices, byte[] nonDefaultValues,
-															   List<T> dictionary, byte defaultValue, int size, int positiveIndex) {
+	public CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+														short[] nonDefaultValues,
+														List<String> dictionary, short defaultValue, int size,
+														int positiveIndex) {
 		return new CategoricalSparseColumn(type, nonDefaultIndices, nonDefaultValues,
-				new BooleanDictionary<T>(dictionary, positiveIndex), defaultValue, size);
+				new BooleanDictionary(dictionary, positiveIndex), defaultValue, size);
+	}
+
+	@Override
+	public CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+														byte[] nonDefaultValues,
+														List<String> dictionary, byte defaultValue, int size,
+														int positiveIndex) {
+		return new CategoricalSparseColumn(type, nonDefaultIndices, nonDefaultValues,
+				new BooleanDictionary(dictionary, positiveIndex), defaultValue, size);
 	}
 
 	@Override
@@ -197,14 +210,15 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 		if (nanos == null || nanos.length == 0 || allNull(nanos)) {
 			return new DateTimeLowPrecisionSparseColumn(defaultValue, nonDefaultIndices, nonDefaultSeconds, size);
 		} else {
-			return new DateTimeHighPrecisionSparseColumn(defaultValue, nonDefaultIndices, nonDefaultSeconds, size, nanos);
+			return new DateTimeHighPrecisionSparseColumn(defaultValue, nonDefaultIndices, nonDefaultSeconds, size,
+					nanos);
 		}
 	}
 
 	@Override
-	public <T> CategoricalColumn<T> newSingleValueCategoricalColumn(ColumnType<T> type, T value, int size) {
-		return new CategoricalSparseColumn<>(type, new int[]{}, new byte[]{},
-				new Dictionary<>(Arrays.asList(null, value)), (byte) 1, size);
+	public CategoricalColumn newSingleValueCategoricalColumn(ColumnType<String> type, String value, int size) {
+		return new CategoricalSparseColumn(type, new int[]{}, new byte[]{},
+				new Dictionary(Arrays.asList(null, value)), (byte) 1, size);
 	}
 
 	@Override
@@ -220,7 +234,7 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 	}
 
 	@Override
-	public <T> List<T> getDictionaryList(Dictionary<T> dictionary) {
+	public List<String> getDictionaryList(Dictionary dictionary) {
 		return dictionary.getValueList();
 	}
 
@@ -297,17 +311,17 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 	 * sparsity is {@code >=} {@link #MIN_SPARSITY_32BIT}, the column will be represented by a sparse column
 	 * implementation that is optimized for sparse data. Otherwise it will be represented by a dense column.
 	 */
-	<T> CategoricalColumn<T> createCategoricalColumn(ColumnType<T> type, int[] data, Dictionary<T> dictionary,
+	CategoricalColumn createCategoricalColumn(ColumnType<String> type, int[] data, Dictionary dictionary,
 													 SplittableRandom random) {
 		if (data.length < MIN_SPARSE_COLUMN_SIZE) {
-			return new SimpleCategoricalColumn<>(type, data, dictionary);
+			return new SimpleCategoricalColumn(type, data, dictionary);
 		}
 		Optional<Integer> defaultValue = ColumnUtils.estimateDefaultValue(SPARSITY_SAMPLE_SIZE,
 				MIN_SPARSITY_32BIT, data, random);
 		if (defaultValue.isPresent()) {
-			return new CategoricalSparseColumn<>(type, data, dictionary, defaultValue.get());
+			return new CategoricalSparseColumn(type, data, dictionary, defaultValue.get());
 		} else {
-			return new SimpleCategoricalColumn<>(type, data, dictionary);
+			return new SimpleCategoricalColumn(type, data, dictionary);
 		}
 	}
 
@@ -318,17 +332,17 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 	 * sparsity is {@code >=} {@link #MIN_SPARSITY_16BIT}, the column will be represented by a sparse column
 	 * implementation that is optimized for sparse data. Otherwise it will be represented by a dense column.
 	 */
-	<T> CategoricalColumn<T> createCategoricalColumn(ColumnType<T> type, short[] data, Dictionary<T> dictionary,
+	CategoricalColumn createCategoricalColumn(ColumnType<String> type, short[] data, Dictionary dictionary,
 													 SplittableRandom random) {
 		if (data.length < MIN_SPARSE_COLUMN_SIZE) {
-			return new SimpleCategoricalColumn<>(type, data, dictionary);
+			return new SimpleCategoricalColumn(type, data, dictionary);
 		}
 		Optional<Short> defaultValue = ColumnUtils.estimateDefaultValue(SPARSITY_SAMPLE_SIZE,
 				MIN_SPARSITY_16BIT, data, random);
 		if (defaultValue.isPresent()) {
-			return new CategoricalSparseColumn<>(type, data, dictionary, defaultValue.get());
+			return new CategoricalSparseColumn(type, data, dictionary, defaultValue.get());
 		} else {
-			return new SimpleCategoricalColumn<>(type, data, dictionary);
+			return new SimpleCategoricalColumn(type, data, dictionary);
 		}
 	}
 
@@ -339,19 +353,19 @@ final class InternalColumnsImpl extends Columns.InternalColumns {
 	 * sparsity is {@code >=} {@link #MIN_SPARSITY_8BIT}, the column will be represented by a sparse column
 	 * implementation that is optimized for sparse data. Otherwise it will be represented by a dense column.
 	 */
-	<T> CategoricalColumn<T> createCategoricalColumn(ColumnType<T> type, IntegerFormats.PackedIntegers bytes,
-													 Dictionary<T> dictionary, SplittableRandom random) {
+	CategoricalColumn createCategoricalColumn(ColumnType<String> type, IntegerFormats.PackedIntegers bytes,
+													 Dictionary dictionary, SplittableRandom random) {
 		byte[] data = bytes.data();
 		if (data.length < MIN_SPARSE_COLUMN_SIZE || IntegerFormats.Format.UNSIGNED_INT2.equals(bytes.format()) ||
 				IntegerFormats.Format.UNSIGNED_INT4.equals(bytes.format())) {
-			return new SimpleCategoricalColumn<>(type, bytes, dictionary);
+			return new SimpleCategoricalColumn(type, bytes, dictionary);
 		}
 		Optional<Byte> defaultValue = ColumnUtils.estimateDefaultValue(SPARSITY_SAMPLE_SIZE,
 				MIN_SPARSITY_8BIT, data, random);
 		if (defaultValue.isPresent()) {
-			return new CategoricalSparseColumn<>(type, bytes, dictionary, defaultValue.get());
+			return new CategoricalSparseColumn(type, bytes, dictionary, defaultValue.get());
 		} else {
-			return new SimpleCategoricalColumn<>(type, bytes, dictionary);
+			return new SimpleCategoricalColumn(type, bytes, dictionary);
 		}
 	}
 

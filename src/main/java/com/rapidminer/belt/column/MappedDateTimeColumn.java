@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -181,7 +181,7 @@ class MappedDateTimeColumn extends DateTimeColumn implements CacheMappedColumn {
 
 	@Override
 	public int[] sort(Order order) {
-		Comparator<Instant> comparator = ColumnTypes.DATETIME.comparator();
+		Comparator<Instant> comparator = ColumnType.DATETIME.comparator();
 		Comparator<Instant> comparatorWithNull = Comparator.nullsLast(comparator);
 		if (highPrecision) {
 			return Sorting.sort(size(), (a, b) -> comparatorWithNull.compare(lookupHighPrecision(a),

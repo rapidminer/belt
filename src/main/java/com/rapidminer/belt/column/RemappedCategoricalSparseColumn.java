@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -35,7 +36,7 @@ import com.rapidminer.belt.util.Sorting;
  *
  * @author Kevin Majchrzak
  */
-class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
+class RemappedCategoricalSparseColumn extends CategoricalColumn {
 
 	private static final String NULL_DATA = "Data must not be null";
 	private static final String NULL_MAPPING = "Categorical dictionary must not be null";
@@ -101,7 +102,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	/**
 	 * Mapping used to map from the internal integer representation to categorical values.
 	 */
-	private final Dictionary<R> dictionary;
+	private final Dictionary dictionary;
 
 	/**
 	 * Creates a new RemappedCategoricalSparseColumn with the given type, defaultValue and data in form of {@link
@@ -120,7 +121,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * @param defaultValue
 	 * 		the default value (usually the most common value as this is most efficient).
 	 */
-	RemappedCategoricalSparseColumn(ColumnType<R> type, PackedIntegers bytes, Dictionary<R> dictionary, int[] remapping,
+	RemappedCategoricalSparseColumn(ColumnType<String> type, PackedIntegers bytes, Dictionary dictionary, int[] remapping,
 									byte defaultValue) {
 		super(type, bytes.size());
 		this.size = bytes.size();
@@ -171,7 +172,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * @param defaultValue
 	 * 		the default value (usually the most common value as this is most efficient).
 	 */
-	RemappedCategoricalSparseColumn(ColumnType<R> type, short[] data, Dictionary<R> dictionary, int[] remapping,
+	RemappedCategoricalSparseColumn(ColumnType<String> type, short[] data, Dictionary dictionary, int[] remapping,
 									short defaultValue) {
 		super(type, data.length);
 		this.size = data.length;
@@ -217,7 +218,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * @param defaultValue
 	 * 		the default value (usually the most common value as this is most efficient).
 	 */
-	RemappedCategoricalSparseColumn(ColumnType<R> type, int[] data, Dictionary<R> dictionary, int[] remapping,
+	RemappedCategoricalSparseColumn(ColumnType<String> type, int[] data, Dictionary dictionary, int[] remapping,
 									int defaultValue) {
 		super(type, data.length);
 		this.size = data.length;
@@ -251,8 +252,8 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * Used internally to create a new RemappedCategoricalSparseColumn by using an existing sparse columns data
 	 * representation.
 	 */
-	RemappedCategoricalSparseColumn(ColumnType<R> type, int[] nonDefaultIndices, byte[] nonDefaultValues,
-									Dictionary<R> dictionary, int[] remapping, byte defaultValue, int size) {
+	RemappedCategoricalSparseColumn(ColumnType<String> type, int[] nonDefaultIndices, byte[] nonDefaultValues,
+									Dictionary dictionary, int[] remapping, byte defaultValue, int size) {
 		super(type, size);
 		this.size = size;
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_MAPPING);
@@ -271,8 +272,8 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * Used internally to create a new RemappedCategoricalSparseColumn by using an existing sparse columns data
 	 * representation.
 	 */
-	RemappedCategoricalSparseColumn(ColumnType<R> type, int[] nonDefaultIndices, short[] nonDefaultValues,
-									Dictionary<R> dictionary, int[] remapping, short defaultValue, int size) {
+	RemappedCategoricalSparseColumn(ColumnType<String> type, int[] nonDefaultIndices, short[] nonDefaultValues,
+									Dictionary dictionary, int[] remapping, short defaultValue, int size) {
 		super(type, size);
 		this.size = size;
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_MAPPING);
@@ -291,8 +292,8 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * Used internally to create a new RemappedCategoricalSparseColumn by using an existing sparse columns data
 	 * representation.
 	 */
-	RemappedCategoricalSparseColumn(ColumnType<R> type, int[] nonDefaultIndices, int[] nonDefaultValues,
-									Dictionary<R> dictionary, int[] remapping, int defaultValue, int size) {
+	RemappedCategoricalSparseColumn(ColumnType<String> type, int[] nonDefaultIndices, int[] nonDefaultValues,
+									Dictionary dictionary, int[] remapping, int defaultValue, int size) {
 		super(type, size);
 		this.size = size;
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_MAPPING);
@@ -1049,7 +1050,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	}
 
 	@Override
-	CategoricalColumn<R> remap(Dictionary<R> newDictionary, int[] remapping) {
+	CategoricalColumn remap(Dictionary newDictionary, int[] remapping) {
 		int[] mergedRemapping = Mapping.merge(this.remapping, remapping);
 		return deriveWithNewDictionary(newDictionary, mergedRemapping);
 	}
@@ -1096,12 +1097,12 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	}
 
 	@Override
-	protected Dictionary<R> getDictionary() {
+	public Dictionary getDictionary() {
 		return dictionary;
 	}
 
 	@Override
-	protected CategoricalColumn<R> swapDictionary(Dictionary<R> newDictionary) {
+	protected CategoricalColumn swapDictionary(Dictionary newDictionary) {
 		return deriveWithNewDictionary(newDictionary, remapping);
 	}
 
@@ -1185,7 +1186,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 			}
 		}
 
-		return new RemappedCategoricalSparseColumn<>(type(), newNonDefaultIndices, newNonDefaultValues, dictionary,
+		return new RemappedCategoricalSparseColumn(type(), newNonDefaultIndices, newNonDefaultValues, dictionary,
 				remapping, defaultValueAsUnsignedInt, mapping.length);
 	}
 
@@ -1217,7 +1218,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 			}
 		}
 
-		return new RemappedCategoricalSparseColumn<>(type(), newNonDefaultIndices, newNonDefaultValues, dictionary,
+		return new RemappedCategoricalSparseColumn(type(), newNonDefaultIndices, newNonDefaultValues, dictionary,
 				remapping, (short) defaultValueAsUnsignedInt, mapping.length);
 	}
 
@@ -1249,7 +1250,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 			}
 		}
 
-		return new RemappedCategoricalSparseColumn<>(type(), newNonDefaultIndices, newNonDefaultValues, dictionary,
+		return new RemappedCategoricalSparseColumn(type(), newNonDefaultIndices, newNonDefaultValues, dictionary,
 				remapping, (byte) defaultValueAsUnsignedInt, mapping.length);
 	}
 
@@ -1257,11 +1258,11 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * Returns the sorted mapping for the non-default values and 1x the default value added to the end.
 	 */
 	private int[] getSortedMapping(Order order) {
-		Comparator<R> comparator = type().comparator();
+		Comparator<String> comparator = type().comparator();
 		if (comparator == null) {
 			throw new UnsupportedOperationException();
 		}
-		Comparator<R> comparatorWithNull = Comparator.nullsLast(comparator);
+		Comparator<String> comparatorWithNull = Comparator.nullsLast(comparator);
 		switch (format) {
 			case UNSIGNED_INT8:
 				return getSortedMappingUINT8(order, comparatorWithNull);
@@ -1277,7 +1278,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	/**
 	 * See {@link #getSortedMapping(Order)}.
 	 */
-	private int[] getSortedMappingUINT8(Order order, Comparator<R> comparatorWithNull) {
+	private int[] getSortedMappingUINT8(Order order, Comparator<String> comparatorWithNull) {
 		int newIndexForDefault = nonDefaultIndices.length;
 		byte[] toSort = Arrays.copyOf(byteNonDefaultValues, newIndexForDefault + 1);
 		toSort[newIndexForDefault] = (byte) defaultValueAsUnsignedInt;
@@ -1289,7 +1290,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	/**
 	 * See {@link #getSortedMapping(Order)}.
 	 */
-	private int[] getSortedMappingUINT16(Order order, Comparator<R> comparatorWithNull) {
+	private int[] getSortedMappingUINT16(Order order, Comparator<String> comparatorWithNull) {
 		int newIndexForDefault = nonDefaultIndices.length;
 		short[] toSort = Arrays.copyOf(shortNonDefaultValues, newIndexForDefault + 1);
 		toSort[newIndexForDefault] = (short) defaultValueAsUnsignedInt;
@@ -1301,7 +1302,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	/**
 	 * See {@link #getSortedMapping(Order)}.
 	 */
-	private int[] getSortedMappingINT32(Order order, Comparator<R> comparatorWithNull) {
+	private int[] getSortedMappingINT32(Order order, Comparator<String> comparatorWithNull) {
 		int newIndexForDefault = nonDefaultIndices.length;
 		int[] toSort = Arrays.copyOf(intNonDefaultValues, newIndexForDefault + 1);
 		toSort[newIndexForDefault] = defaultValueAsUnsignedInt;
@@ -1327,7 +1328,7 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	 * Return the corresponding Object value or {@code null} iff the given value is equal to {@link
 	 * CategoricalReader#MISSING_CATEGORY}. Uses remapping to remap the index before converting it to an Object.
 	 */
-	private R toObject(int i) {
+	private String toObject(int i) {
 		int remapped = remapping[i];
 		return dictionary.get(remapped);
 	}
@@ -1338,11 +1339,11 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	private Column makeDenseColumn(int[] mapping) {
 		switch (format) {
 			case UNSIGNED_INT8:
-				return new RemappedCategoricalColumn<>(type(), Mapping.apply(getByteData(), mapping), dictionary, remapping);
+				return new RemappedCategoricalColumn(type(), Mapping.apply(getByteData(), mapping), dictionary, remapping);
 			case UNSIGNED_INT16:
-				return new RemappedCategoricalColumn<>(type(), Mapping.apply(getShortData(), mapping), dictionary, remapping);
+				return new RemappedCategoricalColumn(type(), Mapping.apply(getShortData(), mapping), dictionary, remapping);
 			case SIGNED_INT32:
-				return new RemappedCategoricalColumn<>(type(), Mapping.apply(getIntData(), mapping), dictionary, remapping);
+				return new RemappedCategoricalColumn(type(), Mapping.apply(getIntData(), mapping), dictionary, remapping);
 			default:
 				throw new IllegalStateException();
 		}
@@ -1351,16 +1352,16 @@ class RemappedCategoricalSparseColumn<R> extends CategoricalColumn<R> {
 	/**
 	 * Creates a new {@link RemappedCategoricalSparseColumn} with the same data but the given dictionary and remapping.
 	 */
-	private CategoricalColumn<R> deriveWithNewDictionary(Dictionary<R> newDictionary, int[] remapping) {
+	private CategoricalColumn deriveWithNewDictionary(Dictionary newDictionary, int[] remapping) {
 		switch (format) {
 			case UNSIGNED_INT8:
-				return new RemappedCategoricalSparseColumn<>(type(), nonDefaultIndices, byteNonDefaultValues,
+				return new RemappedCategoricalSparseColumn(type(), nonDefaultIndices, byteNonDefaultValues,
 						newDictionary, remapping, (byte) defaultValueAsUnsignedInt, size);
 			case UNSIGNED_INT16:
-				return new RemappedCategoricalSparseColumn<>(type(), nonDefaultIndices, shortNonDefaultValues,
+				return new RemappedCategoricalSparseColumn(type(), nonDefaultIndices, shortNonDefaultValues,
 						newDictionary, remapping, (short) defaultValueAsUnsignedInt, size);
 			case SIGNED_INT32:
-				return new RemappedCategoricalSparseColumn<>(type(), nonDefaultIndices, intNonDefaultValues,
+				return new RemappedCategoricalSparseColumn(type(), nonDefaultIndices, intNonDefaultValues,
 						newDictionary, remapping, defaultValueAsUnsignedInt, size);
 			default:
 				throw new IllegalStateException();

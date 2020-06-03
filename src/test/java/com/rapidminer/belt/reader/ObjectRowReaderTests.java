@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -37,7 +37,6 @@ import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.table.Table;
 import com.rapidminer.belt.table.TableTestUtils;
 
@@ -85,10 +84,9 @@ public class ObjectRowReaderTests {
 			mapping.add(0, null);
 			int[] categories = new int[data.length];
 			Arrays.setAll(categories, i -> i + 1);
-			return ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
+			return ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, categories, mapping);
 		} else {
-			return ColumnTestUtils.getObjectColumn(ColumnTypes.objectType(
-					"com.rapidminer.belt.column.stringcolumn", String.class, null), data);
+			return ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
 		}
 	}
 
@@ -303,14 +301,14 @@ public class ObjectRowReaderTests {
 		public void testRightSuper() {
 			int[] indices = new int[10];
 			Arrays.fill(indices, 1);
-			ColumnType<Integer> type = ColumnTypes.categoricalType(
-					"com.rapidminer.belt.column.test.bigintegercolumn", Integer.class, null);
-			CategoricalColumn<Integer> intCol = ColumnTestUtils.getSimpleCategoricalColumn(type, indices,
-					Arrays.asList(null, 0));
+			ColumnType<String> type = ColumnTestUtils.categoricalType(
+					String.class, null);
+			CategoricalColumn stringCol = ColumnTestUtils.getSimpleCategoricalColumn(type, indices,
+					Arrays.asList(null, "null"));
 			Column doubleCol = ColumnTestUtils.getDoubleObjectTestColumn();
-			ObjectRowReader<Number> reader = new ObjectRowReader<>(Arrays.asList(intCol, doubleCol), Number.class);
+			ObjectRowReader<Object> reader = new ObjectRowReader<>(Arrays.asList(stringCol, doubleCol), Object.class);
 			reader.move();
-			assertEquals(0, reader.get(0));
+			assertEquals("null", reader.get(0));
 			assertEquals(1.0, reader.get(1));
 		}
 
@@ -320,7 +318,7 @@ public class ObjectRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class);
@@ -334,7 +332,7 @@ public class ObjectRowReaderTests {
 			int nReads = 16;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class);
@@ -351,7 +349,7 @@ public class ObjectRowReaderTests {
 			int nColumns = 11;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class);
@@ -372,7 +370,7 @@ public class ObjectRowReaderTests {
 			int nReads = 16;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class);
@@ -390,7 +388,7 @@ public class ObjectRowReaderTests {
 			int nReads = 16;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class, 10 * nColumns);
@@ -407,7 +405,7 @@ public class ObjectRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class);
@@ -421,7 +419,7 @@ public class ObjectRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class);
 			while (reader.hasRemaining()) {
@@ -436,7 +434,7 @@ public class ObjectRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 			ObjectRowReader<String> reader = new ObjectRowReader<>(Arrays.asList(columns), String.class, 10 * nColumns);
 			while (reader.hasRemaining()) {

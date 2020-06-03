@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -40,7 +40,7 @@ import com.rapidminer.belt.table.TableTestUtils;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 
 
 /**
@@ -156,6 +156,11 @@ public class MixedRowReaderTests {
 		}
 
 		@Test(expected = NullPointerException.class)
+		public void testSmallNullTable() {
+			SmallReaders.unbufferedMixedRowReader((Table) null);
+		}
+
+		@Test(expected = NullPointerException.class)
 		public void testNullColumnList() {
 			Readers.mixedRowReader((List<Column>) null);
 		}
@@ -207,9 +212,9 @@ public class MixedRowReaderTests {
 			List<String> mappingList = getMappingList();
 
 			Column[] columns = new Column[]{
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input1, mappingList),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input1, mappingList),
 					ColumnTestUtils.getNumericColumn(TypeId.REAL, input2),
-					ColumnTestUtils.getObjectColumn(ColumnTypes.objectType("test", String.class, null), input3)
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, input3)
 			};
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -252,7 +257,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -282,7 +287,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -310,7 +315,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -338,7 +343,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -362,7 +367,7 @@ public class MixedRowReaderTests {
 			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input = randomInts(nRows);
-			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input,
+			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input,
 					getMappingList())};
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -383,7 +388,7 @@ public class MixedRowReaderTests {
 			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input = randomInts(nRows);
-			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input,
+			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input,
 					getMappingList())};
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -416,7 +421,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 			String[] labels = new String[]{"a", "b", "c"};
 			Column[] columns = new Column[3];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			Table table = TableTestUtils.newTable(columns, labels);
@@ -445,12 +450,41 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 			String[] labels = new String[]{"a", "b"};
 			Column[] columns = new Column[2];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			Table table = TableTestUtils.newTable(columns, labels);
 
 			MixedRowReader reader = Readers.mixedRowReader(table);
+			double[][] outputs = readAllColumnsToRealArrays(reader);
+			int[][] indexOutputs = readAllColumnsToIndexArrays(reader);
+			Object[][] objectOutputs = readAllColumnsToObjectArrays(reader);
+
+			assertEquals(2, outputs.length);
+			assertEquals(2, indexOutputs.length);
+			assertEquals(2, objectOutputs.length);
+			assertArrayEquals(inputs[0], indexOutputs[0]);
+			assertArrayEquals(inputs[1], indexOutputs[1]);
+			assertArrayEquals(readColumnToNumeric(columns[0]), outputs[0], EPSILON);
+			assertArrayEquals(readColumnToNumeric(columns[1]), outputs[1], EPSILON);
+			assertArrayEquals(readColumnToObject(columns[0]), objectOutputs[0]);
+			assertArrayEquals(readColumnToObject(columns[1]), objectOutputs[1]);
+		}
+
+		@Test
+		public void testUnbufferedReadingFromTwoColumnTable() {
+			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
+
+			int[][] inputs = new int[2][];
+			Arrays.setAll(inputs, i -> randomInts(nRows));
+			String[] labels = new String[]{"a", "b"};
+			Column[] columns = new Column[2];
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
+					getMappingList()));
+
+			Table table = TableTestUtils.newTable(columns, labels);
+
+			MixedRowReader reader = SmallReaders.unbufferedMixedRowReader(table);
 			double[][] outputs = readAllColumnsToRealArrays(reader);
 			int[][] indexOutputs = readAllColumnsToIndexArrays(reader);
 			Object[][] objectOutputs = readAllColumnsToObjectArrays(reader);
@@ -475,7 +509,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = Readers.mixedRowReader(columns[0], columns[1], columns[2]);
@@ -503,7 +537,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = Readers.mixedRowReader(Arrays.asList(columns));
@@ -531,7 +565,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList()));
 
 			MixedRowReader reader = Readers.mixedRowReader(Arrays.asList(columns));
@@ -580,7 +614,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList())));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -603,8 +637,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> new Object[nRows]);
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getObjectColumn(
-					ColumnTypes.objectType("test", Double.class, null), inputs[i])));
+			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getObjectColumn(ColumnType.TEXTSET, inputs[i])));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
 			readAllColumns(reader);
@@ -648,7 +681,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> randomInts(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					getMappingList())));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
@@ -675,8 +708,7 @@ public class MixedRowReaderTests {
 			Arrays.setAll(inputs, i -> new Object[nRows]);
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getObjectColumn(
-					ColumnTypes.objectType("test", Double.class, null), inputs[i])));
+			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getObjectColumn(ColumnType.TEXTSET, inputs[i])));
 
 			MixedRowReader reader = new MixedRowReader(Arrays.asList(columns));
 			readAllColumns(reader);

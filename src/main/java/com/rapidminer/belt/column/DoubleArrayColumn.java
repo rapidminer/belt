@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -32,7 +32,7 @@ import com.rapidminer.belt.util.Sorting;
 class DoubleArrayColumn extends NumericColumn {
 
 	private static final double[] EMPTY_DOUBLE_ARRAY = new double[0];
-	static final DoubleArrayColumn EMPTY_INT_COLUMN = new DoubleArrayColumn(TypeId.INTEGER,
+	static final DoubleArrayColumn EMPTY_INT_COLUMN = new DoubleArrayColumn(TypeId.INTEGER_53_BIT,
 			EMPTY_DOUBLE_ARRAY);
 	static final DoubleArrayColumn EMPTY_REAL_COLUMN = new DoubleArrayColumn(EMPTY_DOUBLE_ARRAY);
 
@@ -66,7 +66,7 @@ class DoubleArrayColumn extends NumericColumn {
 	 */
 	DoubleArrayColumn(TypeId type, double[] src) {
 		super(Objects.requireNonNull(src, "Source array must not be null").length);
-		this.columntype = type == TypeId.INTEGER ? ColumnTypes.INTEGER : ColumnTypes.REAL;
+		this.columntype = type == TypeId.INTEGER_53_BIT ? ColumnType.INTEGER_53_BIT : ColumnType.REAL;
 		data = src;
 	}
 

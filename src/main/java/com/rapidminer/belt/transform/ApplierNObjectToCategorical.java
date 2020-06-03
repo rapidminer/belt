@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -20,11 +20,12 @@ package com.rapidminer.belt.transform;
 import java.util.List;
 import java.util.function.Function;
 
-import com.rapidminer.belt.buffer.CategoricalBuffer;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt16CategoricalBuffer;
-import com.rapidminer.belt.buffer.UInt8CategoricalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
+import com.rapidminer.belt.buffer.NominalBuffer;
+import com.rapidminer.belt.buffer.UInt16NominalBuffer;
+import com.rapidminer.belt.buffer.UInt8NominalBuffer;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.ObjectRow;
 import com.rapidminer.belt.reader.ObjectRowReader;
 import com.rapidminer.belt.reader.Readers;
@@ -32,25 +33,28 @@ import com.rapidminer.belt.util.IntegerFormats;
 
 
 /**
- * Maps {@link Column.Category#CATEGORICAL} {@link Column}s to a {@link CategoricalBuffer} using a given mapping
+ * Maps {@link Column.Category#CATEGORICAL} {@link Column}s to a {@link NominalBuffer} using a given mapping
  * operator.
  *
  * @author Gisa Meier
  */
-final class ApplierNObjectToCategorical<R, T> implements Calculator<CategoricalBuffer<T>> {
+final class ApplierNObjectToCategorical<R> implements Calculator<NominalBuffer> {
 
 
-	private CategoricalBuffer<T> target;
+	private NominalBuffer target;
 	private final List<Column> sources;
 	private final Class<R> type;
-	private final Function<ObjectRow<R>, T> operator;
+	private final Function<ObjectRow<R>, String> operator;
 	private final IntegerFormats.Format format;
+	private final ColumnType<String> targetType;
 
-	ApplierNObjectToCategorical(List<Column> sources, Class<R> type, Function<ObjectRow<R>, T> operator, IntegerFormats.Format format) {
+	ApplierNObjectToCategorical(List<Column> sources, Class<R> type, Function<ObjectRow<R>, String> operator,
+								IntegerFormats.Format format, ColumnType<String> targetType) {
 		this.sources = sources;
 		this.operator = operator;
 		this.format = format;
 		this.type = type;
+		this.targetType = targetType;
 	}
 
 
@@ -60,14 +64,14 @@ final class ApplierNObjectToCategorical<R, T> implements Calculator<CategoricalB
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				target = BufferAccessor.get().newUInt8Buffer(sources.get(0).size(), format);
+				target = BufferAccessor.get().newUInt8Buffer(targetType, sources.get(0).size(), format);
 				break;
 			case UNSIGNED_INT16:
-				target = BufferAccessor.get().newUInt16Buffer(sources.get(0).size());
+				target = BufferAccessor.get().newUInt16Buffer(targetType, sources.get(0).size());
 				break;
 			case SIGNED_INT32:
 			default:
-				target = BufferAccessor.get().newInt32Buffer(sources.get(0).size());
+				target = BufferAccessor.get().newInt32Buffer(targetType, sources.get(0).size());
 		}
 	}
 
@@ -82,19 +86,19 @@ final class ApplierNObjectToCategorical<R, T> implements Calculator<CategoricalB
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				mapPart(sources, type, operator, (UInt8CategoricalBuffer<T>) target, from, to);
+				mapPart(sources, type, operator, (UInt8NominalBuffer) target, from, to);
 				break;
 			case UNSIGNED_INT16:
-				mapPart(sources, type, operator, (UInt16CategoricalBuffer<T>) target, from, to);
+				mapPart(sources, type, operator, (UInt16NominalBuffer) target, from, to);
 				break;
 			case SIGNED_INT32:
 			default:
-				mapPart(sources, type, operator, (Int32CategoricalBuffer<T>) target, from, to);
+				mapPart(sources, type, operator, (Int32NominalBuffer) target, from, to);
 		}
 	}
 
 	@Override
-	public CategoricalBuffer<T> getResult() {
+	public NominalBuffer getResult() {
 		return target;
 	}
 
@@ -102,13 +106,13 @@ final class ApplierNObjectToCategorical<R, T> implements Calculator<CategoricalB
 	 * Maps every index between from (inclusive) and to (exclusive) of the source columns using the operator and stores
 	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT2}.
 	 */
-	private static <R, T> void mapPart(List<Column> sources, Class<R> type, Function<ObjectRow<R>, T> operator, Int32CategoricalBuffer<T> target,
+	private static <R> void mapPart(List<Column> sources, Class<R> type, Function<ObjectRow<R>, String> operator, Int32NominalBuffer target,
 									   int from, int to) {
 		final ObjectRowReader<R> reader = Readers.objectRowReader(sources, type);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();
-			T value = operator.apply(reader);
+			String value = operator.apply(reader);
 			target.set(i, value);
 		}
 	}
@@ -117,13 +121,13 @@ final class ApplierNObjectToCategorical<R, T> implements Calculator<CategoricalB
 	 * Maps every index between from (inclusive) and to (exclusive) of the source columns using the operator and stores
 	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT4}.
 	 */
-	private static <R, T> void mapPart(List<Column> sources, Class<R> type, Function<ObjectRow<R>, T> operator, UInt16CategoricalBuffer<T> target,
+	private static <R> void mapPart(List<Column> sources, Class<R> type, Function<ObjectRow<R>, String> operator, UInt16NominalBuffer target,
 									   int from, int to) {
 		final ObjectRowReader<R> reader = Readers.objectRowReader(sources, type);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();
-			T value = operator.apply(reader);
+			String value = operator.apply(reader);
 			target.set(i, value);
 		}
 	}
@@ -132,13 +136,13 @@ final class ApplierNObjectToCategorical<R, T> implements Calculator<CategoricalB
 	 * Maps every index between from (inclusive) and to (exclusive) of the source columns using the operator and stores
 	 * the result in target in format {@link IntegerFormats.Format#UNSIGNED_INT8}.
 	 */
-	private static <R, T> void mapPart(List<Column> sources, Class<R> type, Function<ObjectRow<R>, T> operator, UInt8CategoricalBuffer<T> target,
+	private static <R> void mapPart(List<Column> sources, Class<R> type, Function<ObjectRow<R>, String> operator, UInt8NominalBuffer target,
 									   int from, int to) {
 		final ObjectRowReader<R> reader = Readers.objectRowReader(sources, type);
 		reader.setPosition(from - 1);
 		for (int i = from; i < to; i++) {
 			reader.move();
-			T value = operator.apply(reader);
+			String value = operator.apply(reader);
 			target.set(i, value);
 		}
 	}

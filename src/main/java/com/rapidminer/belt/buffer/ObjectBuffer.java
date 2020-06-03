@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -15,8 +15,6 @@
  */
 
 package com.rapidminer.belt.buffer;
-
-import java.util.Objects;
 
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.Category;
@@ -33,6 +31,7 @@ import com.rapidminer.belt.column.ColumnType;
 public final class ObjectBuffer<T> {
 
 	private final Object[] data;
+	private final ColumnType<T> type;
 	private boolean frozen = false;
 
 
@@ -42,8 +41,12 @@ public final class ObjectBuffer<T> {
 	 * @param length
 	 * 		the length of the buffer
 	 */
-	ObjectBuffer(int length) {
+	ObjectBuffer(ColumnType<T> type, int length) {
+		if (type.category() != Category.OBJECT || type.id() == TypeId.TIME || type.id() == TypeId.DATE_TIME) {
+			throw new IllegalArgumentException("Column type must be non-date-time and of category object");
+		}
 		data = new Object[length];
+		this.type = type;
 	}
 
 	/**
@@ -52,13 +55,17 @@ public final class ObjectBuffer<T> {
 	 *
 	 * @param column
 	 * 		the column to convert to a buffer
-	 * @param elementType
+	 * @param type
 	 * 		the desired type of the buffer, must be a super type of the column type
 	 */
-	ObjectBuffer(Class<T> elementType, Column column) {
-		if (!elementType.isAssignableFrom(column.type().elementType())) {
-			throw new IllegalArgumentException("Element id is not super id of " + column.type().elementType());
+	ObjectBuffer(ColumnType<T> type, Column column) {
+		if (type.category() != Category.OBJECT || type.id() == TypeId.TIME || type.id() == TypeId.DATE_TIME) {
+			throw new IllegalArgumentException("Column type must be non-date-time and of category object");
 		}
+		if (!type.elementType().isAssignableFrom(column.type().elementType())) {
+			throw new IllegalArgumentException("Element type is not super type of " + column.type().elementType());
+		}
+		this.type = type;
 		data = new Object[column.size()];
 		column.fill(data, 0);
 	}
@@ -124,12 +131,8 @@ public final class ObjectBuffer<T> {
 		return BufferPrinter.print(this);
 	}
 
-	public Column toColumn(ColumnType<T> type) {
-		Objects.requireNonNull(type, "TypeId must not be null");
+	public Column toColumn() {
 		freeze();
-		if (type.id() != TypeId.CUSTOM || type.category() != Category.OBJECT) {
-			throw new IllegalArgumentException("Column type must be custom and of category object");
-		}
 		return ColumnAccessor.get().newObjectColumn(type, data);
 	}
 }

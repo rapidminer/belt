@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.DoubleConsumer;
 
-import com.rapidminer.belt.buffer.UInt2CategoricalBuffer;
+import com.rapidminer.belt.buffer.UInt2NominalBuffer;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.ExecutionAbortedException;
 import com.rapidminer.belt.execution.ExecutionUtils;
@@ -89,17 +89,17 @@ class ParallelExecutor<T> {
 	static final int BATCH_SIZE_HUGE = 1 << 5;
 
 	/**
-	 * All batches must start with and index%4==0 because of restricted thread-safety of {@link UInt2CategoricalBuffer}
+	 * All batches must start with and index%4==0 because of restricted thread-safety of {@link UInt2NominalBuffer}
 	 */
 	private static final int BATCH_DIVISOR = 4;
 
 	/**
-	 * Batch size must be at least 4 because of restricted thread-safety of {@link UInt2CategoricalBuffer}
+	 * Batch size must be at least 4 because of restricted thread-safety of {@link UInt2NominalBuffer}
 	 */
 	private final int thresholdParallel;
 
 	/**
-	 * Batch size must be divisible by 4 because of restricted thread-safety of {@link UInt2CategoricalBuffer}
+	 * Batch size must be divisible by 4 because of restricted thread-safety of {@link UInt2NominalBuffer}
 	 */
 	private final int batchSize;
 	private final Calculator<T> calculator;

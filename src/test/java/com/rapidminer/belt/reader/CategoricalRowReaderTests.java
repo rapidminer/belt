@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.table.Table;
 import com.rapidminer.belt.table.TableTestUtils;
 
@@ -92,7 +92,7 @@ public class CategoricalRowReaderTests {
 			Arrays.setAll(inputs, i -> randomNumbers(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -111,7 +111,7 @@ public class CategoricalRowReaderTests {
 			Arrays.setAll(inputs, i -> randomNumbers(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -130,7 +130,7 @@ public class CategoricalRowReaderTests {
 			Arrays.setAll(inputs, i -> randomNumbers(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -149,7 +149,7 @@ public class CategoricalRowReaderTests {
 			Arrays.setAll(inputs, i -> randomNumbers(nRows));
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -171,7 +171,7 @@ public class CategoricalRowReaderTests {
 			int nRows = (int) (6.67 * NumericReader.SMALL_BUFFER_SIZE);
 
 			int[] input = randomNumbers(nRows);
-			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input,
+			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input,
 					new ArrayList<>())};
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -189,10 +189,10 @@ public class CategoricalRowReaderTests {
 			int[] input1 = randomNumbers(nRows);
 			int[] input2 = randomNumbers(nRows);
 			String[] labels = new String[]{"a", "b", "c"};
-			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input0,
+			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input0,
 					new ArrayList<>()),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input1, new ArrayList<>()),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input2, new ArrayList<>())};
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input1, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input2, new ArrayList<>())};
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns[2], columns[0]));
 			int[][] outputs = readAllColumnsToArrays(reader);
@@ -210,10 +210,10 @@ public class CategoricalRowReaderTests {
 			int[] input1 = randomNumbers(nRows);
 			int[] input2 = randomNumbers(nRows);
 			String[] labels = new String[]{"a", "b", "c"};
-			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input0,
+			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input0,
 					new ArrayList<>()),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input1, new ArrayList<>()),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input2, new ArrayList<>())};
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input1, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input2, new ArrayList<>())};
 
 			Table table = TableTestUtils.newTable(columns, labels);
 
@@ -234,10 +234,10 @@ public class CategoricalRowReaderTests {
 			int[] input1 = randomNumbers(nRows);
 			int[] input2 = randomNumbers(nRows);
 			String[] labels = new String[]{"a", "b", "c"};
-			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input0,
+			Column[] columns = new Column[]{ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input0,
 					new ArrayList<>()),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input1, new ArrayList<>()),
-					ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, input2, new ArrayList<>())};
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input1, new ArrayList<>()),
+					ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, input2, new ArrayList<>())};
 
 			Table table = TableTestUtils.newTable(columns, labels);
 
@@ -260,7 +260,7 @@ public class CategoricalRowReaderTests {
 			Arrays.setAll(inputs, i -> new int[nRows]);
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i], new ArrayList<>())));
+			Arrays.setAll(columns, i -> spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i], new ArrayList<>())));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
 			readAllColumns(reader);
@@ -282,7 +282,7 @@ public class CategoricalRowReaderTests {
 			Column[] columns = new Column[nColumns];
 			List<String> dictionary = new ArrayList<>();
 			Arrays.setAll(columns, i ->
-					spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, inputs[i], dictionary)));
+					spy(ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, inputs[i], dictionary)));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
 			readAllColumns(reader);
@@ -309,7 +309,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -323,7 +323,7 @@ public class CategoricalRowReaderTests {
 			int nReads = 16;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -340,7 +340,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 11;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -361,7 +361,7 @@ public class CategoricalRowReaderTests {
 			int nReads = 16;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -379,7 +379,7 @@ public class CategoricalRowReaderTests {
 			int nReads = 16;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
@@ -396,7 +396,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows],
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows],
 					new ArrayList<>()));
 
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
@@ -410,7 +410,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows], new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows], new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns));
 			while (reader.hasRemaining()) {
 				reader.move();
@@ -424,7 +424,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, new int[nRows], new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[nRows], new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			while (reader.hasRemaining()) {
 				reader.move();
@@ -440,7 +440,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.setPosition(position);
 			assertEquals(position, reader.position());
@@ -462,7 +462,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			for (int i = 0; i < 13; i++) {
 				reader.move();
@@ -487,7 +487,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			for (int i = 0; i < 13; i++) {
 				reader.move();
@@ -512,7 +512,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			for (int i = 0; i < 13; i++) {
 				reader.move();
@@ -536,7 +536,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.setPosition(-1);
 			assertEquals(Readers.BEFORE_FIRST_ROW, reader.position());
@@ -557,7 +557,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.setPosition(0);
 			reader.move();
@@ -572,7 +572,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.move();
 			reader.move();
@@ -595,7 +595,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.setPosition(nRows - 2);
 			reader.move();
@@ -612,7 +612,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.move();
 			reader.move();
@@ -631,7 +631,7 @@ public class CategoricalRowReaderTests {
 			int[] testArray = new int[nRows];
 			Arrays.setAll(testArray, i -> i);
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.setPosition(16);
 			assertEquals(16, reader.position());
@@ -680,7 +680,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 			int[] testArray = new int[nRows];
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			String expected = "Categorical row reader (" + nRows + "x" + nColumns + ")\n"
 					+ "Row position: " + Readers.BEFORE_FIRST_ROW;
@@ -693,7 +693,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 			int[] testArray = new int[nRows];
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			reader.move();
 			reader.move();
@@ -710,7 +710,7 @@ public class CategoricalRowReaderTests {
 			int nColumns = 3;
 			int[] testArray = new int[nRows];
 			Column[] columns = new Column[nColumns];
-			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, testArray, new ArrayList<>()));
+			Arrays.setAll(columns, i -> ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, testArray, new ArrayList<>()));
 			CategoricalRowReader reader = new CategoricalRowReader(Arrays.asList(columns), 10 * nColumns);
 			while (reader.hasRemaining()) {
 				reader.move();

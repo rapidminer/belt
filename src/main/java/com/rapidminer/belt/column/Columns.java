@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -69,7 +69,7 @@ public final class Columns {
 	 */
 	public static boolean isBicategorical(Column column) {
 		return column.type().category() == Column.Category.CATEGORICAL
-				&& column.getDictionary(Object.class).size() == TWO_VALUES_DICTIONARY_SIZE;
+				&& column.getDictionary().size() == TWO_VALUES_DICTIONARY_SIZE;
 	}
 
 	/**
@@ -81,7 +81,7 @@ public final class Columns {
 	 */
 	public static boolean isAtMostBicategorical(Column column) {
 		return column.type().category() == Column.Category.CATEGORICAL
-				&& column.getDictionary(Object.class).size() <= TWO_VALUES_DICTIONARY_SIZE;
+				&& column.getDictionary().size() <= TWO_VALUES_DICTIONARY_SIZE;
 	}
 
 	/**
@@ -92,48 +92,43 @@ public final class Columns {
 	 * @return {@code true} if the column is categorical has exactly two values with different boolean values associated
 	 */
 	public static boolean isBicategoricalAndBoolean(Column column) {
-		return isBicategorical(column) && column.getDictionary(Object.class).isBoolean();
+		return isBicategorical(column) && column.getDictionary().isBoolean();
 	}
 
 	/**
-	 * Sets the positive value for the categorical column if the dictionary has at most two values. The positive value
-	 * must be either one of the dictionary values, making the other value, if it exists, negative. Or in case of a
-	 * dictionary with only one value the positive value can be {@code null} making the only value negative.
+	 * Sets the positive value for the categorical column if the dictionary has at most two values (including the
+	 * positive value). If the positive value is not part of the dictionary yet, it is added to the dictionary. The
+	 * other value, if it exists, will be made negative. In case of a dictionary with only one value the positive value
+	 * can be {@code null}, making the only value negative.
 	 *
 	 * @param column
 	 * 		the column to adjust
 	 * @param positiveValue
 	 * 		the positive value to use, can be {@code null} in case of a dictionary of size 1
-	 * @param <T>
-	 * 		the element type of the column
 	 * @return a new categorical column with a boolean dictionary with the given positive value
+	 * @throws IllegalArgumentException
+	 * 		if the column is not categorical or its dictionary has more than two values (including the given positive
+	 * 		value)
 	 */
-	public static <T> Column toBoolean(Column column, T positiveValue) {
+	public static Column toBoolean(Column column, String positiveValue) {
 		if (column.type().category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column is not categorical.");
 		}
-		if (column.getDictionary(Object.class).size() > TWO_VALUES_DICTIONARY_SIZE) {
+		if (column.getDictionary().size() > TWO_VALUES_DICTIONARY_SIZE) {
 			throw new IllegalArgumentException("Dictionary has more than 2 values, cannot be made boolean.");
 		}
-		return setPositiveValue(column, column.type().elementType(), positiveValue);
+		return setPositiveValue(column, positiveValue);
 	}
 
 	/**
-	 * Sets the given positive value if it is compatible with the column type.
+	 * Sets the given positive value if it is compatible with the column type. If the positive value is not part of the
+	 * dictionary yet, it is added to the dictionary. Also calls {@link #compactDictionary(Column)} on the column to
+	 * make sure that there are no gaps in the dictionary (required for boolean dictionaries).
 	 */
-	private static <T> Column setPositiveValue(Column column, Class<T> type, Object positiveValue) {
-		if (positiveValue != null && !type.isInstance(positiveValue)) {
-			throw new IllegalArgumentException("Class of the positive value is not compatible with the column " +
-					"elementType " + column.type().elementType());
-		}
+	private static Column setPositiveValue(Column column, String positiveValue) {
 		if (column instanceof CategoricalColumn) {
-			//cast is safe since T is the element type of the column
-			@SuppressWarnings("unchecked")
-			CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
-			//cast is safe since positive value is of type class
-			@SuppressWarnings("unchecked")
-			T positive = (T) positiveValue;
-			return categoricalColumn.toBoolean(positive);
+			CategoricalColumn categoricalColumn = (CategoricalColumn) compactDictionary(column);
+			return categoricalColumn.toBoolean(positiveValue);
 		} else {
 			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
 		}
@@ -163,24 +158,22 @@ public final class Columns {
 		if (!from.type().elementType().equals(to.type().elementType())) {
 			throw new IllegalArgumentException("The element types of the to and from column are different.");
 		}
-		return remap(from, to, from.type().elementType(), false);
+		return remap(from, to, false);
 	}
 
 	/**
 	 * Remaps the from-column with type from-type to the to-column which has the same type.
 	 */
-	private static <T> Column remap(Column from, Column to, Class<T> bothType, boolean merge) {
+	private static Column remap(Column from, Column to, boolean merge) {
 		if (from.type().category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("The from column is not categorical.");
 		}
 		if (to.type().category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("The to column is not categorical.");
 		}
-		//the cast are safe since T is the bothType
-		@SuppressWarnings("unchecked")
-		CategoricalColumn<T> typedFrom = (CategoricalColumn<T>) from;
-		@SuppressWarnings("unchecked")
-		CategoricalColumn<T> typedTo = (CategoricalColumn<T>) to;
+
+		CategoricalColumn typedFrom = (CategoricalColumn) from;
+		CategoricalColumn typedTo = (CategoricalColumn) to;
 		return merge ? typedFrom.mergeDictionaries(typedTo.getDictionary()) : typedFrom.remap(typedTo.getDictionary());
 	}
 
@@ -209,7 +202,7 @@ public final class Columns {
 		if (!from.type().elementType().equals(to.type().elementType())) {
 			throw new IllegalArgumentException("The element types of the to and from column are different.");
 		}
-		return remap(from, to, from.type().elementType(), true);
+		return remap(from, to, true);
 	}
 
 	/**
@@ -259,9 +252,9 @@ public final class Columns {
 		Objects.requireNonNull(context, "Context must not be null");
 		if (column instanceof CategoricalColumn) {
 			if (option == CleanupOption.COMPACT) {
-				return remapToUsed(column, column.type().elementType(), context);
+				return remapToUsed(column, context);
 			} else {
-				return replaceUnused(column, column.type().elementType(), context);
+				return replaceUnused(column,  context);
 			}
 		} else {
 			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
@@ -271,17 +264,17 @@ public final class Columns {
 	/**
 	 * Replaces unused dictionary values by {@code null}.
 	 */
-	private static <T> Column replaceUnused(Column column, Class<T> type, Context context) {
-		Dictionary<T> oldDictionary = column.getDictionary(type);
+	private static Column replaceUnused(Column column, Context context) {
+		Dictionary oldDictionary = column.getDictionary();
 		boolean[] used = findUsed(column, context, oldDictionary);
-		Dictionary<T> newDict = replaceByNull(oldDictionary, used);
+		Dictionary newDict = replaceByNull(oldDictionary, used);
 
 		if (newDict == null) {
 			return column;
 		} else {
-			//cast is safe since T is the element type of the column
+			//cast is safe since the column is categorical
 			@SuppressWarnings("unchecked")
-			CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
+			CategoricalColumn categoricalColumn = (CategoricalColumn) column;
 			return categoricalColumn.swapDictionary(newDict);
 		}
 	}
@@ -289,7 +282,7 @@ public final class Columns {
 	/**
 	 * Creates a boolean array containing whether an index appears in the data.
 	 */
-	private static <T> boolean[] findUsed(Column column, Context context, Dictionary<T> oldDictionary) {
+	private static boolean[] findUsed(Column column, Context context, Dictionary oldDictionary) {
 		int maxIndex = oldDictionary.maximalIndex();
 		return new Transformer(column).workload(Workload.SMALL).reduceCategorical(() -> new boolean[maxIndex + 1],
 				(b, i) -> b[i] = true, (b1, b2) -> {
@@ -302,10 +295,10 @@ public final class Columns {
 	/**
 	 * Creates a new dictionary with {@code null} values in case they are unused. Returns {@code null} otherwise.
 	 */
-	private static <T> Dictionary<T> replaceByNull(Dictionary<T> oldDictionary, boolean[] used) {
-		List<T> values = oldDictionary.getValueList();
+	private static Dictionary replaceByNull(Dictionary oldDictionary, boolean[] used) {
+		List<String> values = oldDictionary.getValueList();
 
-		List<T> newValues = null;
+		List<String> newValues = null;
 		int lastUsed = -1;
 		int unused = 0;
 
@@ -341,15 +334,15 @@ public final class Columns {
 	/**
 	 * Creates a new dictionary. If it is boolean, the positive index is only kept if it is used.
 	 */
-	private static <T> Dictionary<T> createDictionary(Dictionary<T> oldDictionary, boolean[] used, List<T> newValues,
+	private static Dictionary createDictionary(Dictionary oldDictionary, boolean[] used, List<String> newValues,
 													  int unused) {
 		if (newValues != null) {
 			if (oldDictionary.isBoolean()) {
-				return new BooleanDictionary<>(newValues,
+				return new BooleanDictionary(newValues,
 						(oldDictionary.getPositiveIndex() > 0 && used[oldDictionary.getPositiveIndex()]) ?
 								oldDictionary.getPositiveIndex() : BooleanDictionary.NO_ENTRY);
 			} else {
-				return new Dictionary<>(newValues, unused);
+				return new Dictionary(newValues, unused);
 			}
 		} else {
 			return null;
@@ -359,8 +352,8 @@ public final class Columns {
 	/**
 	 * Creates a dictionary of used values and remaps the column to match it.
 	 */
-	private static <T> Column remapToUsed(Column column, Class<T> type, Context context) {
-		Dictionary<T> oldDictionary = column.getDictionary(type);
+	private static Column remapToUsed(Column column, Context context) {
+		Dictionary oldDictionary = column.getDictionary();
 		boolean[] used = findUsed(column, context, oldDictionary);
 
 		int maxIndex = oldDictionary.maximalIndex();
@@ -375,8 +368,8 @@ public final class Columns {
 			//every index is used
 			return column;
 		}
-		List<T> oldValues = oldDictionary.getValueList();
-		List<T> newValues = new ArrayList<>(index);
+		List<String> oldValues = oldDictionary.getValueList();
+		List<String> newValues = new ArrayList<>(index);
 		newValues.add(null);
 		for (int i = 1; i < used.length; i++) {
 			if (used[i]) {
@@ -384,7 +377,7 @@ public final class Columns {
 			}
 		}
 
-		Dictionary<T> newDictionary;
+		Dictionary newDictionary;
 		if (oldDictionary.isBoolean()) {
 			int pos = oldDictionary.getPositiveIndex();
 			if (pos > 0) {
@@ -394,14 +387,12 @@ public final class Columns {
 					pos = remapping[pos];
 				}
 			}
-			newDictionary = new BooleanDictionary<>(newValues, pos);
+			newDictionary = new BooleanDictionary(newValues, pos);
 		} else {
-			newDictionary = new Dictionary<>(newValues);
+			newDictionary = new Dictionary(newValues);
 		}
 
-		//cast is safe since T is the element type of the column
-		@SuppressWarnings("unchecked")
-		CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
+		CategoricalColumn categoricalColumn = (CategoricalColumn) column;
 		return categoricalColumn.remap(newDictionary, remapping);
 	}
 
@@ -422,13 +413,13 @@ public final class Columns {
 		if (column.type().category() != Column.Category.CATEGORICAL) {
 			return column;
 		}
-		Dictionary<Object> dictionary = column.getDictionary(Object.class);
+		Dictionary dictionary = column.getDictionary();
 		if (dictionary.size() == dictionary.maximalIndex()) {
 			return column;
 		}
 
 		if (column instanceof CategoricalColumn) {
-			return columnWithoutGaps(column, column.type().elementType());
+			return columnWithoutGaps(column);
 		} else {
 			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
 		}
@@ -437,36 +428,34 @@ public final class Columns {
 	/**
 	 * Removes the gaps from the dictionary by a remapping.
 	 */
-	private static <T> Column columnWithoutGaps(Column column, Class<T> type) {
-		Dictionary<T> mapping = column.getDictionary(type);
-		List<T> oldValues = mapping.getValueList();
+	private static Column columnWithoutGaps(Column column) {
+		Dictionary mapping = column.getDictionary();
+		List<String> oldValues = mapping.getValueList();
 		int[] remapping = new int[mapping.maximalIndex() + 1];
-		List<T> newValues = new ArrayList<>(mapping.size() + 1);
+		List<String> newValues = new ArrayList<>(mapping.size() + 1);
 		newValues.add(null);
 
 		int newIndex = 1;
 		for (int i = 1; i <= mapping.maximalIndex(); i++) {
-			T value = oldValues.get(i);
+			String value = oldValues.get(i);
 			if (value != null) {
 				remapping[i] = newIndex++;
 				newValues.add(value);
 			}
 		}
 
-		Dictionary<T> dictionary;
+		Dictionary dictionary;
 		if (mapping.isBoolean()) {
 			int newPositive = mapping.getPositiveIndex();
 			if (newPositive > 0) {
 				newPositive = remapping[newPositive];
 			}
-			dictionary = new BooleanDictionary<>(newValues, newPositive);
+			dictionary = new BooleanDictionary(newValues, newPositive);
 		} else {
-			dictionary = new Dictionary<>(newValues);
+			dictionary = new Dictionary(newValues);
 		}
 
-		// column is of element type T
-		@SuppressWarnings("unchecked")
-		CategoricalColumn<T> nominalColumn = (CategoricalColumn<T>) column;
+		CategoricalColumn nominalColumn = (CategoricalColumn) column;
 		return nominalColumn.remap(dictionary, remapping);
 	}
 
@@ -474,11 +463,11 @@ public final class Columns {
 	/**
 	 * Creates a new column with the oldValue replaced by the newValue in the dictionary. In case this is not possible
 	 * because the new value is already part of the dictionary, a {@link IllegalReplacementException} is thrown. In
-	 * that case, the column data needs to be changed, either via a buffer ({@link Buffers#categoricalBuffer(Column,
-	 * Class)}) or an apply function ({@link Transformer#applyObjectToCategorical(Class, Function, Context)}. If the
-	 * old value is not part of the dictionary, nothing is changed.
+	 * that case, the column data needs to be changed, either via a buffer ({@link Buffers#nominalBuffer(Column)}) or
+	 * an apply function ({@link Transformer#applyObjectToNominal(Class, Function, Context)}. If the old value is not
+	 * part of the dictionary, nothing is changed.
 	 * <p>
-	 * In case multiple values need to be replaced, use {@link #replaceInDictionary(Column, Map, Class)} instead.
+	 * In case multiple values need to be replaced, use {@link #replaceInDictionary(Column, Map)} instead.
 	 *
 	 * @param column
 	 * 		the categorical column in which to replace dictionary values
@@ -486,8 +475,6 @@ public final class Columns {
 	 * 		the value to replace
 	 * @param newValue
 	 * 		the replacement value
-	 * @param <T>
-	 * 		the element type of the column
 	 * @return a new column with the same category indices but changed dictionary or the column if the old value is not
 	 * present in the dictionary
 	 * @throws NullPointerException
@@ -497,40 +484,33 @@ public final class Columns {
 	 * @throws IllegalReplacementException
 	 * 		if a replacement in the dictionary is not possible because the dictionary already contains the new value
 	 */
-	public static <T> Column replaceSingleInDictionary(Column column, T oldValue, T newValue) {
+	public static Column replaceSingleInDictionary(Column column, String oldValue, String newValue) {
 		Objects.requireNonNull(column, MESSAGE_NULL_COLUMN);
 		if (oldValue == null || newValue == null) {
 			throw new NullPointerException("Replacement values must not be null");
 		}
-		if (!column.type().elementType().isInstance(oldValue)) {
-			throw new IllegalArgumentException("Old value of different type than dictionary entries");
-		}
-		if (!column.type().elementType().isInstance(newValue)) {
-			throw new IllegalArgumentException("Replacement value of different type than dictionary entries");
-		}
 		if (column.type().category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column must be categorical");
 		}
-		return tryReplace(column, column.type().elementType(), oldValue, newValue);
+		if (!column.type().elementType().isInstance(oldValue)) {
+			throw new IllegalArgumentException("Old value of different type than dictionary entries");
+		}
+		return tryReplace(column, oldValue, newValue);
 	}
 
 	/**
 	 * Creates a new column with the values in the dictionary replaced as specified by the map. In case this is not
 	 * possible because a new value is already part of the dictionary, a {@link IllegalReplacementException} is thrown.
-	 * In that case, the column data needs to be changed, either via a buffer ({@link Buffers#categoricalBuffer(Column,
-	 * Class)}) or an apply function ({@link Transformer#applyObjectToCategorical(Class, Function, Context)}. If the
-	 * old value is not part of the dictionary, the mapping is ignored.
+	 * In that case, the column data needs to be changed, either via a buffer ({@link Buffers#nominalBuffer(Column)})
+	 * or an apply function ({@link Transformer#applyObjectToNominal(Class, Function, Context)}. If the old value is
+	 * not part of the dictionary, the mapping is ignored.
 	 * <p>
-	 * In case only one value should be replaced use {@link #replaceSingleInDictionary(Column, Object, Object)} instead.
+	 * In case only one value should be replaced use {@link #replaceSingleInDictionary(Column, String, String)} instead.
 	 *
 	 * @param column
 	 * 		the categorical column in which to replace dictionary values
 	 * @param oldToNewValue
 	 * 		a map from old to new value, the map order does not matter
-	 * @param type
-	 * 		the type of the replacement values
-	 * @param <T>
-	 * 		the element type of the column
 	 * @return a new column with the same category indices but the dictionary changed according to the map
 	 * @throws NullPointerException
 	 * 		if one of the parameters is {@code null}
@@ -539,25 +519,22 @@ public final class Columns {
 	 * @throws IllegalReplacementException
 	 * 		if a replacement in the dictionary is not possible because the dictionary already contains the new value
 	 */
-	public static <T> Column replaceInDictionary(Column column, Map<T, T> oldToNewValue, Class<T> type) {
+	public static Column replaceInDictionary(Column column, Map<String, String> oldToNewValue) {
 		Objects.requireNonNull(column, MESSAGE_NULL_COLUMN);
-		Objects.requireNonNull(type, "Type must not be null");
 		Objects.requireNonNull(oldToNewValue, "Map must not be null");
-		if (!column.type().elementType().equals(type)) {
-			throw new IllegalArgumentException("Type '" + type + "' of the replacement values not compatible with the " +
+		if (!column.type().elementType().equals(String.class)) {
+			throw new IllegalArgumentException("Type '" + String.class + "' of the replacement values not compatible with the " +
 					"column element type '" + column.type().elementType() + "'");
 		}
 		if (column.type().category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column must be categorical");
 		}
 		if (column instanceof CategoricalColumn) {
-			//checked above that T is the element type
-			@SuppressWarnings("unchecked")
-			CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
-			Dictionary<T> dictionary = categoricalColumn.getDictionary();
-			Map<T, Integer> toReplace = createReplacementMap(oldToNewValue, dictionary);
-			List<T> newDictionaryValues = new ArrayList<>(dictionary.getValueList());
-			for (Map.Entry<T, Integer> entry : toReplace.entrySet()) {
+			CategoricalColumn categoricalColumn = (CategoricalColumn) column;
+			Dictionary dictionary = categoricalColumn.getDictionary();
+			Map<String, Integer> toReplace = createReplacementMap(oldToNewValue, dictionary);
+			List<String> newDictionaryValues = new ArrayList<>(dictionary.getValueList());
+			for (Map.Entry<String, Integer> entry : toReplace.entrySet()) {
 				newDictionaryValues.set(entry.getValue(), entry.getKey());
 			}
 			return replaceDictionaryWithValues(categoricalColumn, dictionary, newDictionaryValues);
@@ -569,8 +546,8 @@ public final class Columns {
 	/**
 	 * Exception thrown when a replacement in a dictionary is not possible since otherwise the same value would be at
 	 * two indices. In case of this exception, a replacement purely on dictionary level is not possible. The category
-	 * index data needs to be changed via a buffer (e.g. {@link Buffers#categoricalBuffer(Column, Class)}) or an apply
-	 * function (e.g. {@link Transformer#applyObjectToCategorical(Class, Function, Context)}.
+	 * index data needs to be changed via a buffer (e.g. {@link Buffers#nominalBuffer(Column)}) or an apply
+	 * function (e.g. {@link Transformer#applyObjectToNominal(Class, Function, Context)}.
 	 */
 	public static final class IllegalReplacementException extends IllegalArgumentException {
 
@@ -586,17 +563,15 @@ public final class Columns {
 	 * Creates a new dictionary with the old value replaced by the new value and creates a new column with this new
 	 * dictionary and the same data.
 	 */
-	private static <T> Column tryReplace(Column column, Class<T> type, Object oldValue, Object newValue) {
+	private static Column tryReplace(Column column, String oldValue, String newValue) {
 		if (column instanceof CategoricalColumn) {
-			//checked above that T is the element type and column is categorical
-			@SuppressWarnings("unchecked")
-			CategoricalColumn<T> categoricalColumn = (CategoricalColumn<T>) column;
+			CategoricalColumn categoricalColumn = (CategoricalColumn) column;
 
-			Dictionary<T> dictionary = categoricalColumn.getDictionary();
-			List<T> dictionaryValues = dictionary.getValueList();
+			Dictionary dictionary = categoricalColumn.getDictionary();
+			List<String> dictionaryValues = dictionary.getValueList();
 			int indexOfOld = -1;
 			int i = 0;
-			for (T value : dictionaryValues) {
+			for (String value : dictionaryValues) {
 				if (oldValue.equals(value)) {
 					indexOfOld = i;
 				}
@@ -609,10 +584,8 @@ public final class Columns {
 			if (indexOfOld < 0) {
 				return column;
 			}
-			List<T> newDictionaryValues = new ArrayList<>(dictionaryValues);
-			//save to cast since new value is compatible with element type
-			T typedNewValue = type.cast(newValue);
-			newDictionaryValues.set(indexOfOld, typedNewValue);
+			List<String> newDictionaryValues = new ArrayList<>(dictionaryValues);
+			newDictionaryValues.set(indexOfOld, newValue);
 			return replaceDictionaryWithValues(categoricalColumn, dictionary, newDictionaryValues);
 		} else {
 			throw new AssertionError(MESSAGE_CATEGORICAL_IMPLEMENTATION);
@@ -623,13 +596,13 @@ public final class Columns {
 	 * Swaps the dictionary of the column with a new dictionary created from the given values and keeps the positive
 	 * index if the dictionary is boolean.
 	 */
-	private static <T> Column replaceDictionaryWithValues(CategoricalColumn<T> categoricalColumn,
-														  Dictionary<T> dictionary, List<T> newDictionaryValues) {
-		Dictionary<T> newDictionary;
+	private static Column replaceDictionaryWithValues(CategoricalColumn categoricalColumn,
+														  Dictionary dictionary, List<String> newDictionaryValues) {
+		Dictionary newDictionary;
 		if (dictionary.isBoolean()) {
-			newDictionary = new BooleanDictionary<>(newDictionaryValues, dictionary.getPositiveIndex());
+			newDictionary = new BooleanDictionary(newDictionaryValues, dictionary.getPositiveIndex());
 		} else {
-			newDictionary = new Dictionary<>(newDictionaryValues);
+			newDictionary = new Dictionary(newDictionaryValues);
 		}
 		return categoricalColumn.swapDictionary(newDictionary);
 	}
@@ -641,16 +614,16 @@ public final class Columns {
 	 * dictionary. Checks that when applying the replacement map to the dictionary, every value appears at only one
 	 * index.
 	 */
-	private static <T> Map<T, Integer> createReplacementMap(Map<T, T> oldToNewValue, Dictionary<T> dictionary) {
-		Map<T, Integer> inverse = dictionary.createInverse();
+	private static Map<String, Integer> createReplacementMap(Map<String, String> oldToNewValue, Dictionary dictionary) {
+		Map<String, Integer> inverse = dictionary.createInverse();
 		// Set used to check that no new value is the same as one of the remaining old values
-		Set<T> uniquenessCheck = new HashSet<>(inverse.keySet());
+		Set<String> uniquenessCheck = new HashSet<>(inverse.keySet());
 		uniquenessCheck.removeAll(oldToNewValue.keySet());
 
-		Map<T, Integer> toReplace = new HashMap<>();
-		for (Map.Entry<T, T> entry : oldToNewValue.entrySet()) {
-			T oldValue = entry.getKey();
-			T newValue = entry.getValue();
+		Map<String, Integer> toReplace = new HashMap<>();
+		for (Map.Entry<String, String> entry : oldToNewValue.entrySet()) {
+			String oldValue = entry.getKey();
+			String newValue = entry.getValue();
 			if (oldValue == null || newValue == null) {
 				throw new NullPointerException("Replacement values must not be null");
 			}
@@ -682,81 +655,81 @@ public final class Columns {
 		/**
 		 * Creates a new categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, int[] data,
-																	  List<T> dictionary);
+		public abstract  CategoricalColumn newCategoricalColumn(ColumnType<String> type, int[] data,
+																	  List<String> dictionary);
 
 		/**
 		 * Creates a new categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, short[] data,
-																	  List<T> dictionary);
+		public abstract  CategoricalColumn newCategoricalColumn(ColumnType<String> type, short[] data,
+																	  List<String> dictionary);
 
 		/**
 		 * Creates a new categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type,
+		public abstract  CategoricalColumn newCategoricalColumn(ColumnType<String> type,
 																	  IntegerFormats.PackedIntegers bytes,
-																	  List<T> dictionary);
+																	  List<String> dictionary);
 
 		/**
 		 * Creates a new categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, int[] data,
-																	  List<T> dictionary, int positiveIndex);
+		public abstract  CategoricalColumn newCategoricalColumn(ColumnType<String> type, int[] data,
+																	  List<String> dictionary, int positiveIndex);
 
 		/**
 		 * Creates a new categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type, short[] data,
-																	  List<T> dictionary, int positiveIndex);
+		public abstract  CategoricalColumn newCategoricalColumn(ColumnType<String> type, short[] data,
+																	  List<String> dictionary, int positiveIndex);
 
 		/**
 		 * Creates a new categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newCategoricalColumn(ColumnType<T> type,
+		public abstract  CategoricalColumn newCategoricalColumn(ColumnType<String> type,
 																	  IntegerFormats.PackedIntegers bytes,
-																	  List<T> dictionary, int positiveIndex);
+																	  List<String> dictionary, int positiveIndex);
 
 		/**
 		 * Creates a new sparse categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
-																			int[] nonDefaultValues, List<T> dictionary,
+		public abstract  CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+																			int[] nonDefaultValues, List<String> dictionary,
 																			int defaultValue, int size);
 
 		/**
 		 * Creates a new sparse categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
-																			short[] nonDefaultValues, List<T> dictionary,
+		public abstract  CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+																			short[] nonDefaultValues, List<String> dictionary,
 																			short defaultValue, int size);
 
 		/**
 		 * Creates a new sparse categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
-																			byte[] nonDefaultValues, List<T> dictionary,
+		public abstract  CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+																			byte[] nonDefaultValues, List<String> dictionary,
 																			byte defaultValue, int size);
 
 		/**
 		 * Creates a new sparse categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
-																			int[] nonDefaultValues, List<T> dictionary,
+		public abstract  CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+																			int[] nonDefaultValues, List<String> dictionary,
 																			int defaultValue, int size, int positiveIndex);
 
 		/**
 		 * Creates a new sparse categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
-																			short[] nonDefaultValues, List<T> dictionary,
+		public abstract  CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+																			short[] nonDefaultValues, List<String> dictionary,
 																			short defaultValue, int size, int positiveIndex);
 
 		/**
 		 * Creates a new sparse categorical column from the given data.
 		 */
-		public abstract <T> CategoricalColumn<T> newSparseCategoricalColumn(ColumnType<T> type, int[] nonDefaultIndices,
-																			byte[] nonDefaultValues, List<T> dictionary,
+		public abstract  CategoricalColumn newSparseCategoricalColumn(ColumnType<String> type, int[] nonDefaultIndices,
+																			byte[] nonDefaultValues, List<String> dictionary,
 																			byte defaultValue, int size, int positiveIndex);
 
 		/**
@@ -802,7 +775,7 @@ public final class Columns {
 		/**
 		 * Creates a new categorical column of the given size that is constantly one value, represented as sparse column.
 		 */
-		public abstract <T> CategoricalColumn<T> newSingleValueCategoricalColumn(ColumnType<T> type, T value, int size);
+		public abstract  CategoricalColumn newSingleValueCategoricalColumn(ColumnType<String> type, String value, int size);
 
 		/**
 		 * Returns a copy of the byte data of a categorical column.
@@ -817,7 +790,7 @@ public final class Columns {
 		/**
 		 * Returns the internal list of dictionary values.
 		 */
-		public abstract <T> List<T> getDictionaryList(Dictionary<T> dictionary);
+		public abstract  List<String> getDictionaryList(Dictionary dictionary);
 
 		/**
 		 * Maps a column wrt. to a mapping, see {@link Column#map(int[], boolean)}.

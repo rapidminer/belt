@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.rapidminer.belt.column.BooleanDictionary;
 import com.rapidminer.belt.column.CategoricalColumn;
-import com.rapidminer.belt.column.Column.Category;
 import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.util.IntegerFormats;
 import com.rapidminer.belt.util.IntegerFormats.Format;
@@ -34,17 +33,17 @@ import com.rapidminer.belt.util.IntegerFormats.PackedIntegers;
 
 
 /**
- * Implementation of a {@link CategoricalBuffer} with category index format {@link Format#UNSIGNED_INT2} that can
+ * Implementation of a {@link NominalBuffer} with category index format {@link Format#UNSIGNED_INT2} that can
  * hold {@code 3} different categories. Four category indices are stored in a single {@code byte}.
  *
  * @author Gisa Meier
  */
-public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
+public class UInt2NominalBuffer extends NominalBuffer {
 
 	private final PackedIntegers bytes;
 	private boolean frozen = false;
-	private final Map<T, Byte> indexLookup = new ConcurrentHashMap<>();
-	private final List<T> valueLookup = new ArrayList<>(4);
+	private final Map<String, Byte> indexLookup = new ConcurrentHashMap<>();
+	private final List<String> valueLookup = new ArrayList<>(4);
 
 	/**
 	 * Creates a buffer of the given length.
@@ -52,13 +51,14 @@ public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * @param length
 	 * 		the length of the buffer
 	 */
-	UInt2CategoricalBuffer(int length) {
+	UInt2NominalBuffer(ColumnType<String> type, int length) {
+		super(type);
 		bytes = new PackedIntegers(new byte[length % 4 == 0 ? length / 4 : length / 4 + 1], indexFormat(), length);
 		valueLookup.add(null); //position 0 stands for missing value, i.e. null
 	}
 
 	@Override
-	public T get(int index) {
+	public String get(int index) {
 		int valueIndex = readUInt2(bytes.data(), index);
 		synchronized (valueLookup) {
 			return valueLookup.get(valueIndex);
@@ -72,7 +72,7 @@ public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * different threads, you must ensure that m and n are divisible by 4.
 	 */
 	@Override
-	public void set(int index, T value) {
+	public void set(int index, String value) {
 		if (!setSave(index, value)) {
 			throw new IllegalArgumentException("More than " + indexFormat().maxValue() + " different values.");
 		}
@@ -85,7 +85,7 @@ public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	 * different threads, you must ensure that m and n are divisible by 4.
 	 */
 	@Override
-	public boolean setSave(int index, T value) {
+	public boolean setSave(int index, String value) {
 		if (frozen) {
 			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
@@ -146,7 +146,7 @@ public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
 
 
 	@Override
-	List<T> getMapping() {
+	List<String> getMapping() {
 		return valueLookup;
 	}
 
@@ -156,21 +156,13 @@ public class UInt2CategoricalBuffer<T> extends CategoricalBuffer<T> {
 	}
 
 	@Override
-	public CategoricalColumn<T> toColumn(ColumnType<T> type) {
-		Objects.requireNonNull(type, "Column type must not be null");
-		if (type.category() != Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Column type must be categorical");
-		}
+	public CategoricalColumn toColumn() {
 		freeze();
 		return ColumnAccessor.get().newCategoricalColumn(type, bytes, valueLookup);
 	}
 
 	@Override
-	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
-		Objects.requireNonNull(type, "Column type must not be null");
-		if (type.category() != Category.CATEGORICAL) {
-			throw new IllegalArgumentException("Column type must be categorical");
-		}
+	public CategoricalColumn toBooleanColumn(String positiveValue) {
 		if (valueLookup.size() > BooleanDictionary.MAXIMAL_RAW_SIZE) {
 			throw new IllegalArgumentException("Boolean column must have 2 values or less");
 		}

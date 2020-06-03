@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -53,7 +53,7 @@ final class ApplierNObjectToNumeric<T> implements Calculator<NumericBuffer> {
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = round ? Buffers.integerBuffer(sources.get(0).size(), false) :
+		target = round ? Buffers.integer53BitBuffer(sources.get(0).size(), false) :
 				Buffers.realBuffer(sources.get(0).size(), false);
 	}
 

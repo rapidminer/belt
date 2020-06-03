@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -77,13 +78,13 @@ final class BufferPrinter {
 	}
 
 	/**
-	 * Prints a single {@link CategoricalBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
+	 * Prints a single {@link NominalBuffer} showing up to {@value MAX_COLUMN_ROWS} rows (horizontal layout).
 	 *
 	 * @param buffer
 	 * 		the buffer to print
 	 * @return the formatted string
 	 */
-	static String print(CategoricalBuffer<?> buffer) {
+	static String print(NominalBuffer buffer) {
 		int size = buffer.size();
 		boolean rowSubset = size > MAX_COLUMN_ROWS;
 
@@ -192,7 +193,7 @@ final class BufferPrinter {
 		if (Double.isNaN(value)) {
 			return MISSING_VALUE_STRING;
 		}
-		if (type == TypeId.INTEGER) {
+		if (type == TypeId.INTEGER_53_BIT) {
 			return String.format(Locale.ENGLISH, "%.0f", value);
 		}
 		return String.format(Locale.ENGLISH, "%.3f", value);

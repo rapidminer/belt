@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -19,6 +19,7 @@ package com.rapidminer.belt.column;
 
 import java.time.Instant;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -111,7 +112,12 @@ public class Statistics {
 		/**
 		 * (One of) the most frequent items in the column (if any).
 		 */
-		MODE
+		MODE,
+
+		/**
+		 * How often each category index appears in a categorical column.
+		 */
+		INDEX_COUNTS
 	}
 
 
@@ -119,14 +125,16 @@ public class Statistics {
 	 * Result container for a statistics computation. Not all values might be set depending on column type and
 	 * statistic.
 	 *
-	 * <p>Statistics for columns of type {@link ColumnTypes#REAL} and {@link ColumnTypes#INTEGER} only make use of
+	 * <p>Statistics for columns of type {@link ColumnType#REAL} and {@link ColumnType#INTEGER_53_BIT} only make use of
 	 * the numeric value (see {@link #getNumeric()}).
 	 *
-	 * <p>Statistics for columns of type {@link ColumnTypes#NOMINAL} make use of the categorical index and string value
+	 * <p>Statistics for columns of type {@link ColumnType#NOMINAL} make use of the categorical index and string value
 	 * (see {@link #getCategorical()} and {@link #getObject()} respectively). An exception is the statistic
-	 * {@link Statistic#COUNT} which makes use of the numeric value (see {@link #getNumeric()}) instead.
+	 * {@link Statistic#COUNT} which makes use of the numeric value (see {@link #getNumeric()}) instead. The
+	 * {@link Statistic#INDEX_COUNTS} is a special case as it returns a {@link CategoricalIndexCounts} accessible via
+	 * {@link #getObject()}.
 	 *
-	 * <p>Statistics for columns of type {@link ColumnTypes#DATETIME} and {@link ColumnTypes#TIME} only make use of the
+	 * <p>Statistics for columns of type {@link ColumnType#DATETIME} and {@link ColumnType#TIME} only make use of the
 	 * {@link Instant} and {@link LocalTime} value respectively (see {@link #getObject()}). An exception is the
 	 * statistic {@link Statistic#COUNT} which makes use of the numeric value (see {@link #getNumeric()}) instead.
 	 *
@@ -215,6 +223,48 @@ public class Statistics {
 	}
 
 	/**
+	 * Container for categorical index counts from categorical statistic calculations.
+	 */
+	public static final class CategoricalIndexCounts {
+		private final int[] counts;
+
+		private CategoricalIndexCounts(int[] counts) {
+			this.counts = counts;
+		}
+
+		/**
+		 * Returns how often a certain category index appears in the column this statistics was calculated for.
+		 *
+		 * @param categoryIndex
+		 * 		the category index to check
+		 * @return how often the category index appears
+		 */
+		public int countForIndex(int categoryIndex) {
+			if (categoryIndex < 0 || categoryIndex >= counts.length) {
+				return 0;
+			}
+			return counts[categoryIndex];
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			CategoricalIndexCounts that = (CategoricalIndexCounts) o;
+			return Arrays.equals(counts, that.counts);
+		}
+
+		@Override
+		public int hashCode() {
+			return Arrays.hashCode(counts);
+		}
+	}
+
+	/**
 	 * Statistics supported for numeric columns.
 	 */
 	private static final Set<Statistic> NUMERIC = EnumSet.of(
@@ -262,7 +312,8 @@ public class Statistics {
 	private static final Set<Statistic> CATEGORICAL = EnumSet.of(
 			Statistic.COUNT,
 			Statistic.LEAST,
-			Statistic.MODE
+			Statistic.MODE,
+			Statistic.INDEX_COUNTS
 	);
 
 	/**
@@ -348,7 +399,7 @@ public class Statistics {
 		Objects.requireNonNull(statistic, "Statistic must not be null");
 		ColumnType<?> type = column.type();
 		switch (type.id()) {
-			case INTEGER:
+			case INTEGER_53_BIT:
 			case REAL:
 				return NUMERIC.contains(statistic);
 			case TIME:
@@ -357,11 +408,9 @@ public class Statistics {
 				return CATEGORICAL.contains(statistic);
 			case DATE_TIME:
 				return DATETIME.contains(statistic);
-			case CUSTOM:
+			default:
 				// Decide based on category
 				return supported(type.category(), statistic);
-			default:
-				return false;
 		}
 	}
 
@@ -398,7 +447,7 @@ public class Statistics {
 			throw new UnsupportedOperationException("Unsupported statistics: " + statistic);
 		}
 		switch (column.type().id()) {
-			case INTEGER:
+			case INTEGER_53_BIT:
 			case REAL:
 				return computeNumeric(column, statistic, ctx);
 			case NOMINAL:
@@ -407,14 +456,12 @@ public class Statistics {
 				return computeTime(column, statistic, ctx);
 			case DATE_TIME:
 				return computeDateTime(column, statistic, ctx);
-			case CUSTOM:
-				return computeCustom(column, statistic, ctx);
 			default:
-				throw new AssertionError();
+				return computeOther(column, statistic, ctx);
 		}
 	}
 
-	private static Result computeCustom(Column column, Statistic statistic, Context context) {
+	private static Result computeOther(Column column, Statistic statistic, Context context) {
 		switch (column.type().category()) {
 			case CATEGORICAL:
 				return computeCategorical(column, statistic, context);
@@ -452,7 +499,7 @@ public class Statistics {
 			}
 		}
 		switch (column.type().id()) {
-			case INTEGER:
+			case INTEGER_53_BIT:
 			case REAL:
 				return computeNumeric(column, statistics, ctx);
 			case NOMINAL:
@@ -461,14 +508,12 @@ public class Statistics {
 				return computeTime(column, statistics, ctx);
 			case DATE_TIME:
 				return computeDateTime(column, statistics, ctx);
-			case CUSTOM:
-				return computeCustom(column, statistics, ctx);
 			default:
-				throw new AssertionError();
+				return computeOther(column, statistics, ctx);
 		}
 	}
 
-	private static Map<Statistic, Result> computeCustom(Column column, Set<Statistic> statistics, Context ctx) {
+	private static Map<Statistic, Result> computeOther(Column column, Set<Statistic> statistics, Context ctx) {
 		switch (column.type().category()) {
 			case CATEGORICAL:
 				return computeCategorical(column, statistics, ctx);
@@ -796,6 +841,12 @@ public class Statistics {
 			case MODE:
 				counts = computeCategoricalCounts(column, ctx);
 				return new Result(counts.modeCount, counts.modeIndex, counts.mode);
+			case INDEX_COUNTS:
+				Dictionary dictionary = column.getDictionary();
+				int nValues = dictionary.maximalIndex() + 1;
+				int[] indexCounts = calculateIndexCounts(column, ctx, nValues);
+				CategoricalIndexCounts valueCount = new CategoricalIndexCounts(indexCounts);
+				return new Result(Double.NaN, 0, valueCount);
 			default:
 				throw new AssertionError();
 		}
@@ -805,6 +856,20 @@ public class Statistics {
 		Map<Statistic, Result> resultMap = new EnumMap<>(Statistic.class);
 		if (statistics.size() == 1 && statistics.contains(Statistic.COUNT)) {
 			resultMap.put(Statistic.COUNT, new Result(computeCategoricalElementCount(column, ctx)));
+		} else if (statistics.contains(Statistic.INDEX_COUNTS)) {
+			Dictionary dictionary = column.getDictionary();
+			int nValues = dictionary.maximalIndex() + 1;
+			int[] indexCounts = calculateIndexCounts(column, ctx, nValues);
+			CategoricalIndexCounts valueCount = new CategoricalIndexCounts(indexCounts);
+			resultMap.put(Statistic.INDEX_COUNTS, new Result(Double.NaN, 0, valueCount));
+			if (statistics.size() > 1) {
+				CategoricalCounts counts = extractCategoricalCounts(dictionary, nValues, indexCounts);
+				for (Statistic statistic : statistics) {
+					if (statistic != Statistic.INDEX_COUNTS) {
+						resultMap.put(statistic, extractCategoricalStatistic(statistic, counts));
+					}
+				}
+			}
 		} else {
 			CategoricalCounts counts = computeCategoricalCounts(column, ctx);
 			for (Statistic statistic : statistics) {
@@ -838,19 +903,15 @@ public class Statistics {
 
 	private static CategoricalCounts computeCategoricalCounts(Column column, Context ctx) {
 		// Count occurrences of each dictionary index.
-		Dictionary<Object> dictionary = column.getDictionary(Object.class);
+		Dictionary dictionary = column.getDictionary();
 		int nValues = dictionary.maximalIndex() + 1;
-		Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
-		int[] indexCounts = transformer.reduceCategorical(
-				() -> new int[nValues],
-				(counts, index) -> counts[index]++,
-				(countsA, countsB) -> {
-					for (int index = 0; index < nValues; index++) {
-						countsA[index] += countsB[index];
-					}
-				},
-				ctx);
+		int[] indexCounts = calculateIndexCounts(column, ctx, nValues);
+		return extractCategoricalCounts(dictionary, nValues, indexCounts);
 
+	}
+
+	private static CategoricalCounts extractCategoricalCounts(Dictionary dictionary, int nValues,
+															  int[] indexCounts) {
 		// Lookup most/least frequent values (if any).
 		CategoricalCounts counts = new CategoricalCounts();
 		for (int index = 1; index < nValues; index++) {
@@ -883,6 +944,19 @@ public class Statistics {
 		}
 
 		return counts;
+	}
+
+	private static int[] calculateIndexCounts(Column column, Context ctx, int nValues) {
+		Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
+		return transformer.reduceCategorical(
+				() -> new int[nValues],
+				(counts, index) -> counts[index]++,
+				(countsA, countsB) -> {
+					for (int index = 0; index < nValues; index++) {
+						countsA[index] += countsB[index];
+					}
+				},
+				ctx);
 	}
 
 	private static Result computeDateTime(Column column, Statistic statistic, Context ctx) {

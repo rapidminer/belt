@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,11 +28,11 @@ import com.rapidminer.belt.column.ColumnTestUtils;
 
 
 /**
- * Tests for {@link IntegerBufferSparse}.
+ * Tests for {@link Integer53BitBufferSparse}.
  *
  * @author Kevin Majchrzak
  */
-public class IntegerBufferSparseTests {
+public class Integer53BitBufferSparseTests {
 
 	private static final double SPARSITY = 0.1;
 	private static final double EPSILON = 1e-10;
@@ -48,7 +49,7 @@ public class IntegerBufferSparseTests {
 	public void testSet() {
 		int n = 123;
 		double[] testData = random(n);
-		IntegerBufferSparse buffer = Buffers.sparseIntegerBuffer(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
+		Integer53BitBufferSparse buffer = Buffers.sparseInteger53BitBuffer(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
 		for (int i = 0; i < n; i++) {
 			buffer.setNext(testData[i]);
 		}
@@ -62,7 +63,7 @@ public class IntegerBufferSparseTests {
 	public void testSetInterleaved() {
 		int n = 100;
 		double defaultValue = -3.9;
-		IntegerBufferSparse buffer = Buffers.sparseIntegerBuffer(defaultValue, n);
+		Integer53BitBufferSparse buffer = Buffers.sparseInteger53BitBuffer(defaultValue, n);
 		buffer.setNext(17, defaultValue);
 		buffer.setNext(20, 213.2);
 		buffer.setNext(21, -3.88);
@@ -86,7 +87,7 @@ public class IntegerBufferSparseTests {
 		double[] testData = random(n);
 		// default value will not be part of test data
 		double defaultValue = MAX_RANDOM_INT + 1.3;
-		IntegerBufferSparse buffer = Buffers.sparseIntegerBuffer(defaultValue, n);
+		Integer53BitBufferSparse buffer = Buffers.sparseInteger53BitBuffer(defaultValue, n);
 		// add default value one..
 		buffer.setNext(defaultValue);
 		for (int i = 1; i < n / 2; i++) {
@@ -107,7 +108,7 @@ public class IntegerBufferSparseTests {
 	public void testGrow() {
 		int n = 1_000_000;
 		double[] testData = random(n);
-		IntegerBufferSparse buffer = new IntegerBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
 		for (int i = 0; i < n; i++) {
 			buffer.setNext(testData[i]);
 		}
@@ -124,7 +125,7 @@ public class IntegerBufferSparseTests {
 		// Do not change it if you are not sure what you are doing.
 		int n = 1124;
 		double[] testData = random(n);
-		IntegerBufferSparse buffer = new IntegerBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
 		for (int i = 0; i < n; i++) {
 			buffer.setNext(testData[i]);
 		}
@@ -136,18 +137,18 @@ public class IntegerBufferSparseTests {
 
 	@Test
 	public void testBufferLength() {
-		IntegerBufferSparse buffer = new IntegerBufferSparse(Math.random(), 197);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(Math.random(), 197);
 		assertEquals(197, buffer.size());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBufferNegativeLengthTwo() {
-		Buffers.sparseIntegerBuffer(Math.random(), -5);
+		Buffers.sparseInteger53BitBuffer(Math.random(), -5);
 	}
 
 	@Test
 	public void testZeroBufferLength() {
-		IntegerBufferSparse buffer = new IntegerBufferSparse(Math.random(), 0);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(Math.random(), 0);
 		assertEquals(0, buffer.size());
 	}
 
@@ -155,11 +156,11 @@ public class IntegerBufferSparseTests {
 	public void testToColumnToBuffer() {
 		int n = 42;
 		double[] testData = random(n);
-		IntegerBufferSparse buffer = new IntegerBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
 		for (int i = 0; i < n; i++) {
 			buffer.setNext(testData[i]);
 		}
-		NumericBuffer buffer2 = new IntegerBuffer(buffer.toColumn());
+		NumericBuffer buffer2 = new Integer53BitBuffer(buffer.toColumn());
 
 		double[] resultData = new double[n];
 		for (int i = 0; i < n; i++) {
@@ -175,7 +176,7 @@ public class IntegerBufferSparseTests {
 	public void testSetAfterFreeze() {
 		int n = 12;
 		double[] testData = random(n);
-		IntegerBufferSparse buffer = new IntegerBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(ColumnTestUtils.getMostFrequentValue(testData, -17.3), n);
 		for (int i = 0; i < n - 1; i++) {
 			buffer.setNext(testData[i]);
 		}
@@ -186,7 +187,7 @@ public class IntegerBufferSparseTests {
 	@Test
 	public void testNotFinite() {
 		double[] data = {Double.NaN, Double.NEGATIVE_INFINITY, Double.NaN, Double.POSITIVE_INFINITY};
-		IntegerBufferSparse buffer = new IntegerBufferSparse(ColumnTestUtils.getMostFrequentValue(data, -17.3), data.length);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(ColumnTestUtils.getMostFrequentValue(data, -17.3), data.length);
 		for (int i = 0; i < data.length; i++) {
 			buffer.setNext(data[i]);
 		}
@@ -198,27 +199,27 @@ public class IntegerBufferSparseTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testIllegalIndex() {
-		IntegerBufferSparse buffer = new IntegerBufferSparse(10, 100);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(10, 100);
 		buffer.setNext(17, 0.3);
 		buffer.setNext(0, -2);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void duplicateIndex() {
-		IntegerBufferSparse buffer = new IntegerBufferSparse(10, 100);
+		Integer53BitBufferSparse buffer = new Integer53BitBufferSparse(10, 100);
 		buffer.setNext(17, 0.3);
 		buffer.setNext(17, 10);
 	}
 
 	@Test(expected = IndexOutOfBoundsException.class)
 	public void outOfLowerBounds() {
-		IntegerBufferSparse buffer = Buffers.sparseIntegerBuffer(random(1)[0], 100);
+		Integer53BitBufferSparse buffer = Buffers.sparseInteger53BitBuffer(random(1)[0], 100);
 		buffer.setNext(-1, random(1)[0]);
 	}
 
 	@Test(expected = IndexOutOfBoundsException.class)
 	public void outOfUpperBounds() {
-		IntegerBufferSparse buffer = Buffers.sparseIntegerBuffer(random(1)[0], 100);
+		Integer53BitBufferSparse buffer = Buffers.sparseInteger53BitBuffer(random(1)[0], 100);
 		buffer.setNext(100, random(1)[0]);
 	}
 

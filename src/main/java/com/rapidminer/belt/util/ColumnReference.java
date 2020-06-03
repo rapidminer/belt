@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -29,13 +29,13 @@ public final class ColumnReference implements ColumnMetaData {
 	private static final String TYPE_ID = "com.rapidminer.belt.meta.column.reference";
 
 	private final String column;
-	private final Object value;
+	private final String value;
 
 	public ColumnReference(String column) {
 		this(column, null);
 	}
 
-	public ColumnReference(String column, Object value) {
+	public ColumnReference(String column, String value) {
 		this.column = column;
 		this.value = value;
 	}
@@ -64,7 +64,7 @@ public final class ColumnReference implements ColumnMetaData {
 	 *
 	 * @return the value or {@code null}
 	 */
-	public Object getValue() {
+	public String getValue() {
 		return value;
 	}
 
@@ -84,6 +84,11 @@ public final class ColumnReference implements ColumnMetaData {
 	@Override
 	public int hashCode() {
 		return Objects.hash(column, value);
+	}
+
+	@Override
+	public String toString() {
+		return "ColumnReference[" + column + ", " + value + "]";
 	}
 
 }

@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -36,7 +36,6 @@ import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.execution.Context;
 
 
@@ -54,8 +53,6 @@ public class ObjectColumnReducerTests {
 
 	private static final Context CTX = Belt.defaultContext();
 
-	private static final ColumnType<String> FREE_STRING_TYPE = ColumnTypes.objectType("test", String.class, null);
-
 	private static final Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 			.add("a", getNominal())
 			.add("b", getFree())
@@ -68,13 +65,13 @@ public class ObjectColumnReducerTests {
 		mapping.add(0, null);
 		int[] categories = new int[data.length];
 		Arrays.setAll(categories, i -> i + 1);
-		return ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
+		return ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, categories, mapping);
 	}
 
 	private static Column getFree() {
 		String[] data = new String[NUMBER_OF_ROWS];
 		Arrays.setAll(data, i -> "value" + (i % 10));
-		return ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data);
+		return ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
 	}
 
 	private static String[] random(int n) {
@@ -122,7 +119,7 @@ public class ObjectColumnReducerTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
 			Table table2 = Builders.newTableBuilder(table.height())
-					.add("a", ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, new Object[table.height()]))
+					.add("a", ColumnTestUtils.getObjectColumn(ColumnType.TEXT, new Object[table.height()]))
 					.add("b", ColumnTestUtils.getNumericColumn(TypeId.REAL, new double[table.height()])).build(CTX);
 			table2.transform(1).reduceObjects(Void.class, ArrayList::new, (t, r) -> {
 			}, ArrayList::addAll, CTX);
@@ -176,7 +173,7 @@ public class ObjectColumnReducerTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testUnsupportedColumn() {
 			Table table2 = Builders.newTableBuilder(table.height())
-					.add("a", ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, new Object[table.height()]))
+					.add("a", ColumnTestUtils.getObjectColumn(ColumnType.TEXT, new Object[table.height()]))
 					.add("b", ColumnTestUtils.getNumericColumn(TypeId.REAL, new double[table.height()])).build(CTX);
 			table2.transform(new int[]{0, 1}).reduceObjects(Object.class, ArrayList::new, (t, r) -> {},
 					ArrayList::addAll, CTX);
@@ -190,7 +187,7 @@ public class ObjectColumnReducerTests {
 		public void testOneColumn() {
 			int size = 75;
 			String[] data = random(size);
-			Column column = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data);
+			Column column = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
 			ObjectColumnReducer<double[], String> calculator =
 					new ObjectColumnReducer<>(column, String.class, () -> new double[2],
 							(t, d) -> {
@@ -226,8 +223,8 @@ public class ObjectColumnReducerTests {
 			int size = 75;
 			String[] data = random(size);
 			String[] data2 = random(size);
-			Column column = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data);
-			Column column2 = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data2);
+			Column column = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
+			Column column2 = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data2);
 			ObjectColumnsReducer<double[], String> calculator =
 					new ObjectColumnsReducer<>(Arrays.asList(column, column2),
 							String.class, () -> new double[2],
@@ -266,9 +263,9 @@ public class ObjectColumnReducerTests {
 			String[] data = random(size);
 			String[] data2 = random(size);
 			String[] data3 = random(size);
-			Column column = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data);
-			Column column2 = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data2);
-			Column column3 = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data3);
+			Column column = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
+			Column column2 = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data2);
+			Column column3 = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data3);
 			ObjectColumnsReducer<double[], String> calculator =
 					new ObjectColumnsReducer<>(Arrays.asList(column, column2, column3),
 							String.class, () -> new double[2],
@@ -314,7 +311,7 @@ public class ObjectColumnReducerTests {
 		public void testOneColumn() {
 			int size = 75;
 			String[] data = random(size);
-			Column column = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data);
+			Column column = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
 			Transformer transformer = new Transformer(column);
 			MutableDouble result = transformer.reduceObjects(String.class, MutableDouble::new,
 					(r, v) -> r.value += v.length(),
@@ -336,9 +333,9 @@ public class ObjectColumnReducerTests {
 			String[] data3 = random(size);
 
 			RowTransformer transformer = new RowTransformer(Arrays.asList(
-					ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data),
-					ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data2),
-					ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data3)));
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data),
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data2),
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data3)));
 			MutableDouble result = transformer.reduceObjects(String.class, MutableDouble::new,
 					(d, row) -> d.value += (row.get(0).length() + row.get(1).length() + row.get(2).length()),
 					(l, r) -> l.value += r.value, CTX);
@@ -352,7 +349,7 @@ public class ObjectColumnReducerTests {
 		@Test
 		public void testOneColumnZeroHeight() {
 			String[] data = random(0);
-			Column column = ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data);
+			Column column = ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
 			Transformer transformer = new Transformer(column);
 			MutableDouble result = transformer.reduceObjects(String.class, () -> {
 						MutableDouble d = new MutableDouble();
@@ -370,9 +367,9 @@ public class ObjectColumnReducerTests {
 			String[] data = random(0);
 
 			RowTransformer transformer = new RowTransformer(Arrays.asList(
-					ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data),
-					ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data),
-					ColumnTestUtils.getObjectColumn(FREE_STRING_TYPE, data)));
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data),
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data),
+					ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data)));
 			MutableDouble result = transformer.reduceObjects(String.class, () -> {
 						MutableDouble d = new MutableDouble();
 						d.value = 1;

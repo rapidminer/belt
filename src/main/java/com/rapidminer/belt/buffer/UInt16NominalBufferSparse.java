@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -32,17 +33,17 @@ import com.rapidminer.belt.util.ShortArrayBuilder;
 
 
 /**
- * Implementation of a {@link CategoricalBufferSparse} with category index format {@link
- * IntegerFormats.Format#UNSIGNED_INT16} that can hold {@link 65535} many different categories. The category indices are
+ * Implementation of a {@link NominalBufferSparse} with category index format {@link
+ * IntegerFormats.Format#UNSIGNED_INT16} that can hold {@code 65535} many different categories. The category indices are
  * stored as {@code short}.
  * <p>
  * Please note that the buffer implementation is thread safe but accessing it from multiple threads will be slow.
  *
  * @author Kevin Majchrzak
- * @see CategoricalBufferSparse
+ * @see NominalBufferSparse
  * @see Buffers
  */
-public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSparse<T> {
+public final class UInt16NominalBufferSparse extends NominalBufferSparse {
 
 	/**
 	 * The maximum size a chunk can have relative to the overall buffer size. This means that a chunk will never be
@@ -63,17 +64,17 @@ public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSpa
 	/**
 	 * The buffer's (usually most common) default value's object representation.
 	 */
-	private final T defaultValueAsObject;
+	private final String defaultValueAsObject;
 
 	/**
 	 * Maps the given categorical value to its corresponding index.
 	 */
-	private final Map<T, Short> indexLookup;
+	private final Map<String, Short> indexLookup;
 
 	/**
 	 * Maps the given categorical value to its corresponding index.
 	 */
-	private final List<T> valueLookup;
+	private final List<String> valueLookup;
 
 	/**
 	 * {@code true} if the buffer cannot be modified anymore.
@@ -108,12 +109,15 @@ public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSpa
 	/**
 	 * Creates a sparse buffer of the given length used to define a {@link CategoricalColumn}.
 	 *
+	 * @param type
+	 * 		the column type
 	 * @param defaultValue
 	 * 		the data's most common default value.
 	 * @param length
-	 * 		the length of the buffer
+	 * 		the buffer length
 	 */
-	UInt16CategoricalBufferSparse(T defaultValue, int length) {
+	UInt16NominalBufferSparse(ColumnType<String> type, String defaultValue, int length) {
+		super(type);
 		if (length < 0) {
 			throw new IllegalArgumentException("Sparse categorical buffer cannot have negative length: " + length);
 		}
@@ -137,12 +141,12 @@ public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSpa
 	}
 
 	@Override
-	public void setNext(T value) {
+	public void setNext(String value) {
 		setNext(nextLogicalIndex, value);
 	}
 
 	@Override
-	public void setNext(int index, T value) {
+	public void setNext(int index, String value) {
 		if (!setNextSave(index, value)) {
 			throw new IllegalArgumentException("More than " + IntegerFormats.Format.UNSIGNED_INT16.maxValue()
 					+ " different values.");
@@ -150,7 +154,7 @@ public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSpa
 	}
 
 	@Override
-	public synchronized boolean setNextSave(int index, T value) {
+	public synchronized boolean setNextSave(int index, String value) {
 		if (frozen) {
 			throw new IllegalStateException(NumericBuffer.BUFFER_FROZEN_MESSAGE);
 		}
@@ -199,12 +203,12 @@ public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSpa
 	}
 
 	@Override
-	List<T> getMapping() {
+	List<String> getMapping() {
 		return valueLookup;
 	}
 
 	@Override
-	public synchronized CategoricalColumn<T> toColumn(ColumnType<T> type) {
+	public synchronized CategoricalColumn toColumn() {
 		Objects.requireNonNull(type, "Column type must not be null");
 		if (type.category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column type must be categorical");
@@ -218,7 +222,7 @@ public final class UInt16CategoricalBufferSparse<T> extends CategoricalBufferSpa
 	}
 
 	@Override
-	public CategoricalColumn<T> toBooleanColumn(ColumnType<T> type, T positiveValue) {
+	public CategoricalColumn toBooleanColumn(String positiveValue) {
 		Objects.requireNonNull(type, "Column type must not be null");
 		if (type.category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Column type must be categorical");

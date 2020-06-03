@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -16,7 +17,9 @@
 package com.rapidminer.belt.column;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.SplittableRandom;
 
 import com.rapidminer.belt.util.IntegerFormats;
@@ -28,6 +31,33 @@ import com.rapidminer.belt.util.IntegerFormats;
  * @author Gisa Meier, Kevin Majchrzak
  */
 public class ColumnTestUtils {
+
+	public static final ColumnType<Object> OBJECT_DUMMY_TYPE = new ColumnType<>(Column.TypeId.TEXT_SET,
+			Column.Category.OBJECT, Object.class, null);
+
+	/**
+	 * Returns a new categorical type with the given id, element type and comparator (optional). The id must be unique
+	 * and should follow Java's naming convention for packages. Belt assumes that the given element type is immutable,
+	 * i.e., that is is safe to share instances between tables.
+	 *
+	 * @param <T>
+	 * 		the element type
+	 * @param elementType
+	 * 		the immutable element type
+	 * @param comparator
+	 * 		the comparator (optional)
+	 * @return the complex custom types
+	 * @see Column.Category#CATEGORICAL
+	 */
+	public static <T> ColumnType<T> categoricalType(Class<T> elementType, Comparator<T> comparator) {
+		Objects.requireNonNull(elementType, "Element type must not be null");
+		//Use text-set for now, change in ticket for categorical type refactoring
+		return new ColumnType<>(Column.TypeId.TEXT_SET, Column.Category.CATEGORICAL, elementType, comparator);
+	}
+
+	public static <T> ColumnType<T> objectType(Class<T> elementType, Comparator<T> comparator) {
+		return new ColumnType<>(Column.TypeId.TEXT_SET, Column.Category.OBJECT, elementType, comparator);
+	}
 
 	public static Column getSparseDoubleColumn(Column.TypeId typeId, double defaultValue, double[] data) {
 		return new DoubleSparseColumn(typeId, defaultValue, data);
@@ -154,8 +184,8 @@ public class ColumnTestUtils {
 	 * 		the categorical mapping
 	 * @return a new categorical column
 	 */
-	public static <T> CategoricalColumn<T> getCategoricalColumn(long seed, ColumnType<T> type, short[] data, List<T> mapping) {
-		return new InternalColumnsImpl().createCategoricalColumn(type, data, new Dictionary<T>(mapping), new SplittableRandom(seed));
+	public static CategoricalColumn getCategoricalColumn(long seed, ColumnType<String> type, short[] data, List<String> mapping) {
+		return new InternalColumnsImpl().createCategoricalColumn(type, data, new Dictionary(mapping), new SplittableRandom(seed));
 	}
 
 	/**
@@ -167,8 +197,8 @@ public class ColumnTestUtils {
 	 * 		the categorical mapping
 	 * @return a new sparse categorical column
 	 */
-	public static <T> CategoricalColumn<T> getSparseCategoricalColumn(ColumnType<T> type, short[] data, List<T> mapping, short defaultValue) {
-		return new CategoricalSparseColumn<>(type, data, new Dictionary<T>(mapping), defaultValue);
+	public static CategoricalColumn getSparseCategoricalColumn(ColumnType<String> type, short[] data, List<String> mapping, short defaultValue) {
+		return new CategoricalSparseColumn(type, data, new Dictionary(mapping), defaultValue);
 	}
 
 	/**
@@ -180,8 +210,8 @@ public class ColumnTestUtils {
 	 * 		the categorical mapping
 	 * @return a new sparse categorical column
 	 */
-	public static <T> CategoricalColumn<T> getSparseCategoricalColumn(ColumnType<T> type, IntegerFormats.PackedIntegers data, List<T> mapping, byte defaultValue) {
-		return new CategoricalSparseColumn<>(type, data, new Dictionary<T>(mapping), defaultValue);
+	public static CategoricalColumn getSparseCategoricalColumn(ColumnType<String> type, IntegerFormats.PackedIntegers data, List<String> mapping, byte defaultValue) {
+		return new CategoricalSparseColumn(type, data, new Dictionary(mapping), defaultValue);
 	}
 
 	/**
@@ -193,8 +223,8 @@ public class ColumnTestUtils {
 	 * 		the categorical mapping
 	 * @return a new sparse categorical column
 	 */
-	public static <T> CategoricalColumn<T> getSparseCategoricalColumn(ColumnType<T> type, int[] data, List<T> mapping, int defaultValue) {
-		return new CategoricalSparseColumn<>(type, data, new Dictionary<T>(mapping), defaultValue);
+	public static CategoricalColumn getSparseCategoricalColumn(ColumnType<String> type, int[] data, List<String> mapping, int defaultValue) {
+		return new CategoricalSparseColumn(type, data, new Dictionary(mapping), defaultValue);
 	}
 
 	/**
@@ -209,8 +239,8 @@ public class ColumnTestUtils {
 	 * 		the categorical mapping
 	 * @return a new categorical column
 	 */
-	public static <T> CategoricalColumn<T> getCategoricalColumn(long seed, ColumnType<T> type, IntegerFormats.PackedIntegers data, List<T> mapping) {
-		return new InternalColumnsImpl().createCategoricalColumn(type, data, new Dictionary<T>(mapping), new SplittableRandom(seed));
+	public static CategoricalColumn getCategoricalColumn(long seed, ColumnType<String> type, IntegerFormats.PackedIntegers data, List<String> mapping) {
+		return new InternalColumnsImpl().createCategoricalColumn(type, data, new Dictionary(mapping), new SplittableRandom(seed));
 	}
 
 	/**
@@ -225,8 +255,8 @@ public class ColumnTestUtils {
 	 * 		the categorical mapping
 	 * @return a new categorical column
 	 */
-	public static <T> CategoricalColumn<T> getCategoricalColumn(long seed, ColumnType<T> type, int[] data, List<T> mapping) {
-		return new InternalColumnsImpl().createCategoricalColumn(type, data, new Dictionary<T>(mapping), new SplittableRandom(seed));
+	public static CategoricalColumn getCategoricalColumn(long seed, ColumnType<String> type, int[] data, List<String> mapping) {
+		return new InternalColumnsImpl().createCategoricalColumn(type, data, new Dictionary(mapping), new SplittableRandom(seed));
 	}
 
 	/**
@@ -305,65 +335,65 @@ public class ColumnTestUtils {
 		return new SimpleObjectColumn<>(type, data);
 	}
 
-	public static <T> Column getRemappedCategoricalColumn(ColumnType<T> type, int[] data, List<T> dictionary, int[] remapping) {
-		return new RemappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), remapping);
+	public static Column getRemappedCategoricalColumn(ColumnType<String> type, int[] data, List<String> dictionary, int[] remapping) {
+		return new RemappedCategoricalColumn(type, data, new Dictionary(dictionary), remapping);
 	}
 
-	public static <T> Column getRemappedCategoricalColumn(ColumnType<T> type, IntegerFormats.PackedIntegers data, List<T> dictionary, int[] remapping) {
-		return new RemappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), remapping);
+	public static Column getRemappedCategoricalColumn(ColumnType<String> type, IntegerFormats.PackedIntegers data, List<String> dictionary, int[] remapping) {
+		return new RemappedCategoricalColumn(type, data, new Dictionary(dictionary), remapping);
 	}
 
-	public static <T> Column getRemappedCategoricalColumn(ColumnType<T> type, short[] data, List<T> dictionary, int[] remapping) {
-		return new RemappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), remapping);
+	public static Column getRemappedCategoricalColumn(ColumnType<String> type, short[] data, List<String> dictionary, int[] remapping) {
+		return new RemappedCategoricalColumn(type, data, new Dictionary(dictionary), remapping);
 	}
 
-	public static <T> Column getRemappedCategoricalSparseColumn(ColumnType<T> type, int[] data, List<T> dictionary, int[] remapping, int defaultValue) {
-		return new RemappedCategoricalSparseColumn<>(type, data, new Dictionary<>(dictionary), remapping, defaultValue);
+	public static Column getRemappedCategoricalSparseColumn(ColumnType<String> type, int[] data, List<String> dictionary, int[] remapping, int defaultValue) {
+		return new RemappedCategoricalSparseColumn(type, data, new Dictionary(dictionary), remapping, defaultValue);
 	}
 
-	public static <T> Column getRemappedCategoricalSparseColumn(ColumnType<T> type, IntegerFormats.PackedIntegers data, List<T> dictionary, int[] remapping, byte defaultValue) {
-		return new RemappedCategoricalSparseColumn<>(type, data, new Dictionary<>(dictionary), remapping, defaultValue);
+	public static Column getRemappedCategoricalSparseColumn(ColumnType<String> type, IntegerFormats.PackedIntegers data, List<String> dictionary, int[] remapping, byte defaultValue) {
+		return new RemappedCategoricalSparseColumn(type, data, new Dictionary(dictionary), remapping, defaultValue);
 	}
 
-	public static <T> Column getRemappedCategoricalSparseColumn(ColumnType<T> type, short[] data, List<T> dictionary, int[] remapping, short defaultValue) {
-		return new RemappedCategoricalSparseColumn<>(type, data, new Dictionary<>(dictionary), remapping, defaultValue);
+	public static Column getRemappedCategoricalSparseColumn(ColumnType<String> type, short[] data, List<String> dictionary, int[] remapping, short defaultValue) {
+		return new RemappedCategoricalSparseColumn(type, data, new Dictionary(dictionary), remapping, defaultValue);
 	}
 
-	public static <T> Column getMappedCategoricalColumn(ColumnType<T> type, int[] data, List<T> dictionary, int[] mapping) {
-		return new MappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), mapping);
+	public static Column getMappedCategoricalColumn(ColumnType<String> type, int[] data, List<String> dictionary, int[] mapping) {
+		return new MappedCategoricalColumn(type, data, new Dictionary(dictionary), mapping);
 	}
 
-	public static <T> Column getMappedCategoricalColumn(ColumnType<T> type, short[] data, List<T> dictionary, int[] mapping) {
-		return new MappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), mapping);
+	public static Column getMappedCategoricalColumn(ColumnType<String> type, short[] data, List<String> dictionary, int[] mapping) {
+		return new MappedCategoricalColumn(type, data, new Dictionary(dictionary), mapping);
 	}
 
-	public static <T> Column getMappedCategoricalColumn(ColumnType<T> type, IntegerFormats.PackedIntegers data, List<T> dictionary, int[] mapping) {
-		return new MappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), mapping);
+	public static Column getMappedCategoricalColumn(ColumnType<String> type, IntegerFormats.PackedIntegers data, List<String> dictionary, int[] mapping) {
+		return new MappedCategoricalColumn(type, data, new Dictionary(dictionary), mapping);
 	}
 
-	public static <T> Column getRemappedMappedCategoricalColumn(ColumnType<T> type, int[] data, List<T> dictionary, int[] remapping, int[] mapping) {
-		return new RemappedMappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), remapping, mapping);
+	public static Column getRemappedMappedCategoricalColumn(ColumnType<String> type, int[] data, List<String> dictionary, int[] remapping, int[] mapping) {
+		return new RemappedMappedCategoricalColumn(type, data, new Dictionary(dictionary), remapping, mapping);
 	}
 
-	public static <T> Column getRemappedMappedCategoricalColumn(ColumnType<T> type, short[] data, List<T> dictionary, int[] remapping, int[] mapping) {
-		return new RemappedMappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), remapping, mapping);
+	public static Column getRemappedMappedCategoricalColumn(ColumnType<String> type, short[] data, List<String> dictionary, int[] remapping, int[] mapping) {
+		return new RemappedMappedCategoricalColumn(type, data, new Dictionary(dictionary), remapping, mapping);
 	}
 
-	public static <T> Column getRemappedMappedCategoricalColumn(ColumnType<T> type, IntegerFormats.PackedIntegers data, List<T> dictionary, int[] remapping, int[] mapping) {
-		return new RemappedMappedCategoricalColumn<>(type, data, new Dictionary<>(dictionary), remapping, mapping);
+	public static Column getRemappedMappedCategoricalColumn(ColumnType<String> type, IntegerFormats.PackedIntegers data, List<String> dictionary, int[] remapping, int[] mapping) {
+		return new RemappedMappedCategoricalColumn(type, data, new Dictionary(dictionary), remapping, mapping);
 	}
 
-	public static <T> CategoricalColumn<T> getSimpleCategoricalColumn(ColumnType<T> type, IntegerFormats.PackedIntegers data,
-																	  List<T> dictionary) {
-		return new SimpleCategoricalColumn<>(type, data, new Dictionary<>(dictionary));
+	public static CategoricalColumn getSimpleCategoricalColumn(ColumnType<String> type, IntegerFormats.PackedIntegers data,
+																	  List<String> dictionary) {
+		return new SimpleCategoricalColumn(type, data, new Dictionary(dictionary));
 	}
 
-	public static <T> CategoricalColumn<T> getSimpleCategoricalColumn(ColumnType<T> type, short[] data, List<T> dictionary) {
-		return new SimpleCategoricalColumn<>(type, data, new Dictionary<>(dictionary));
+	public static CategoricalColumn getSimpleCategoricalColumn(ColumnType<String> type, short[] data, List<String> dictionary) {
+		return new SimpleCategoricalColumn(type, data, new Dictionary(dictionary));
 	}
 
-	public static <T> CategoricalColumn<T> getSimpleCategoricalColumn(ColumnType<T> type, int[] data, List<T> dictionary) {
-		return new SimpleCategoricalColumn<>(type, data, new Dictionary<>(dictionary));
+	public static CategoricalColumn getSimpleCategoricalColumn(ColumnType<String> type, int[] data, List<String> dictionary) {
+		return new SimpleCategoricalColumn(type, data, new Dictionary(dictionary));
 	}
 
 	public static Column getMappedNumericColumn(Column.TypeId type, double[] mappedData, int[] mapping) {
@@ -382,7 +412,7 @@ public class ColumnTestUtils {
 		return new Column(3) {
 			@Override
 			public ColumnType<?> type() {
-				return ColumnTypes.NOMINAL;
+				return ColumnType.NOMINAL;
 			}
 
 			@Override
@@ -398,8 +428,9 @@ public class ColumnTestUtils {
 	}
 
 	public static Column getDoubleObjectTestColumn() {
-		return new ObjectColumn<Double>(ColumnTypes.objectType(
-				"com.rapidminer.belt.column.test.bigdoublecolumn", Double.class, null), 10) {
+		//take dummy type id since there is currently none for Double object type
+		return new ObjectColumn<Double>(new ColumnType<>(Column.TypeId.TEXT, Column.Category.OBJECT, Double.class,
+				null), 10) {
 			@Override
 			public void fill(Object[] array, int rowIndex) {
 			}
@@ -542,4 +573,6 @@ public class ColumnTestUtils {
 		}
 		return data;
 	}
+
+
 }

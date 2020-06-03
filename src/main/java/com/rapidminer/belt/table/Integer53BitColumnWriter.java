@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,8 +27,7 @@ import com.rapidminer.belt.column.Column;
  *
  * @author Gisa Meier
  */
-final class IntegerColumnWriter implements NumericColumnWriter {
-
+final class Integer53BitColumnWriter implements NumericColumnWriter {
 
 	private static final double[] PLACEHOLDER_BUFFER = new double[0];
 
@@ -42,7 +41,7 @@ final class IntegerColumnWriter implements NumericColumnWriter {
 	 * @param length
 	 * 		the length of the buffer
 	 */
-	IntegerColumnWriter(int length) {
+	Integer53BitColumnWriter(int length) {
 		data = new double[length];
 		size = length;
 	}
@@ -50,7 +49,7 @@ final class IntegerColumnWriter implements NumericColumnWriter {
 	/**
 	 * Creates a buffer with starting size zero.
 	 */
-	IntegerColumnWriter() {
+	Integer53BitColumnWriter() {
 		data = PLACEHOLDER_BUFFER;
 		size = 0;
 	}
@@ -101,7 +100,7 @@ final class IntegerColumnWriter implements NumericColumnWriter {
 	@Override
 	public Column toColumn() {
 		freeze();
-		return ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER, data);
+		return ColumnAccessor.get().newNumericColumn(Column.TypeId.INTEGER_53_BIT, data);
 	}
 
 	/**

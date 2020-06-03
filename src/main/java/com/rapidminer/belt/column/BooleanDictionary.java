@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -25,7 +26,7 @@ import java.util.Objects;
  *
  * @author Gisa Meier
  */
-public class BooleanDictionary<T> extends Dictionary<T> {
+public class BooleanDictionary extends Dictionary {
 
 	/**
 	 * The placeholder for the category index when there is no positive or negative index.
@@ -49,7 +50,7 @@ public class BooleanDictionary<T> extends Dictionary<T> {
 	 * @param positiveIndex
 	 * 		an existing index except 0 or {@link #NO_ENTRY} and in case of (null, a, b) it must be either 1 or 2
 	 */
-	BooleanDictionary(List<T> dictionary, int positiveIndex) {
+	BooleanDictionary(List<String> dictionary, int positiveIndex) {
 		super(dictionary, (dictionary.size() > 1 && dictionary.get(1) == null) ? 1 : 0);
 		this.positiveIndex = positiveIndex;
 		sanityCheck(dictionary, positiveIndex);
@@ -58,7 +59,7 @@ public class BooleanDictionary<T> extends Dictionary<T> {
 	/**
 	 * Checks that the dictionary has a sensible positive value and a valid size.
 	 */
-	private static <T> void sanityCheck(List<T> dictionary, int positiveIndex) {
+	private static void sanityCheck(List<String> dictionary, int positiveIndex) {
 		if (dictionary.size() > MAXIMAL_RAW_SIZE) {
 			throw new IllegalArgumentException("Too many values for boolean");
 		}
@@ -114,7 +115,7 @@ public class BooleanDictionary<T> extends Dictionary<T> {
 		if (!super.equals(o)) {
 			return false;
 		}
-		BooleanDictionary<?> that = (BooleanDictionary<?>) o;
+		BooleanDictionary that = (BooleanDictionary) o;
 		return positiveIndex == that.positiveIndex;
 	}
 

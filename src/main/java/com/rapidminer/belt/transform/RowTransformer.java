@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,15 +27,18 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 
-import com.rapidminer.belt.execution.Context;
-import com.rapidminer.belt.execution.Workload;
-import com.rapidminer.belt.buffer.CategoricalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
+import com.rapidminer.belt.buffer.NominalBuffer;
 import com.rapidminer.belt.buffer.DateTimeBuffer;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
 import com.rapidminer.belt.buffer.NumericBuffer;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.buffer.TimeBuffer;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.Column.TypeId;
+import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringSet;
+import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.execution.Workload;
 import com.rapidminer.belt.reader.CategoricalRow;
 import com.rapidminer.belt.reader.MixedRow;
 import com.rapidminer.belt.reader.NumericRow;
@@ -185,8 +188,8 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
-	 * result in a new integer {@link NumericBuffer}. Depending on the input size and the specified workload per
-	 * data-point, the computation might be performed in parallel.
+	 * result in a new {@link NumericBuffer} of type {@link TypeId#INTEGER_53_BIT}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link NumericRow})
@@ -198,7 +201,7 @@ public final class RowTransformer {
 	 * @throws UnsupportedOperationException
 	 * 		if any of the transformation columns is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public NumericBuffer applyNumericToInteger(ToDoubleFunction<NumericRow> operator, Context context) {
+	public NumericBuffer applyNumericToInteger53Bit(ToDoubleFunction<NumericRow> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(new ApplierNNumericToNumeric(transformationColumns, operator, true),
@@ -230,8 +233,8 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
-	 * in a new integer {@link NumericBuffer}. Depending on the input size and the specified workload per data-point,
-	 * the computation might be performed in parallel.
+	 * in a new {@link NumericBuffer} of type {@link TypeId#INTEGER_53_BIT}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link CategoricalRow})
@@ -243,7 +246,7 @@ public final class RowTransformer {
 	 * @throws UnsupportedOperationException
 	 * 		if any of the transformation columns is not {@link Column.Category#CATEGORICAL}
 	 */
-	public NumericBuffer applyCategoricalToInteger(ToDoubleFunction<CategoricalRow> operator, Context context) {
+	public NumericBuffer applyCategoricalToInteger53Bit(ToDoubleFunction<CategoricalRow> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(new ApplierNCategoricalToNumeric(transformationColumns, operator, true),
@@ -280,8 +283,8 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
-	 * in a new integer {@link NumericBuffer}. Depending on the input size and the specified workload per data-point,
-	 * the computation might be performed in parallel.
+	 * in a new {@link NumericBuffer} of type {@link TypeId#INTEGER_53_BIT}.. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link ObjectRow})
@@ -299,8 +302,8 @@ public final class RowTransformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation columns cannot be read as the given type
 	 */
-	public <T> NumericBuffer applyObjectToInteger(Class<T> type, ToDoubleFunction<ObjectRow<T>> operator,
-												  Context context) {
+	public <T> NumericBuffer applyObjectToInteger53Bit(Class<T> type, ToDoubleFunction<ObjectRow<T>> operator,
+													   Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(new ApplierNObjectToNumeric<>(transformationColumns, type, operator, true),
@@ -334,13 +337,13 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the transformation columns returning the result in a new
-	 * integer {@link NumericBuffer}. Depending on the input size and the specified workload per data-point, the
-	 * computation might be performed in parallel.
+	 * {@link NumericBuffer} of type {@link TypeId#INTEGER_53_BIT}. Depending on the input size and the specified
+	 * workload per data-point, the computation might be performed in parallel.
 	 *
 	 * <p>This method uses an operator starting from a {@link MixedRow} which allows to read the row in different
 	 * ways. This is not as performant as reading the row only in one specific way. So whenever possible it is
-	 * recommended to use the methods {@link #applyNumericToInteger}, {@link #applyCategoricalToInteger} or {@link
-	 * #applyObjectToInteger} instead.
+	 * recommended to use the methods {@link #applyNumericToInteger53Bit}, {@link #applyCategoricalToInteger53Bit} or
+	 * {@link #applyObjectToInteger53Bit} instead.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link MixedRow})
@@ -350,7 +353,7 @@ public final class RowTransformer {
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
 	 */
-	public NumericBuffer applyMixedToInteger(ToDoubleFunction<MixedRow> operator, Context context) {
+	public NumericBuffer applyMixedToInteger53Bit(ToDoubleFunction<MixedRow> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(new ApplierMixedToNumeric(transformationColumns, operator, true),
@@ -359,8 +362,8 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
-	 * in a new {@link Int32CategoricalBuffer}. Depending on the input size and the specified workload per data-point,
-	 * the computation might be performed in parallel.
+	 * in a new {@link Int32NominalBuffer} of type {@link Column.TypeId#NOMINAL}. Depending on the input size and
+	 * the specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link ObjectRow})
@@ -368,8 +371,6 @@ public final class RowTransformer {
 	 * 		the type of the objects in the columns
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @param <R>
 	 * 		type of objects in the columns
 	 * @return a buffer containing the result of the mapping
@@ -380,20 +381,20 @@ public final class RowTransformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation columns cannot be read as the given type
 	 */
-	public <R, T> Int32CategoricalBuffer<T> applyObjectToCategorical(Class<R> type, Function<ObjectRow<R>, T> operator,
-																	 Context context) {
+	public <R> Int32NominalBuffer applyObjectToNominal(Class<R> type, Function<ObjectRow<R>, String> operator,
+													   Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
-		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(
+		return (Int32NominalBuffer) new ParallelExecutor<>(
 				new ApplierNObjectToCategorical<>(transformationColumns, type, operator,
-						IntegerFormats.Format.SIGNED_INT32), workload, callback).execute(context);
+						IntegerFormats.Format.SIGNED_INT32, ColumnType.NOMINAL), workload, callback).execute(context);
 	}
 
 	/**
 	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
-	 * in a new {@link CategoricalBuffer}. The format of the target buffer is derived from given
-	 * maxNumberOfValues parameter. Depending on the input size and the specified workload per data-point, the
-	 * computation might be performed in parallel.
+	 * in a new {@link NominalBuffer} of type {@link Column.TypeId#NOMINAL}. The format of the target buffer is
+	 * derived from given maxNumberOfValues parameter. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
 	 *
 	 * @param type
 	 * 		the type of the objects in the columns
@@ -403,8 +404,6 @@ public final class RowTransformer {
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @param <R>
 	 * 		type of objects in the columns
 	 * @return a buffer containing the result of the mapping
@@ -416,49 +415,47 @@ public final class RowTransformer {
 	 * 		if the objects in the transformation columns cannot be read as the given type or if more different values
 	 * 		are	supplied than supported by the buffer format calculated from the maxNumberOfValues
 	 */
-	public <R, T> CategoricalBuffer<T> applyObjectToCategorical(Class<R> type,
-																Function<ObjectRow<R>, T> operator,
-																int maxNumberOfValues,
-																Context context) {
+	public <R> NominalBuffer applyObjectToNominal(Class<R> type,
+												  Function<ObjectRow<R>, String> operator,
+												  int maxNumberOfValues,
+												  Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(maxNumberOfValues);
 		return new ParallelExecutor<>(
-				new ApplierNObjectToCategorical<>(transformationColumns, type, operator, format),
+				new ApplierNObjectToCategorical<>(transformationColumns, type, operator, format, ColumnType.NOMINAL),
 				workload, callback).execute(context);
 	}
 
 	/**
 	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
-	 * in a new {@link Int32CategoricalBuffer}. Depending on the input size and the specified workload per data-point,
-	 * the computation might be performed in parallel.
+	 * in a new {@link Int32NominalBuffer} of type {@link Column.TypeId#NOMINAL}. Depending on the input size and
+	 * the specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link CategoricalRow})
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws UnsupportedOperationException
 	 * 		if any of the transformation columns is not {@link Column.Category#CATEGORICAL}
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation columns cannot be read as the given type
 	 */
-	public <T> Int32CategoricalBuffer<T> applyCategoricalToCategorical(Function<CategoricalRow, T> operator,
-																	   Context context) {
+	public Int32NominalBuffer applyCategoricalToNominal(Function<CategoricalRow, String> operator,
+														Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
-		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(
-				new ApplierNCategoricalToCategorical<>(transformationColumns, operator,
-						IntegerFormats.Format.SIGNED_INT32), workload, callback).execute(context);
+		return (Int32NominalBuffer) new ParallelExecutor<>(
+				new ApplierNCategoricalToCategorical(transformationColumns, operator,
+						IntegerFormats.Format.SIGNED_INT32, ColumnType.NOMINAL), workload, callback).execute(context);
 	}
 
 	/**
 	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
-	 * in a new {@link CategoricalBuffer}. The format of the target buffer is derived from given maxNumberOfValues
-	 * parameter. Depending on the input size and the specified workload per data-point, the computation might be
-	 * performed in parallel.
+	 * in a new {@link NominalBuffer} of type {@link Column.TypeId#NOMINAL}. The format of the target buffer is
+	 * derived from given maxNumberOfValues parameter. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link CategoricalRow})
@@ -466,8 +463,6 @@ public final class RowTransformer {
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
@@ -477,58 +472,54 @@ public final class RowTransformer {
 	 * 		if more different values are supplied than supported by the buffer format calculated from the
 	 * 		maxNumberOfValues
 	 */
-	public <T> CategoricalBuffer<T> applyCategoricalToCategorical(Function<CategoricalRow, T> operator,
-																  int maxNumberOfValues,
-																  Context context) {
+	public NominalBuffer applyCategoricalToNominal(Function<CategoricalRow, String> operator,
+												   int maxNumberOfValues,
+												   Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(maxNumberOfValues);
 		return new ParallelExecutor<>(
-				new ApplierNCategoricalToCategorical<>(transformationColumns, operator, format),
+				new ApplierNCategoricalToCategorical(transformationColumns, operator, format, ColumnType.NOMINAL),
 				workload, callback).execute(context);
 	}
 
 
 	/**
 	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
-	 * result in a new {@link Int32CategoricalBuffer}. Depending on the input size and the specified workload per
+	 * result in a new {@link Int32NominalBuffer} of type {@link Column.TypeId#NOMINAL}. Depending on the input size
+	 * and the specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link NumericRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Capability#NUMERIC_READABLE}
+	 */
+	public Int32NominalBuffer applyNumericToNominal(Function<NumericRow, String> operator,
+													Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return (Int32NominalBuffer) new ParallelExecutor<>(
+				new ApplierNNumericToCategorical(transformationColumns, operator,
+						IntegerFormats.Format.SIGNED_INT32, ColumnType.NOMINAL), workload, callback).execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
+	 * result in a new {@link NominalBuffer} of type {@link Column.TypeId#NOMINAL}. The format of the target buffer
+	 * is derived from given maxNumberOfValues parameter. Depending on the input size and the specified workload per
 	 * data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link NumericRow})
-	 * @param context
-	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
-	 * @return a buffer containing the result of the mapping
-	 * @throws NullPointerException
-	 * 		if any of the arguments is {@code null}
-	 * @throws UnsupportedOperationException
-	 * 		if any of the transformation columns is not {@link Column.Capability#NUMERIC_READABLE}
-	 */
-	public <T> Int32CategoricalBuffer<T> applyNumericToCategorical(Function<NumericRow, T> operator,
-																   Context context) {
-		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
-		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
-		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(
-				new ApplierNNumericToCategorical<>(transformationColumns, operator,
-						IntegerFormats.Format.SIGNED_INT32), workload, callback).execute(context);
-	}
-
-	/**
-	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
-	 * result in a new {@link CategoricalBuffer}. The format of the target buffer is derived from given
-	 * maxNumberOfValues parameter. Depending on the input size and the specified workload per data-point, the
-	 * computation might be performed in parallel.
-	 *
-	 * @param operator
-	 * 		the operator to apply to each tuple (see {@link NumericRow})
 	 * @param maxNumberOfValues
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
@@ -538,57 +529,55 @@ public final class RowTransformer {
 	 * 		if more different values are supplied than supported by the buffer format calculated from the
 	 * 		maxNumberOfValues
 	 */
-	public <T> CategoricalBuffer<T> applyNumericToCategorical(Function<NumericRow, T> operator,
-															  int maxNumberOfValues,
-															  Context context) {
+	public NominalBuffer applyNumericToNominal(Function<NumericRow, String> operator,
+											   int maxNumberOfValues,
+											   Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(maxNumberOfValues);
 		return new ParallelExecutor<>(
-				new ApplierNNumericToCategorical<>(transformationColumns, operator, format),
+				new ApplierNNumericToCategorical(transformationColumns, operator, format, ColumnType.NOMINAL),
 				workload, callback).execute(context);
 	}
 
 
 	/**
 	 * Applies the given operator of arbitrary arity to the transformation columns returning the result in a new {@link
-	 * Int32CategoricalBuffer}. Depending on the input size and the specified workload per data-point, the computation
-	 * might be performed in parallel.
+	 * Int32NominalBuffer} of type {@link Column.TypeId#NOMINAL}. Depending on the input size and the specified
+	 * workload per data-point, the computation might be performed in parallel.
 	 *
 	 * <p>This method uses an operator starting from a {@link MixedRow} which allows to read the row in different
 	 * ways. This is not as performant as reading the row only in one specific way. So whenever possible it is
-	 * recommended to use the methods {@link #applyNumericToCategorical}, {@link #applyCategoricalToCategorical} or
-	 * {@link #applyObjectToCategorical} instead.
+	 * recommended to use the methods {@link #applyNumericToNominal}, {@link #applyCategoricalToNominal} or
+	 * {@link #applyObjectToNominal} instead.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link MixedRow})
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
 	 */
-	public <T> Int32CategoricalBuffer<T> applyMixedToCategorical(Function<MixedRow, T> operator,
-																 Context context) {
+	public Int32NominalBuffer applyMixedToNominal(Function<MixedRow, String> operator,
+												  Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
-		return (Int32CategoricalBuffer<T>) new ParallelExecutor<>(
-				new ApplierMixedToCategorical<>(transformationColumns, operator,
-						IntegerFormats.Format.SIGNED_INT32), workload, callback).execute(context);
+		return (Int32NominalBuffer) new ParallelExecutor<>(
+				new ApplierMixedToCategorical(transformationColumns, operator,
+						IntegerFormats.Format.SIGNED_INT32, ColumnType.NOMINAL), workload, callback).execute(context);
 	}
 
 	/**
 	 * Applies the given operator of arbitrary arity to the transformation columns returning the result in a new {@link
-	 * CategoricalBuffer}. The format of the target buffer is derived from given maxNumberOfValues parameter.
-	 * Depending on the input size and the specified workload per data-point, the computation might be performed in
-	 * parallel.
+	 * NominalBuffer} of type {@link Column.TypeId#NOMINAL}. The format of the target buffer is derived from given
+	 * maxNumberOfValues parameter. Depending on the input size and the specified workload per data-point, the
+	 * computation might be performed in parallel.
 	 *
 	 * <p>This method uses an operator starting from a {@link MixedRow} which allows to read the row in different
 	 * ways. This is not as performant as reading the row only in one specific way. So whenever possible it is
-	 * recommended to use the methods {@link #applyNumericToCategorical}, {@link #applyCategoricalToCategorical} or
-	 * {@link #applyObjectToCategorical} instead.
+	 * recommended to use the methods {@link #applyNumericToNominal}, {@link #applyCategoricalToNominal} or
+	 * {@link #applyObjectToNominal} instead.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link MixedRow})
@@ -596,8 +585,6 @@ public final class RowTransformer {
 	 * 		the maximal number of different values generated by the operator. Decides the format of the buffer.
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
@@ -605,21 +592,21 @@ public final class RowTransformer {
 	 * 		if more different values are supplied than supported by the buffer format calculated from the
 	 * 		maxNumberOfValues
 	 */
-	public <T> CategoricalBuffer<T> applyMixedToCategorical(Function<MixedRow, T> operator,
-															int maxNumberOfValues,
-															Context context) {
+	public NominalBuffer applyMixedToNominal(Function<MixedRow, String> operator,
+											 int maxNumberOfValues,
+											 Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		IntegerFormats.Format format = IntegerFormats.Format.findMinimal(maxNumberOfValues);
 		return new ParallelExecutor<>(
-				new ApplierMixedToCategorical<>(transformationColumns, operator, format),
+				new ApplierMixedToCategorical(transformationColumns, operator, format, ColumnType.NOMINAL),
 				workload, callback).execute(context);
 	}
 
 	/**
 	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
-	 * in a new {@link ObjectBuffer}. Depending on the input size and the specified workload per data-point, the
-	 * computation might be performed in parallel.
+	 * in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link ObjectRow})
@@ -627,8 +614,6 @@ public final class RowTransformer {
 	 * 		the type of the objects in the columns
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @param <R>
 	 * 		type of objects in the columns
 	 * @return a buffer containing the result of the mapping
@@ -639,12 +624,43 @@ public final class RowTransformer {
 	 * @throws IllegalArgumentException
 	 * 		if the objects in the transformation columns cannot be read as the given type
 	 */
-	public <R, T> ObjectBuffer<T> applyObjectToObject(Class<R> type, Function<ObjectRow<R>, T> operator,
-													  Context context) {
+	public <R> ObjectBuffer<String> applyObjectToText(Class<R> type, Function<ObjectRow<R>, String> operator,
+															Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(
-				new ApplierNObjectToObject<>(transformationColumns, type, operator), workload, callback).execute(context);
+				new ApplierNObjectToObject<>(transformationColumns, type, operator, ColumnType.TEXT), workload, callback)
+				.execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
+	 * in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT_SET}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link ObjectRow})
+	 * @param type
+	 * 		the type of the objects in the columns
+	 * @param context
+	 * 		the execution context to use
+	 * @param <R>
+	 * 		type of objects in the columns
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Capability#OBJECT_READABLE}
+	 * @throws IllegalArgumentException
+	 * 		if the objects in the transformation columns cannot be read as the given type
+	 */
+	public <R> ObjectBuffer<StringSet> applyObjectToTextset(Class<R> type, Function<ObjectRow<R>, StringSet> operator,
+															Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierNObjectToObject<>(transformationColumns, type, operator, ColumnType.TEXTSET), workload, callback)
+				.execute(context);
 	}
 
 	/**
@@ -706,30 +722,52 @@ public final class RowTransformer {
 				new ApplierNObjectToDateTime<>(transformationColumns, type, operator), workload, callback).execute(context);
 	}
 
-
 	/**
 	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
-	 * in a new {@link ObjectBuffer}. Depending on the input size and the specified workload per data-point, the
-	 * computation might be performed in parallel.
+	 * in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link CategoricalRow})
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
 	 * @throws UnsupportedOperationException
 	 * 		if any of the transformation columns is not {@link Column.Category#CATEGORICAL}
 	 */
-	public <T> ObjectBuffer<T> applyCategoricalToObject(Function<CategoricalRow, T> operator,
+	public ObjectBuffer<String> applyCategoricalToText(Function<CategoricalRow, String> operator,
+															 Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierNCategoricalToObject<>(transformationColumns, operator, ColumnType.TEXT), workload, callback)
+				.execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
+	 * in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT_SET}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link CategoricalRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Category#CATEGORICAL}
+	 */
+	public ObjectBuffer<StringSet> applyCategoricalToTextset(Function<CategoricalRow, StringSet> operator,
 														Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(
-				new ApplierNCategoricalToObject<>(transformationColumns, operator), workload, callback).execute(context);
+				new ApplierNCategoricalToObject<>(transformationColumns, operator, ColumnType.TEXTSET), workload, callback)
+				.execute(context);
 	}
 
 	/**
@@ -782,26 +820,48 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
-	 * result in a new {@link ObjectBuffer}. Depending on the input size and the specified workload per data-point,
-	 * the computation might be performed in parallel.
+	 * result in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link NumericRow})
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
 	 * @throws UnsupportedOperationException
 	 * 		if any of the transformation columns is not {@link Column.Capability#NUMERIC_READABLE}
 	 */
-	public <T> ObjectBuffer<T> applyNumericToObject(Function<NumericRow, T> operator, Context context) {
+	public ObjectBuffer<String> applyNumericToText(Function<NumericRow, String> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(
-				new ApplierNNumericToObject<>(transformationColumns, operator), workload, callback).execute(context);
+				new ApplierNNumericToObject<>(transformationColumns, operator, ColumnType.TEXT), workload, callback)
+				.execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
+	 * result in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT_SET}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link NumericRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Capability#NUMERIC_READABLE}
+	 */
+	public ObjectBuffer<StringSet> applyNumericToTextset(Function<NumericRow, StringSet> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierNNumericToObject<>(transformationColumns, operator, ColumnType.TEXTSET), workload, callback)
+				.execute(context);
 	}
 
 	/**
@@ -851,29 +911,52 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the transformation columns returning the result in a new {@link
-	 * ObjectBuffer}. Depending on the input size and the specified workload per data-point, the computation might
-	 * be performed in parallel.
+	 * ObjectBuffer} of type {@link Column.TypeId#TEXT}. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
 	 *
 	 * <p>This method uses an operator starting from a {@link MixedRow} which allows to read the row in different
 	 * ways. This is not as performant as reading the row only in one specific way. So whenever possible it is
-	 * recommended to use the methods {@link #applyNumericToObject}, {@link #applyCategoricalToObject} or {@link
-	 * #applyObjectToObject} instead.
+	 * recommended to use the methods {@link #applyNumericToText}, {@link #applyCategoricalToText} or {@link
+	 * #applyObjectToText} instead.
 	 *
 	 * @param operator
 	 * 		the operator to apply to each tuple (see {@link MixedRow})
 	 * @param context
 	 * 		the execution context to use
-	 * @param <T>
-	 * 		type of the result
 	 * @return a buffer containing the result of the mapping
 	 * @throws NullPointerException
 	 * 		if any of the arguments is {@code null}
 	 */
-	public <T> ObjectBuffer<T> applyMixedToObject(Function<MixedRow, T> operator, Context context) {
+	public ObjectBuffer<String> applyMixedToText(Function<MixedRow, String> operator, Context context) {
 		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(
-				new ApplierMixedToObject<>(transformationColumns, operator), workload, callback).execute(context);
+				new ApplierMixedToObject<>(transformationColumns, operator, ColumnType.TEXT), workload, callback).execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the transformation columns returning the result in a new {@link
+	 * ObjectBuffer} of type {@link Column.TypeId#TEXT_SET}. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
+	 *
+	 * <p>This method uses an operator starting from a {@link MixedRow} which allows to read the row in different
+	 * ways. This is not as performant as reading the row only in one specific way. So whenever possible it is
+	 * recommended to use the methods {@link #applyNumericToTextset}, {@link #applyCategoricalToTextset} or {@link
+	 * #applyObjectToTextset} instead.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link MixedRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 */
+	public ObjectBuffer<StringSet> applyMixedToTextset(Function<MixedRow, StringSet> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierMixedToObject<>(transformationColumns, operator, ColumnType.TEXTSET), workload, callback).execute(context);
 	}
 
 	/**

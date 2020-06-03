@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -125,7 +126,7 @@ public class RealBufferSparse {
 	}
 
 	/**
-	 * Sets the value at the given index to the given value. All indices {<=} the given index that have not been set so
+	 * Sets the value at the given index to the given value. All indices {@code <=} the given index that have not been set so
 	 * far will be set to the default value. Please note that you cannot modify an index smaller than or equal to the
 	 * given index after calling this method. Trying to access an index {@code <=} the largest index that has already
 	 * been set will lead to an {@link IllegalArgumentException}.

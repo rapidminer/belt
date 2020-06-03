@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -32,10 +33,7 @@ import org.junit.runner.RunWith;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.TimeColumn;
-import com.rapidminer.belt.table.Builders;
-import com.rapidminer.belt.table.ColumnAccessor;
-import com.rapidminer.belt.table.ColumnSelector;
-import com.rapidminer.belt.table.Table;
+import com.rapidminer.belt.table.TableTests.MetaData.NonUnique;
 import com.rapidminer.belt.util.Belt;
 import com.rapidminer.belt.util.ColumnAnnotation;
 import com.rapidminer.belt.util.ColumnMetaData;
@@ -132,8 +130,8 @@ public class ColumnSelectorTests {
 					.addReal("four", i -> 4)
 					.addMetaData("zero", ColumnRole.ID)
 					.addMetaData("one", ColumnRole.METADATA)
-					.addMetaData("one", new ColumnAnnotation("First annotation"))
-					.addMetaData("one", new ColumnAnnotation("Second annotation"))
+					.addMetaData("one", new NonUnique("First annotation"))
+					.addMetaData("one", new NonUnique("Second annotation"))
 					.addMetaData("three", ColumnRole.METADATA)
 					.addMetaData("four", ColumnRole.LABEL)
 					.build(Belt.defaultContext());
@@ -149,7 +147,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testTypeLookupWithSingleMatch() {
-			ColumnSelector selector = table.select().withMetaData(ColumnAnnotation.class);
+			ColumnSelector selector = table.select().withMetaData(NonUnique.class);
 			List<String> matches = selector.labels();
 			List<String> expected = Collections.singletonList("one");
 			assertEquals(expected, matches);
@@ -175,7 +173,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testInstanceLookupWithSingleMatch() {
-			ColumnSelector selector = table.select().withMetaData(new ColumnAnnotation("First annotation"));
+			ColumnSelector selector = table.select().withMetaData(new NonUnique("First annotation"));
 			List<String> matches = selector.labels();
 			List<String> expected = Collections.singletonList("one");
 			assertEquals(expected, matches);
@@ -201,7 +199,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testInverseTypeLookupWithSingleMatch() {
-			ColumnSelector selector = table.select().withoutMetaData(ColumnAnnotation.class);
+			ColumnSelector selector = table.select().withoutMetaData(NonUnique.class);
 			List<String> matches = selector.labels();
 			List<String> expected = Arrays.asList("zero", "two", "three", "four");
 			assertEquals(expected, matches);
@@ -227,7 +225,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testInverseInstanceLookupWithSingleMatch() {
-			ColumnSelector selector = table.select().withoutMetaData(new ColumnAnnotation("First annotation"));
+			ColumnSelector selector = table.select().withoutMetaData(new NonUnique("First annotation"));
 			List<String> matches = selector.labels();
 			List<String> expected = Arrays.asList("zero", "two", "three", "four");
 			assertEquals(expected, matches);
@@ -252,15 +250,14 @@ public class ColumnSelectorTests {
 		public static void createTable() {
 			table = Builders.newTableBuilder(100)
 					.addReal("zero", i -> 0)
-					.addInt("one", i -> 1)
+					.addInt53Bit("one", i -> 1)
 					.addNominal("two", i -> "bla")
 					.addTime("three", i -> LocalTime.NOON)
 					.addDateTime("four", i -> Instant.EPOCH)
-					.addInt("five", i -> 0)
+					.addInt53Bit("five", i -> 0)
 					.addMetaData("zero", ColumnRole.ID)
 					.addMetaData("one", ColumnRole.METADATA)
 					.addMetaData("one", new ColumnAnnotation("First annotation"))
-					.addMetaData("one", new ColumnAnnotation("Second annotation"))
 					.addMetaData("three", ColumnRole.METADATA)
 					.addMetaData("four", ColumnRole.LABEL)
 					.build(Belt.defaultContext());
@@ -268,7 +265,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testTypeLookupWithoutMatch() {
-			ColumnSelector selector = table.select().ofTypeId(Column.TypeId.CUSTOM);
+			ColumnSelector selector = table.select().ofTypeId(TypeId.TEXT_SET);
 			List<String> matches = selector.labels();
 			assertTrue(matches.isEmpty());
 			assertTrue(selector.columns().isEmpty());
@@ -285,7 +282,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testTypeLookupWithMultipleMatches() {
-			ColumnSelector selector = table.select().ofTypeId(Column.TypeId.INTEGER);
+			ColumnSelector selector = table.select().ofTypeId(Column.TypeId.INTEGER_53_BIT);
 			List<String> matches = selector.labels();
 			List<String> expected = Arrays.asList("one", "five");
 			assertEquals(expected, matches);
@@ -348,7 +345,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testInverseTypeLookupWithoutMatch() {
-			ColumnSelector selector = table.select().notOfTypeId(Column.TypeId.CUSTOM);
+			ColumnSelector selector = table.select().notOfTypeId(TypeId.TEXT_SET);
 			List<String> matches = selector.labels();
 			assertEquals(table.labels(), matches);
 			assertEquals(ColumnSelector.toColumnList(table.labels(), table), selector.columns());
@@ -365,7 +362,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testInverseTypeLookupWithMultipleMatches() {
-			ColumnSelector selector = table.select().notOfTypeId(Column.TypeId.INTEGER);
+			ColumnSelector selector = table.select().notOfTypeId(Column.TypeId.INTEGER_53_BIT);
 			List<String> matches = selector.labels();
 			List<String> expected = Arrays.asList("zero", "two", "three", "four");
 			assertEquals(expected, matches);
@@ -437,15 +434,15 @@ public class ColumnSelectorTests {
 		public static void createTable() {
 			table = Builders.newTableBuilder(100)
 					.addReal("zero", i -> 0)
-					.addInt("one", i -> 1)
+					.addInt53Bit("one", i -> 1)
 					.addNominal("two", i -> "bla")
 					.addTime("three", i -> LocalTime.NOON)
 					.addDateTime("four", i -> Instant.EPOCH)
-					.addInt("five", i -> 0)
+					.addInt53Bit("five", i -> 0)
 					.addMetaData("zero", ColumnRole.ID)
 					.addMetaData("one", ColumnRole.METADATA)
-					.addMetaData("one", new ColumnAnnotation("First annotation"))
-					.addMetaData("one", new ColumnAnnotation("Second annotation"))
+					.addMetaData("one", new NonUnique("First annotation"))
+					.addMetaData("one", new NonUnique("Second annotation"))
 					.addMetaData("three", ColumnRole.METADATA)
 					.addMetaData("four", ColumnRole.LABEL)
 					.addMetaData("five", ColumnRole.LABEL)
@@ -454,7 +451,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testTwoTypes() {
-			ColumnSelector selector = table.select().ofTypeId(Column.TypeId.INTEGER).ofTypeId(Column.TypeId.REAL);
+			ColumnSelector selector = table.select().ofTypeId(Column.TypeId.INTEGER_53_BIT).ofTypeId(Column.TypeId.REAL);
 			List<String> matches = selector.labels();
 			assertTrue(matches.isEmpty());
 			assertTrue(selector.columns().isEmpty());
@@ -488,7 +485,8 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testTwoMetaData() {
-			ColumnSelector selector = table.select().withMetaData(ColumnRole.METADATA).withMetaData(new ColumnAnnotation("First annotation"));
+			ColumnSelector selector = table.select().withMetaData(ColumnRole.METADATA).withMetaData(new NonUnique(
+					"First annotation"));
 			List<String> matches = selector.labels();
 			List<String> expected = Collections.singletonList("one");
 			assertEquals(expected, matches);
@@ -533,7 +531,7 @@ public class ColumnSelectorTests {
 
 		@Test
 		public void testManyConditions() {
-			ColumnSelector selector = table.select().withMetaData(ColumnRole.class).ofTypeId(Column.TypeId.INTEGER)
+			ColumnSelector selector = table.select().withMetaData(ColumnRole.class).ofTypeId(Column.TypeId.INTEGER_53_BIT)
 					.withMetaData(ColumnRole.METADATA).ofCategory(
 							Column.Category.NUMERIC).notOfCategory(Column.Category.OBJECT)
 					.withCapability(Column.Capability.SORTABLE).withoutCapability(

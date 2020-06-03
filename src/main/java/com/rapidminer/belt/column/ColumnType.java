@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -10,73 +10,142 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Affero General Public License along with this program. If not, see 
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see
  * https://www.gnu.org/licenses/.
  */
 
 package com.rapidminer.belt.column;
 
+import java.time.Instant;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.rapidminer.belt.buffer.CategoricalBuffer;
 import com.rapidminer.belt.column.Column.Category;
 import com.rapidminer.belt.column.Column.TypeId;
+import com.rapidminer.belt.column.type.StringSet;
+import com.rapidminer.belt.reader.Readers;
 
 
 /**
- * Describes the type of a column but does not hold any data. Can be used to create new columns, e.g.,
- * via {@link CategoricalBuffer#toColumn(ColumnType)}.
+ * Describes the type of a column but does not hold any data.
  *
  * @param <T>
  * 		the complex type of the column elements (optional)
  * @author Michael Knopf
- * @see ColumnTypes
  */
 public final class ColumnType<T> {
 
-	private static final EnumSet<Column.Capability> CATEGORICAL = EnumSet.of(Column.Capability.OBJECT_READABLE,
-			Column.Capability.NUMERIC_READABLE);
+	/**
+	 * Complex id for columns holding 64 bit double values. Data can be accessed, for example, via {@link
+	 * Readers#numericReader(Column)}.
+	 */
+	public static final ColumnType<Void> REAL;
 
-	private static final EnumSet<Column.Capability> NUMERIC = EnumSet.of(Column.Capability.NUMERIC_READABLE);
+	/**
+	 * Complex id for columns holding 64 bit double values with no fractional digits. Data can be accessed, for example,
+	 * via {@link Readers#numericReader(Column)}.
+	 * <p>
+	 * Please note: The maximum / minimum value that can be stored without loss of information is {@code +/- 2^53-1} ,
+	 * or {@code +/- 9,007,199,254,740,991}. Therefore, casting this column's values to {@code int} leads to loss of
+	 * information for values smaller / larger than {@link Integer#MIN_VALUE} / {@link Integer#MAX_VALUE}.
+	 */
+	public static final ColumnType<Void> INTEGER_53_BIT;
 
-	private static final EnumSet<Column.Capability> OBJECT = EnumSet.of(Column.Capability.OBJECT_READABLE);
+	/**
+	 * Complex id for columns holding categorical strings. Data can be read categorical or as {@link String}. This can
+	 * be done, for example, via {@link Readers#categoricalReader(Column)} or {@link Readers#objectReader(Column,
+	 * Class)}.
+	 */
+	public static final ColumnType<String> NOMINAL;
 
-	private static final EnumSet<Column.Capability> CATEGORICAL_SORTABLE =
-			EnumSet.of(Column.Capability.OBJECT_READABLE, Column.Capability.NUMERIC_READABLE,
-					Column.Capability.SORTABLE);
+	/**
+	 * Complex id for columns holding nanoseconds of a day. Data can be read numeric or as {@link java.time.LocalTime}.
+	 * This can be done, for example, via {@link Readers#numericReader(Column)} or {@link Readers#objectReader(Column,
+	 * Class)}.
+	 */
+	public static final ColumnType<LocalTime> TIME;
 
-	private static final EnumSet<Column.Capability> NUMERIC_SORTABLE = EnumSet.of(Column.Capability.NUMERIC_READABLE,
-			Column.Capability.SORTABLE);
+	/**
+	 * Complex id for columns holding 64 bit UTC timestamps (seconds), and 32Bit fraction of a second (nanoseconds,
+	 * optional). Data can be read as {@link java.time.Instant}. This can be done, for example, via {@link
+	 * Readers#objectReader(Column, Class)}.
+	 */
+	public static final ColumnType<Instant> DATETIME;
 
-	private static final EnumSet<Column.Capability> OBJECT_SORTABLE = EnumSet.of(Column.Capability.OBJECT_READABLE,
-			Column.Capability.SORTABLE);
+	/**
+	 * Complex id for columns holding non-categorical strings. Data can be read as {@link String}. This can be done, for
+	 * example, via {@link Readers#objectReader(Column, Class)}.
+	 */
+	public static final ColumnType<String> TEXT;
 
+	/**
+	 * Complex id for columns holding sets of strings. Data can be read as {@link StringSet}. This can be done, for
+	 * example, via {@link Readers#objectReader(Column, Class)}.
+	 */
+	public static final ColumnType<StringSet> TEXTSET;
+
+	private static final Map<TypeId, ColumnType<?>> ID_TO_TYPE;
+
+	private static final EnumSet<Column.Capability> CATEGORICAL;
+	private static final EnumSet<Column.Capability> NUMERIC;
+	private static final EnumSet<Column.Capability> OBJECT;
+	private static final EnumSet<Column.Capability> CATEGORICAL_SORTABLE;
+	private static final EnumSet<Column.Capability> NUMERIC_SORTABLE;
+	private static final EnumSet<Column.Capability> OBJECT_SORTABLE;
+
+	static {
+		// init capabilities
+		CATEGORICAL = EnumSet.of(Column.Capability.OBJECT_READABLE, Column.Capability.NUMERIC_READABLE);
+		NUMERIC = EnumSet.of(Column.Capability.NUMERIC_READABLE);
+		OBJECT = EnumSet.of(Column.Capability.OBJECT_READABLE);
+		CATEGORICAL_SORTABLE = EnumSet.of(Column.Capability.OBJECT_READABLE, Column.Capability.NUMERIC_READABLE,
+				Column.Capability.SORTABLE);
+		NUMERIC_SORTABLE = EnumSet.of(Column.Capability.NUMERIC_READABLE, Column.Capability.SORTABLE);
+		OBJECT_SORTABLE = EnumSet.of(Column.Capability.OBJECT_READABLE, Column.Capability.SORTABLE);
+
+		// init column types
+		NOMINAL = new ColumnType<>(TypeId.NOMINAL, Category.CATEGORICAL, String.class, String::compareTo);
+		INTEGER_53_BIT = new ColumnType<>(TypeId.INTEGER_53_BIT, Category.NUMERIC, Void.class, null,
+				Column.Capability.SORTABLE);
+		REAL = new ColumnType<>(TypeId.REAL, Category.NUMERIC, Void.class, null,
+				Column.Capability.SORTABLE);
+		TIME = new ColumnType<>(TypeId.TIME, Category.OBJECT, LocalTime.class, LocalTime::compareTo,
+				Column.Capability.NUMERIC_READABLE);
+		DATETIME = new ColumnType<>(TypeId.DATE_TIME, Category.OBJECT, Instant.class, Instant::compareTo);
+		TEXT = new ColumnType<>(TypeId.TEXT, Category.OBJECT, String.class, String::compareTo);
+		TEXTSET = new ColumnType<>(TypeId.TEXT_SET, Category.OBJECT, StringSet.class, StringSet::compareTo);
+
+		// init id to type map
+		ID_TO_TYPE = new EnumMap<>(TypeId.class);
+		for (ColumnType<?> columnType : Arrays.asList(NOMINAL, INTEGER_53_BIT, REAL, TIME, DATETIME, TEXT, TEXTSET)) {
+			ID_TO_TYPE.put(columnType.id(), columnType);
+		}
+	}
 
 	private final Column.TypeId id;
-	private final String customTypeId;
 	private final Column.Category category;
 	private final Class<T> elementType;
 	private final Comparator<T> elementComparator;
 	private final Set<Column.Capability> capabilities;
 
-	ColumnType(TypeId type, String customTypeId, Category category, Class<T> elementType,
+	ColumnType(TypeId type, Category category, Class<T> elementType,
 			   Comparator<T> elementComparator) {
 		this.id = type;
-		this.customTypeId = customTypeId;
 		this.category = category;
 		this.elementType = elementType;
 		this.elementComparator = elementComparator;
 		this.capabilities = getStandardCapabilities(category, elementComparator);
 	}
 
-	ColumnType(TypeId type, String customTypeId, Category category, Class<T> elementType,
+	ColumnType(TypeId type, Category category, Class<T> elementType,
 			   Comparator<T> elementComparator, Column.Capability... nonStandardCapabilities) {
 		this.id = type;
-		this.customTypeId = customTypeId;
 		this.category = category;
 		this.elementType = elementType;
 		this.elementComparator = elementComparator;
@@ -109,8 +178,7 @@ public final class ColumnType<T> {
 	}
 
 	/**
-	 * Identifies the column type as one of the builtin types, e.g., {@link TypeId#NOMINAL}, or a custom column type
-	 * registered by a plugin ({@link TypeId#CUSTOM}).
+	 * Identifies the column type as one of the builtin types, e.g., {@link TypeId#NOMINAL}.
 	 *
 	 * @return the type id
 	 */
@@ -119,18 +187,8 @@ public final class ColumnType<T> {
 	}
 
 	/**
-	 * Returns an additional identifier for column types with id {@link TypeId#CUSTOM}. Return {@code null} for builtin
-	 * column types.
-	 *
-	 * @return the custom id or {@code null}
-	 */
-	public String customTypeID() {
-		return customTypeId;
-	}
-
-	/**
-	 * Returns the complex type of the column elements. Returns {@link Void} for primitive columns such as
-	 * {@link TypeId#REAL} columns.
+	 * Returns the complex type of the column elements. Returns {@link Void} for primitive columns such as {@link
+	 * TypeId#REAL} columns.
 	 *
 	 * @return the element type or {@link Void}
 	 */
@@ -148,8 +206,8 @@ public final class ColumnType<T> {
 	}
 
 	/**
-	 * Returns a comparator for complex elements types. Returns {@code null} for primitive columns such as
-	 * {@link TypeId#REAL} columns or if no comparator was specified.
+	 * Returns a comparator for complex elements types. Returns {@code null} for primitive columns such as {@link
+	 * TypeId#REAL} columns or if no comparator was specified.
 	 *
 	 * @return a comparator for the element type
 	 */
@@ -171,11 +229,7 @@ public final class ColumnType<T> {
 
 	@Override
 	public String toString() {
-		if (id == TypeId.CUSTOM) {
-			return String.format("Column type %s (%s)", id, customTypeId);
-		} else {
-			return String.format("Column type %s", id);
-		}
+		return String.format("Column type %s", id);
 	}
 
 	@Override
@@ -188,7 +242,6 @@ public final class ColumnType<T> {
 		}
 		ColumnType<?> that = (ColumnType<?>) o;
 		return id == that.id &&
-				Objects.equals(customTypeId, that.customTypeId) &&
 				category == that.category &&
 				Objects.equals(elementType, that.elementType) &&
 				Objects.equals(elementComparator, that.elementComparator) &&
@@ -197,6 +250,17 @@ public final class ColumnType<T> {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, customTypeId, category, elementType, elementComparator, capabilities);
+		return Objects.hash(id, category, elementType, elementComparator, capabilities);
+	}
+
+	/**
+	 * Returns the unique {@link ColumnType} with this id.
+	 *
+	 * @param id
+	 * 		the id of the requested column type
+	 * @return the type with the given id
+	 */
+	public static ColumnType<?> forId(TypeId id) {
+		return ID_TO_TYPE.get(id);
 	}
 }

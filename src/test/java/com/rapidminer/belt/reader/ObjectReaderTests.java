@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -40,7 +40,7 @@ import org.junit.runners.Parameterized.Parameters;
 import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 
 
 /**
@@ -81,11 +81,9 @@ public class ObjectReaderTests {
 				mapping.add(0, null);
 				int[] categories = new int[data.length];
 				Arrays.setAll(categories, i -> i + 1);
-				ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL, categories, mapping);
+				ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, categories, mapping);
 			case OBJECT:
-				return ColumnTestUtils.getObjectColumn(ColumnTypes.objectType("com.rapidminer.belt.column.test" +
-								".stringcolumn",
-						String.class, String::compareTo), data);
+				return ColumnTestUtils.getObjectColumn(ColumnType.TEXT, data);
 			default:
 				throw new IllegalStateException("Unknown column implementation");
 		}
@@ -99,20 +97,44 @@ public class ObjectReaderTests {
 		}
 
 		@Test(expected = NullPointerException.class)
+		public void testNullColumnSmall() {
+			SmallReaders.smallObjectReader(null, String.class);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullColumnUnbuffered() {
+			SmallReaders.unbufferedObjectReader(null, String.class);
+		}
+
+		@Test(expected = NullPointerException.class)
 		public void testNullColumnWithLength() {
 			Readers.objectReader(null, String.class, 100);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullType() {
-			CategoricalColumn<String> column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
+			CategoricalColumn column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL,
 					new int[0], EMPTY_DICTIONARY);
 			Readers.objectReader(column, null);
 		}
 
 		@Test(expected = NullPointerException.class)
+		public void testNullTypeSmall() {
+			CategoricalColumn column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL,
+					new int[0], EMPTY_DICTIONARY);
+			SmallReaders.smallObjectReader(column, null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullTypeUnbuffered() {
+			CategoricalColumn column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL,
+					new int[0], EMPTY_DICTIONARY);
+			SmallReaders.unbufferedObjectReader(column, null);
+		}
+
+		@Test(expected = NullPointerException.class)
 		public void testNullTypeWithLength() {
-			CategoricalColumn<String> column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnTypes.NOMINAL,
+			CategoricalColumn column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL,
 					new int[0],
 					EMPTY_DICTIONARY);
 			Readers.objectReader(column, null, 100);
@@ -299,6 +321,30 @@ public class ObjectReaderTests {
 			int reads = 16;
 			Column column = column(new String[n]);
 			ObjectReader<String> reader = new ObjectReader<>(column, String.class, 10, column.size());
+			for (int i = 0; i < reads; i++) {
+				reader.read();
+			}
+			assertEquals(reads - 1, reader.position());
+		}
+
+		@Test
+		public void testGetBufferSmall() {
+			int n = 64;
+			int reads = 16;
+			Column column = column(new String[n]);
+			ObjectReader<String> reader = SmallReaders.smallObjectReader(column, String.class);
+			for (int i = 0; i < reads; i++) {
+				reader.read();
+			}
+			assertEquals(reads - 1, reader.position());
+		}
+
+		@Test
+		public void testGetBufferMinimal() {
+			int n = 64;
+			int reads = 16;
+			Column column = column(new String[n]);
+			ObjectReader<String> reader = SmallReaders.unbufferedObjectReader(column, String.class);
 			for (int i = 0; i < reads; i++) {
 				reader.read();
 			}

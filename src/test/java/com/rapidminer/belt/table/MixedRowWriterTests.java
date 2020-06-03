@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -31,9 +32,9 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.reader.NumericReader;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
@@ -47,8 +48,6 @@ import junit.framework.TestCase;
  */
 @RunWith(Enclosed.class)
 public class MixedRowWriterTests {
-
-	private static final ColumnType<String> TEXT = ColumnTypes.objectType("text", String.class, null);
 
 	private static double[] random(int n) {
 		double[] numbers = new double[n];
@@ -101,17 +100,17 @@ public class MixedRowWriterTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testNullLabels() {
-			Writers.mixedRowWriter(null, Arrays.asList(ColumnTypes.INTEGER, ColumnTypes.NOMINAL), true);
+			Writers.mixedRowWriter(null, Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.NOMINAL), true);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testNullLabelsPosRows() {
-			Writers.mixedRowWriter(null, Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.NOMINAL), 1, false);
+			Writers.mixedRowWriter(null, Arrays.asList(TypeId.NOMINAL, TypeId.NOMINAL), 1, false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testEmptyLabels() {
-			Writers.mixedRowWriter(new ArrayList<>(), Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.REAL), true);
+			Writers.mixedRowWriter(new ArrayList<>(), Arrays.asList(TypeId.NOMINAL, TypeId.REAL), true);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -126,29 +125,29 @@ public class MixedRowWriterTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testEmptyLabelsPosRows() {
-			Writers.mixedRowWriter(new ArrayList<>(), Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.TIME), 1, true);
+			Writers.mixedRowWriter(new ArrayList<>(), Arrays.asList(TypeId.NOMINAL, TypeId.TIME), 1, true);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testNegativeRows() {
-			Writers.mixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.REAL, ColumnTypes.NOMINAL),
+			Writers.mixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.REAL, TypeId.NOMINAL),
 					-1, true);
 		}
 
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchedTypesLength() {
-			Writers.mixedRowWriter(Arrays.asList("a", "b"), Collections.singletonList(ColumnTypes.NOMINAL), false);
+			Writers.mixedRowWriter(Arrays.asList("a", "b"), Collections.singletonList(TypeId.NOMINAL), false);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testMismatchedTypesLengthWithRows() {
-			Writers.mixedRowWriter(Arrays.asList("a", "b"), Collections.singletonList(ColumnTypes.NOMINAL), 5, true);
+			Writers.mixedRowWriter(Arrays.asList("a", "b"), Collections.singletonList(TypeId.NOMINAL), 5, true);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testInvalidLabels() {
-			Writers.mixedRowWriter(Arrays.asList("a", "a"), Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER), 5, false)
+			Writers.mixedRowWriter(Arrays.asList("a", "a"), Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT), 5, false)
 					.create();
 		}
 
@@ -167,8 +166,8 @@ public class MixedRowWriterTests {
 			double[] fifth = random(numberOfRows);
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER, ColumnTypes.TIME, TEXT, ColumnTypes.REAL,
-							ColumnTypes.DATETIME), false);
+					Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT, TypeId.TIME, TypeId.TEXT, TypeId.REAL,
+							TypeId.DATE_TIME), false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] * 5));
@@ -209,7 +208,7 @@ public class MixedRowWriterTests {
 			double[] fifth = sparseRandom(numberOfRows, false);
 
 			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a", "b", "c", "d", "e"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER, ColumnTypes.TIME, ColumnTypes.DATETIME, ColumnTypes.REAL));
+					Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT, TypeId.TIME, TypeId.DATE_TIME, TypeId.REAL));
 			for (int i = 0; i < NumericReader.SMALL_BUFFER_SIZE + 10; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] % 1000));
@@ -221,13 +220,13 @@ public class MixedRowWriterTests {
 			// we added more than NumericReader.SMALL_BUFFER_SIZE values. Therefore, the buffer has been written to the
 			// columns and we can now check for sparsity to force sparse columns
 			assertTrue(writer.getObjectColumns()[0] instanceof Int32CategoricalWriter);
-			assertTrue(writer.getNumericColumns()[1] instanceof IntegerColumnWriter);
+			assertTrue(writer.getNumericColumns()[1] instanceof Integer53BitColumnWriter);
 			assertTrue(writer.getObjectColumns()[2] instanceof TimeColumnWriter);
 			assertTrue(writer.getObjectColumns()[3] instanceof NanosecondsDateTimeWriter);
 			assertTrue(writer.getNumericColumns()[4] instanceof RealColumnWriter);
 			writer.checkForSparsity();
 			assertTrue(writer.getObjectColumns()[0] instanceof Int32CategoricalWriterSparse);
-			assertTrue(writer.getNumericColumns()[1] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getNumericColumns()[1] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getObjectColumns()[2] instanceof TimeColumnWriterSparse);
 			assertTrue(writer.getObjectColumns()[3] instanceof NanoDateTimeWriterSparse);
 			assertTrue(writer.getNumericColumns()[4] instanceof RealColumnWriterSparse);
@@ -276,7 +275,7 @@ public class MixedRowWriterTests {
 			double[] fifth = sparseRandom(numberOfRows, true);
 
 			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a", "b", "c", "d", "e"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER, ColumnTypes.TIME, ColumnTypes.DATETIME, ColumnTypes.REAL));
+					Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT, TypeId.TIME, TypeId.DATE_TIME, TypeId.REAL));
 			for (int i = 0; i < NumericReader.SMALL_BUFFER_SIZE + 10; i++) {
 				writer.move();
 				writer.set(0, Double.isNaN(first[i]) ? null : "" + Math.round(first[i] % 1000));
@@ -288,13 +287,13 @@ public class MixedRowWriterTests {
 			// we added more than NumericReader.SMALL_BUFFER_SIZE values. Therefore, the buffer has been written to the
 			// columns and we can now check for sparsity to force sparse columns
 			assertTrue(writer.getObjectColumns()[0] instanceof Int32CategoricalWriter);
-			assertTrue(writer.getNumericColumns()[1] instanceof IntegerColumnWriter);
+			assertTrue(writer.getNumericColumns()[1] instanceof Integer53BitColumnWriter);
 			assertTrue(writer.getObjectColumns()[2] instanceof TimeColumnWriter);
 			assertTrue(writer.getObjectColumns()[3] instanceof NanosecondsDateTimeWriter);
 			assertTrue(writer.getNumericColumns()[4] instanceof RealColumnWriter);
 			writer.checkForSparsity();
 			assertTrue(writer.getObjectColumns()[0] instanceof Int32CategoricalWriterSparse);
-			assertTrue(writer.getNumericColumns()[1] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getNumericColumns()[1] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getObjectColumns()[2] instanceof TimeColumnWriterSparse);
 			assertTrue(writer.getObjectColumns()[3] instanceof NanoDateTimeWriterSparse);
 			assertTrue(writer.getNumericColumns()[4] instanceof RealColumnWriterSparse);
@@ -343,7 +342,7 @@ public class MixedRowWriterTests {
 			double[] fifth = sparseRandom(numberOfRows, false);
 
 			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a", "b", "c", "d", "e"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER, ColumnTypes.TIME, ColumnTypes.DATETIME, ColumnTypes.REAL));
+					Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT, TypeId.TIME, TypeId.DATE_TIME, TypeId.REAL));
 			for (int i = 0; i < numberOfRows - 1; i++) {
 				writer.move();
 				writer.set(0, "" + Math.round(first[i] % 1000));
@@ -354,7 +353,7 @@ public class MixedRowWriterTests {
 			}
 			// this is the max number of rows before checking for sparsity
 			assertTrue(writer.getObjectColumns()[0] instanceof Int32CategoricalWriter);
-			assertTrue(writer.getNumericColumns()[1] instanceof IntegerColumnWriter);
+			assertTrue(writer.getNumericColumns()[1] instanceof Integer53BitColumnWriter);
 			assertTrue(writer.getObjectColumns()[2] instanceof TimeColumnWriter);
 			assertTrue(writer.getObjectColumns()[3] instanceof NanosecondsDateTimeWriter);
 			assertTrue(writer.getNumericColumns()[4] instanceof RealColumnWriter);
@@ -367,7 +366,7 @@ public class MixedRowWriterTests {
 			writer.set(4, fifth[numberOfRows - 1]);
 			// now the check for sparsity should have taken place
 			assertTrue(writer.getObjectColumns()[0] instanceof Int32CategoricalWriterSparse);
-			assertTrue(writer.getNumericColumns()[1] instanceof IntegerColumnWriterSparse);
+			assertTrue(writer.getNumericColumns()[1] instanceof Integer53BitColumnWriterSparse);
 			assertTrue(writer.getObjectColumns()[2] instanceof TimeColumnWriterSparse);
 			assertTrue(writer.getObjectColumns()[3] instanceof NanoDateTimeWriterSparse);
 			assertTrue(writer.getNumericColumns()[4] instanceof RealColumnWriterSparse);
@@ -407,8 +406,8 @@ public class MixedRowWriterTests {
 			double[] fifth = random(numberOfRows);
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f"),
-					Arrays.asList(ColumnTypes.REAL, ColumnTypes.NOMINAL, ColumnTypes.TIME, TEXT, ColumnTypes.DATETIME,
-							ColumnTypes.INTEGER), numberOfRows / 2, false);
+					Arrays.asList(TypeId.REAL, TypeId.NOMINAL, TypeId.TIME, TypeId.TEXT, TypeId.DATE_TIME,
+							TypeId.INTEGER_53_BIT), numberOfRows / 2, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(1, first[i] > 0.2 ? "" + first[i] : null);
@@ -446,8 +445,8 @@ public class MixedRowWriterTests {
 			double[] fifth = random(numberOfRows);
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, ColumnTypes.INTEGER, ColumnTypes.REAL,
-							TEXT, ColumnTypes.TIME), numberOfRows, false);
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.INTEGER_53_BIT, TypeId.REAL,
+							TypeId.TEXT, TypeId.TIME), numberOfRows, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "" + first[i]);
@@ -486,8 +485,8 @@ public class MixedRowWriterTests {
 
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, TEXT, ColumnTypes.TIME, ColumnTypes.REAL,
-							ColumnTypes.INTEGER), numberOfRows * 2, false);
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TEXT, TypeId.TIME, TypeId.REAL,
+							TypeId.INTEGER_53_BIT), numberOfRows * 2, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "" + first[i]);
@@ -521,8 +520,8 @@ public class MixedRowWriterTests {
 		public void testNotInitialized() {
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME,
-							ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME,
+							TypeId.INTEGER_53_BIT), false);
 			writer.move();
 			writer.move();
 			writer.set(0, "Yes");
@@ -539,8 +538,8 @@ public class MixedRowWriterTests {
 		public void testInitialized() {
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME,
-							ColumnTypes.INTEGER), true);
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME,
+							TypeId.INTEGER_53_BIT), true);
 			writer.move();
 			writer.move();
 			writer.set(0, "Yes");
@@ -557,7 +556,7 @@ public class MixedRowWriterTests {
 		public void testSecondFillInitialized() {
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "c"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER), true);
+					Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT), true);
 			writer.move();
 			writer.move();
 			writer.set(0, "Yes");
@@ -583,7 +582,7 @@ public class MixedRowWriterTests {
 		public void testSecondFillNotInitialized() {
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "c"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER), false);
+					Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT), false);
 			writer.move();
 			writer.move();
 			writer.set(0, "Yes");
@@ -618,7 +617,7 @@ public class MixedRowWriterTests {
 
 
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d"),
-					Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, TEXT, ColumnTypes.TIME), numberOfRows *
+					Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.TEXT, TypeId.TIME), numberOfRows *
 							2, false);
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
@@ -633,7 +632,7 @@ public class MixedRowWriterTests {
 		@Test(expected = IllegalStateException.class)
 		public void testCreateTwiceDatetime() {
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("b", "c", "d"),
-					Arrays.asList(ColumnTypes.INTEGER, TEXT, ColumnTypes.TIME), 2, false);
+					Arrays.asList(TypeId.INTEGER_53_BIT, TypeId.TEXT, TypeId.TIME), 2, false);
 			writer.create();
 			writer.create();
 		}
@@ -641,7 +640,7 @@ public class MixedRowWriterTests {
 		@Test(expected = IllegalStateException.class)
 		public void testCreateTwiceFree() {
 			MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("c", "d"),
-					Arrays.asList(TEXT, ColumnTypes.TIME), 2, false);
+					Arrays.asList(TypeId.TEXT, TypeId.TIME), 2, false);
 			writer.create();
 			writer.create();
 		}
@@ -649,7 +648,7 @@ public class MixedRowWriterTests {
 		@Test(expected = IllegalStateException.class)
 		public void testCreateTwiceTime() {
 			MixedRowWriter writer = Writers.mixedRowWriter(Collections.singletonList("d"),
-					Collections.singletonList(ColumnTypes.REAL), 2, false);
+					Collections.singletonList(TypeId.REAL), 2, false);
 			writer.create();
 			writer.create();
 		}
@@ -658,7 +657,7 @@ public class MixedRowWriterTests {
 		public void testIllegalStateSparseCategorical() {
 			int numberOfRows = NumericReader.SMALL_BUFFER_SIZE + 10;
 
-			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a"), Arrays.asList(ColumnTypes.NOMINAL));
+			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a"), Arrays.asList(TypeId.NOMINAL));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, "defaultValue");
@@ -677,7 +676,7 @@ public class MixedRowWriterTests {
 			int numberOfRows = NumericReader.SMALL_BUFFER_SIZE + 10;
 
 			Instant defaultValue = Instant.ofEpochSecond(398523);
-			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a"), Arrays.asList(ColumnTypes.DATETIME));
+			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a"), Arrays.asList(TypeId.DATE_TIME));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, defaultValue);
@@ -696,7 +695,7 @@ public class MixedRowWriterTests {
 			int numberOfRows = NumericReader.SMALL_BUFFER_SIZE + 10;
 
 			LocalTime defaultValue = LocalTime.ofNanoOfDay(398523);
-			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a"), Arrays.asList(ColumnTypes.TIME));
+			MixedRowWriter writer = new MixedRowWriter(Arrays.asList("a"), Arrays.asList(TypeId.TIME));
 			for (int i = 0; i < numberOfRows; i++) {
 				writer.move();
 				writer.set(0, defaultValue);
@@ -715,16 +714,16 @@ public class MixedRowWriterTests {
 			@Test
 			public void testUnknownRows() {
 				MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f"),
-						Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.INTEGER, ColumnTypes.REAL, ColumnTypes.DATETIME,
-								ColumnTypes.TIME, TEXT), false);
+						Arrays.asList(TypeId.NOMINAL, TypeId.INTEGER_53_BIT, TypeId.REAL, TypeId.DATE_TIME,
+								TypeId.TIME, TypeId.TEXT), false);
 				Table table = writer.create();
 
-				assertEquals(ColumnTypes.NOMINAL, table.column(0).type());
-				assertEquals(ColumnTypes.INTEGER, table.column(1).type());
-				assertEquals(ColumnTypes.REAL, table.column(2).type());
-				assertEquals(ColumnTypes.DATETIME, table.column(3).type());
-				assertEquals(ColumnTypes.TIME, table.column(4).type());
-				assertEquals(TEXT, table.column(5).type());
+				assertEquals(ColumnType.NOMINAL, table.column(0).type());
+				assertEquals(ColumnType.INTEGER_53_BIT, table.column(1).type());
+				assertEquals(ColumnType.REAL, table.column(2).type());
+				assertEquals(ColumnType.DATETIME, table.column(3).type());
+				assertEquals(ColumnType.TIME, table.column(4).type());
+				assertEquals(ColumnType.TEXT, table.column(5).type());
 			}
 
 
@@ -735,8 +734,8 @@ public class MixedRowWriterTests {
 				double[] third = random(numberOfRows);
 
 				MixedRowWriter writer = Writers.mixedRowWriter(Arrays.asList("a", "b", "c", "d", "e", "f"),
-						Arrays.asList(ColumnTypes.NOMINAL, ColumnTypes.DATETIME, ColumnTypes.REAL, ColumnTypes.TIME,
-								ColumnTypes.INTEGER, TEXT), numberOfRows / 2, false);
+						Arrays.asList(TypeId.NOMINAL, TypeId.DATE_TIME, TypeId.REAL, TypeId.TIME,
+								TypeId.INTEGER_53_BIT, TypeId.TEXT), numberOfRows / 2, false);
 				for (int i = 0; i < numberOfRows; i++) {
 					writer.move();
 					writer.set(0, "" + first[i]);
@@ -746,12 +745,12 @@ public class MixedRowWriterTests {
 				}
 				Table table = writer.create();
 
-				assertEquals(ColumnTypes.NOMINAL, table.column(0).type());
-				assertEquals(ColumnTypes.DATETIME, table.column(1).type());
-				assertEquals(ColumnTypes.REAL, table.column(2).type());
-				assertEquals(ColumnTypes.TIME, table.column(3).type());
-				assertEquals(ColumnTypes.INTEGER, table.column(4).type());
-				assertEquals(TEXT, table.column(5).type());
+				assertEquals(ColumnType.NOMINAL, table.column(0).type());
+				assertEquals(ColumnType.DATETIME, table.column(1).type());
+				assertEquals(ColumnType.REAL, table.column(2).type());
+				assertEquals(ColumnType.TIME, table.column(3).type());
+				assertEquals(ColumnType.INTEGER_53_BIT, table.column(4).type());
+				assertEquals(ColumnType.TEXT, table.column(5).type());
 			}
 
 		}
@@ -761,7 +760,7 @@ public class MixedRowWriterTests {
 			@Test
 			public void testNoRows() {
 				MixedRowWriter writer =
-						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes
+						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId
 								.NOMINAL), true);
 				String expected = "General row writer (0x2)";
 				assertEquals(expected, writer.toString());
@@ -770,7 +769,7 @@ public class MixedRowWriterTests {
 			@Test
 			public void testNoRowsMoved() {
 				MixedRowWriter writer =
-						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.INTEGER, ColumnTypes
+						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.INTEGER_53_BIT, TypeId
 								.NOMINAL), true);
 				writer.move();
 				writer.move();
@@ -782,7 +781,7 @@ public class MixedRowWriterTests {
 			@Test
 			public void testExpectedRows() {
 				MixedRowWriter writer =
-						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.REAL),
+						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.REAL),
 								19, true);
 				String expected = "General row writer (0x2)";
 				assertEquals(expected, writer.toString());
@@ -791,7 +790,7 @@ public class MixedRowWriterTests {
 			@Test
 			public void testExpectedMoved() {
 				MixedRowWriter writer =
-						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.TIME, ColumnTypes.NOMINAL),
+						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.TIME, TypeId.NOMINAL),
 								19, true);
 				writer.move();
 				writer.move();
@@ -803,7 +802,7 @@ public class MixedRowWriterTests {
 			@Test
 			public void testWidth() {
 				MixedRowWriter writer =
-						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(ColumnTypes.INTEGER, ColumnTypes
+						new MixedRowWriter(Arrays.asList("a", "b"), Arrays.asList(TypeId.INTEGER_53_BIT, TypeId
 								.NOMINAL), true);
 				String expected = "General row writer (0x" + writer.width() + ")";
 				assertEquals(expected, writer.toString());

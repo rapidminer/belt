@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -45,8 +45,8 @@ class ObjectWriter<T> implements ComplexWriter {
 	 */
 	ObjectWriter(ColumnType<T> type, int length) {
 		data = new Object[length];
-		if (type.id() != Column.TypeId.CUSTOM || type.category() != Column.Category.OBJECT) {
-			throw new IllegalArgumentException("Column type must be custom and of category object");
+		if (type.category() != Column.Category.OBJECT || type.id() == Column.TypeId.DATE_TIME || type.id() == Column.TypeId.TIME) {
+ 			throw new IllegalArgumentException("Column type must be non-date-time and of category object");
 		}
 		this.type = type;
 		size = length;
@@ -55,8 +55,8 @@ class ObjectWriter<T> implements ComplexWriter {
 
 	ObjectWriter(ColumnType<T> type) {
 		data = new Object[0];
-		if (type.id() != Column.TypeId.CUSTOM || type.category() != Column.Category.OBJECT) {
-			throw new IllegalArgumentException("Column type must be custom and of category object");
+		if (type.category() != Column.Category.OBJECT || type.id() == Column.TypeId.DATE_TIME || type.id() == Column.TypeId.TIME) {
+			throw new IllegalArgumentException("Column type must be non-date-time and of category object");
 		}
 		this.type = type;
 		size = 0;

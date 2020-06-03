@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -35,11 +35,11 @@ import com.rapidminer.belt.util.Sorting;
 
 /**
  * Column with data associated to integer categories. Data can be accessed via a {@link CategoricalReader} or a
- * {@link NumericReader} together with access to the dictionary by {@link #getDictionary(Class)}.
+ * {@link NumericReader} together with access to the dictionary by {@link #getDictionary()}.
  *
  * @author Gisa Meier, Michael Knopf
  */
-class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
+class SimpleCategoricalColumn extends CategoricalColumn {
 
 	private static final String NULL_DATA = "Data must not be null";
 	private static final String NULL_MAPPING = "Categorical dictionary must not be null";
@@ -49,9 +49,9 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 	private final short[] shortData;
 	private final int[] intData;
 
-	private final Dictionary<R> dictionary;
+	private final Dictionary dictionary;
 
-	SimpleCategoricalColumn(ColumnType<R> type, PackedIntegers bytes, Dictionary<R> dictionary) {
+	SimpleCategoricalColumn(ColumnType<String> type, PackedIntegers bytes, Dictionary dictionary) {
 		super(type, bytes.size());
 		if (!BYTE_BACKED_FORMATS.contains(bytes.format())) {
 			throw new IllegalArgumentException("Given data management not backed by byte array");
@@ -63,7 +63,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_MAPPING);
 	}
 
-	SimpleCategoricalColumn(ColumnType<R> type, short[] data, Dictionary<R> dictionary) {
+	SimpleCategoricalColumn(ColumnType<String> type, short[] data, Dictionary dictionary) {
 		super(type , data.length);
 		this.format = Format.UNSIGNED_INT16;
 		this.byteData = null;
@@ -72,7 +72,7 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 		this.dictionary = Objects.requireNonNull(dictionary, NULL_MAPPING);
 	}
 
-	SimpleCategoricalColumn(ColumnType<R> type, int[] data, Dictionary<R> dictionary) {
+	SimpleCategoricalColumn(ColumnType<String> type, int[] data, Dictionary dictionary) {
 		super(type, data.length);
 		this.format = Format.SIGNED_INT32;
 		this.byteData = null;
@@ -457,13 +457,13 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
 				PackedIntegers mappedBytes = Mapping.apply(byteData, mapping);
-				return new SimpleCategoricalColumn<>(type(), mappedBytes, dictionary);
+				return new SimpleCategoricalColumn(type(), mappedBytes, dictionary);
 			case UNSIGNED_INT16:
 				short[] mappedShorts = Mapping.apply(shortData, mapping);
-				return new SimpleCategoricalColumn<>(type(), mappedShorts, dictionary);
+				return new SimpleCategoricalColumn(type(), mappedShorts, dictionary);
 			case SIGNED_INT32:
 				int[] mappedIntegers = Mapping.apply(intData, mapping);
-				return new SimpleCategoricalColumn<>(type(), mappedIntegers, dictionary);
+				return new SimpleCategoricalColumn(type(), mappedIntegers, dictionary);
 			default:
 				throw new IllegalStateException();
 		}
@@ -474,27 +474,27 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new MappedCategoricalColumn<>(type(), byteData, dictionary, mapping);
+				return new MappedCategoricalColumn(type(), byteData, dictionary, mapping);
 			case UNSIGNED_INT16:
-				return new MappedCategoricalColumn<>(type(), shortData, dictionary, mapping);
+				return new MappedCategoricalColumn(type(), shortData, dictionary, mapping);
 			case SIGNED_INT32:
-				return new MappedCategoricalColumn<>(type(), intData, dictionary, mapping);
+				return new MappedCategoricalColumn(type(), intData, dictionary, mapping);
 			default:
 				throw new IllegalStateException();
 		}
 	}
 
 	@Override
-	CategoricalColumn<R> remap(Dictionary<R> newDictionary, int[] remapping) {
+	CategoricalColumn remap(Dictionary newDictionary, int[] remapping) {
 		switch (format) {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new RemappedCategoricalColumn<>(type(), byteData, newDictionary, remapping);
+				return new RemappedCategoricalColumn(type(), byteData, newDictionary, remapping);
 			case UNSIGNED_INT16:
-				return new RemappedCategoricalColumn<>(type(), shortData, newDictionary, remapping);
+				return new RemappedCategoricalColumn(type(), shortData, newDictionary, remapping);
 			case SIGNED_INT32:
-				return new RemappedCategoricalColumn<>(type(), intData, newDictionary, remapping);
+				return new RemappedCategoricalColumn(type(), intData, newDictionary, remapping);
 			default:
 				throw new IllegalStateException();
 		}
@@ -521,21 +521,21 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 	}
 
 	@Override
-	protected Dictionary<R> getDictionary() {
+	public Dictionary getDictionary() {
 		return dictionary;
 	}
 
 	@Override
-	protected CategoricalColumn<R> swapDictionary(Dictionary<R> newDictionary) {
+	protected CategoricalColumn swapDictionary(Dictionary newDictionary) {
 		switch (format) {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new SimpleCategoricalColumn<>(type(), byteData, newDictionary);
+				return new SimpleCategoricalColumn(type(), byteData, newDictionary);
 			case UNSIGNED_INT16:
-				return new SimpleCategoricalColumn<>(type(), shortData, newDictionary);
+				return new SimpleCategoricalColumn(type(), shortData, newDictionary);
 			case SIGNED_INT32:
-				return new SimpleCategoricalColumn<>(type(), intData, newDictionary);
+				return new SimpleCategoricalColumn(type(), intData, newDictionary);
 			default:
 				throw new IllegalStateException();
 		}
@@ -543,11 +543,11 @@ class SimpleCategoricalColumn<R> extends CategoricalColumn<R> {
 
 	@Override
 	public int[] sort(Order order) {
-		Comparator<R> comparator = type().comparator();
+		Comparator<String> comparator = type().comparator();
 		if(comparator==null){
 			throw new UnsupportedOperationException();
 		}
-		Comparator<R> comparatorWithNull = Comparator.nullsLast(comparator);
+		Comparator<String> comparatorWithNull = Comparator.nullsLast(comparator);
 		switch (format) {
 			case UNSIGNED_INT2:
 				return Sorting.sort(size(),

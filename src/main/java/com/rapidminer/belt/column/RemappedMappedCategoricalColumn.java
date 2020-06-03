@@ -1,5 +1,6 @@
 /**
- * This file is part of the RapidMiner Belt project. Copyright (C) 2017-2019 RapidMiner GmbH
+ * This file is part of the RapidMiner Belt project.
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -38,11 +39,11 @@ import com.rapidminer.belt.util.Sorting;
  * Column with data associated to integer categories twisted by a mapping that selects a (reordered) subset of the
  * columns and a remapping that adjusts the data to the dictionary. Data can be accessed via a {@link
  * CategoricalReader}, an {@link ObjectReader}, or a {@link NumericReader} together with access to the dictionary by
- * {@link #getDictionary(Class)}.
+ * {@link #getDictionary()}.
  *
  * @author Gisa Meier, Michael Knopf
  */
-class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements CacheMappedColumn {
+class RemappedMappedCategoricalColumn extends CategoricalColumn implements CacheMappedColumn {
 
 	private static final String NULL_DATA = "Data must not be null";
 	private static final String NULL_CATEGORY_MAPPING = "Categorical mapping must not be null";
@@ -55,10 +56,10 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 	private final short[] shortData;
 	private final int[] intData;
 
-	private final Dictionary<R> dictionary;
+	private final Dictionary dictionary;
 	private final int[] remapping;
 
-	RemappedMappedCategoricalColumn(ColumnType<R> type, PackedIntegers data, Dictionary<R> dictionary, int[] remapping,
+	RemappedMappedCategoricalColumn(ColumnType<String> type, PackedIntegers data, Dictionary dictionary, int[] remapping,
 									int[] mapping) {
 		super(type, mapping.length);
 		if (!BYTE_BACKED_FORMATS.contains(data.format())) {
@@ -73,7 +74,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		this.remapping = Objects.requireNonNull(remapping, NULL_REMAPPING);
 	}
 
-	RemappedMappedCategoricalColumn(ColumnType<R> type, short[] data, Dictionary<R> dictionary, int[] remapping,
+	RemappedMappedCategoricalColumn(ColumnType<String> type, short[] data, Dictionary dictionary, int[] remapping,
 									int[] mapping) {
 		super(type, mapping.length);
 		this.format = Format.UNSIGNED_INT16;
@@ -85,7 +86,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		this.remapping = Objects.requireNonNull(remapping, NULL_REMAPPING);
 	}
 
-	RemappedMappedCategoricalColumn(ColumnType<R> type, int[] data, Dictionary<R> dictionary, int[] remapping, int[] mapping) {
+	RemappedMappedCategoricalColumn(ColumnType<String> type, int[] data, Dictionary dictionary, int[] remapping, int[] mapping) {
 		super(type, mapping.length);
 		this.format = Format.SIGNED_INT32;
 		this.byteData = null;
@@ -402,7 +403,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 	 * @return the categorical mapping
 	 */
 	@Override
-	protected Dictionary<R> getDictionary() {
+	public Dictionary getDictionary() {
 		return dictionary;
 	}
 
@@ -437,11 +438,11 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 
 	@Override
 	public int[] sort(Order order) {
-		Comparator<R> comparator = type().comparator();
+		Comparator<String> comparator = type().comparator();
 		if (comparator == null) {
 			throw new UnsupportedOperationException();
 		}
-		Comparator<R> comparatorWithNull = Comparator.nullsLast(comparator);
+		Comparator<String> comparatorWithNull = Comparator.nullsLast(comparator);
 		switch (format) {
 			case UNSIGNED_INT2:
 				return Sorting.sort(mapping.length,
@@ -492,40 +493,40 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
 				PackedIntegers mappedBytes = Mapping.apply(byteData, mapping);
-				return new RemappedCategoricalColumn<>(type(), mappedBytes, dictionary, remapping);
+				return new RemappedCategoricalColumn(type(), mappedBytes, dictionary, remapping);
 			case UNSIGNED_INT16:
 				short[] mappedShorts = Mapping.apply(shortData, mapping);
-				return new RemappedCategoricalColumn<>(type(), mappedShorts, dictionary, remapping);
+				return new RemappedCategoricalColumn(type(), mappedShorts, dictionary, remapping);
 			case SIGNED_INT32:
 				int[] mappedIntegers = Mapping.apply(intData, mapping);
-				return new RemappedCategoricalColumn<>(type(), mappedIntegers, dictionary, remapping);
+				return new RemappedCategoricalColumn(type(), mappedIntegers, dictionary, remapping);
 			default:
 				throw new IllegalStateException();
 		}
 	}
 
 	@Override
-	CategoricalColumn<R> remap(Dictionary<R> newDictionary, int[] remapping) {
+	CategoricalColumn remap(Dictionary newDictionary, int[] remapping) {
 		int[] mergedRemapping = Mapping.merge(this.remapping, remapping);
 		return getRemappedMappedCategoricalColumn(newDictionary, mergedRemapping, mapping);
 	}
 
 	@Override
-	protected CategoricalColumn<R> swapDictionary(Dictionary<R> newDictionary) {
+	protected CategoricalColumn swapDictionary(Dictionary newDictionary) {
 		return getRemappedMappedCategoricalColumn(newDictionary, remapping, mapping);
 	}
 
-	private CategoricalColumn<R> getRemappedMappedCategoricalColumn(Dictionary<R> dictionary, int[] remapping,
+	private CategoricalColumn getRemappedMappedCategoricalColumn(Dictionary dictionary, int[] remapping,
 																	int[] mapping) {
 		switch (format) {
 			case UNSIGNED_INT2:
 			case UNSIGNED_INT4:
 			case UNSIGNED_INT8:
-				return new RemappedMappedCategoricalColumn<>(type(), byteData, dictionary, remapping, mapping);
+				return new RemappedMappedCategoricalColumn(type(), byteData, dictionary, remapping, mapping);
 			case UNSIGNED_INT16:
-				return new RemappedMappedCategoricalColumn<>(type(), shortData, dictionary, remapping, mapping);
+				return new RemappedMappedCategoricalColumn(type(), shortData, dictionary, remapping, mapping);
 			case SIGNED_INT32:
-				return new RemappedMappedCategoricalColumn<>(type(), intData, dictionary, remapping, mapping);
+				return new RemappedMappedCategoricalColumn(type(), intData, dictionary, remapping, mapping);
 			default:
 				throw new IllegalStateException();
 		}
@@ -626,7 +627,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		}
 	}
 
-	private R lookUpUInt2(int i) {
+	private String lookUpUInt2(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = remapping[readUInt2(byteData.data(), position)];
@@ -640,7 +641,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		}
 	}
 
-	private R lookUpUInt4(int i) {
+	private String lookUpUInt4(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = remapping[readUInt4(byteData.data(), position)];
@@ -654,7 +655,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		}
 	}
 
-	private R lookUpUInt8(int i) {
+	private String lookUpUInt8(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < byteData.size()) {
 			int datum = remapping[Byte.toUnsignedInt(byteData.data()[position])];
@@ -668,7 +669,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		}
 	}
 
-	private R lookUpUInt16(int i) {
+	private String lookUpUInt16(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < shortData.length) {
 			int datum = remapping[Short.toUnsignedInt(shortData[position])];
@@ -682,7 +683,7 @@ class RemappedMappedCategoricalColumn<R> extends CategoricalColumn<R> implements
 		}
 	}
 
-	private R lookUpInt32(int i) {
+	private String lookUpInt32(int i) {
 		int position = mapping[i];
 		if (position >= 0 && position < intData.length) {
 			int datum = remapping[intData[position]];

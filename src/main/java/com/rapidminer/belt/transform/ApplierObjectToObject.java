@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -19,9 +19,9 @@ package com.rapidminer.belt.transform;
 
 import java.util.function.Function;
 
-import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
 
@@ -38,18 +38,20 @@ final class ApplierObjectToObject<R, T> implements Calculator<ObjectBuffer<T>> {
 	private ObjectBuffer<T> target;
 	private final Column source;
 	private final Class<R> sourceType;
+	private final ColumnType<T> targetType;
 	private final Function<R,T> operator;
 
-	ApplierObjectToObject(Column source, Class<R> sourceType, Function<R,T> operator) {
+	ApplierObjectToObject(Column source, Class<R> sourceType, Function<R,T> operator, ColumnType<T> targetType) {
 		this.source = source;
 		this.operator = operator;
 		this.sourceType = sourceType;
+		this.targetType = targetType;
 	}
 
 
 	@Override
 	public void init(int numberOfBatches) {
-		target = Buffers.objectBuffer(source.size());
+		target = BufferAccessor.get().newObjectBuffer(targetType, source.size());
 	}
 
 	@Override

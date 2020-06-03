@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -31,7 +31,7 @@ import org.junit.runner.RunWith;
 
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.column.TimeColumn;
 
 
@@ -209,7 +209,7 @@ public class TimeBufferTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromCategoricalColumn() {
 			int[] data = random(177);
-			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnTypes.NOMINAL, data,
+			Column column = ColumnAccessor.get().newCategoricalColumn(ColumnType.NOMINAL, data,
 					new ArrayList<>());
 			Buffers.timeBuffer(column);
 		}
@@ -223,8 +223,7 @@ public class TimeBufferTests {
 		@Test(expected = IllegalArgumentException.class)
 		public void testFromFreeColumn() {
 			Column column =
-					ColumnAccessor.get().newObjectColumn(ColumnTypes.categoricalType("com.rapidminer.belt.column.test" +
-									".objectcolumn",
+					ColumnAccessor.get().newObjectColumn(ColumnTestUtils.categoricalType(
 							Object.class, null), new Object[0]
 					);
 			Buffers.timeBuffer(column);

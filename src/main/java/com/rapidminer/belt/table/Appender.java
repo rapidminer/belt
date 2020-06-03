@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -27,19 +27,18 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.DoubleConsumer;
 
-import com.rapidminer.belt.buffer.Buffers;
-import com.rapidminer.belt.buffer.CategoricalBuffer;
+import com.rapidminer.belt.buffer.NominalBuffer;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
 import com.rapidminer.belt.column.DateTimeColumn;
 import com.rapidminer.belt.column.Dictionary;
 import com.rapidminer.belt.column.TimeColumn;
 import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.execution.ExecutionUtils;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.util.ColumnMetaData;
-import com.rapidminer.belt.execution.ExecutionUtils;
+import com.rapidminer.belt.util.IntegerFormats;
 
 
 /**
@@ -106,7 +105,13 @@ public final class Appender {
 				case NUMERIC:
 					return appendNumeric(columns, totalLength, type.id(), finalProgressCallback);
 				case CATEGORICAL:
-					return appendCategorical(columns, totalLength, column, type, finalProgressCallback);
+					if (!type.elementType().equals(String.class)) {
+						throw new AssertionError("non-String categorical column");
+					}
+					//cast is safe since element type was checked above
+					@SuppressWarnings("unchecked")
+					ColumnType<String> stringColumnType = (ColumnType<String>) type;
+					return appendCategorical(columns, totalLength, column, stringColumnType, finalProgressCallback);
 				case OBJECT:
 				default:
 					if (type.id() == Column.TypeId.DATE_TIME) {
@@ -222,12 +227,12 @@ public final class Appender {
 	 * @throws IncompatibleTypesException
 	 * 		if not all columns are of the same type
 	 */
-	private static <T> Column appendCategorical(List<Column> columns, int totalLength, Column column,
-												ColumnType<T> type, DoubleConsumer progressCallback) {
-		Dictionary<Object> dictionary = column.getDictionary(Object.class);
-		Set<Object> values = new HashSet<>(ColumnAccessor.get().getDictionaryList(dictionary));
+	private static Column appendCategorical(List<Column> columns, int totalLength, Column column,
+												ColumnType<String> type, DoubleConsumer progressCallback) {
+		Dictionary dictionary = column.getDictionary();
+		Set<String> values = new HashSet<>(ColumnAccessor.get().getDictionaryList(dictionary));
 		boolean isBoolean = dictionary.isBoolean();
-		Object[] positiveNegativeValue = getPositiveNegativeValue(dictionary, isBoolean);
+		String[] positiveNegativeValue = getPositiveNegativeValue(dictionary, isBoolean);
 
 		for (int i = 1; i < columns.size(); i++) {
 			Column otherColumn = columns.get(i);
@@ -237,7 +242,7 @@ public final class Appender {
 			if (!type.equals(otherColumn.type())) {
 				throw new IncompatibleTypesException(type, otherColumn.type(), i);
 			}
-			Dictionary<Object> otherDictionary = otherColumn.getDictionary(Object.class);
+			Dictionary otherDictionary = otherColumn.getDictionary();
 			values.addAll(ColumnAccessor.get().getDictionaryList(otherDictionary));
 			if (isBoolean) {
 				isBoolean = handleBooleanProperties(positiveNegativeValue, otherDictionary);
@@ -245,7 +250,7 @@ public final class Appender {
 		}
 		int newDiffValues = values.size() - 1;
 		return appendCategorical(columns, totalLength, newDiffValues, type, isBoolean, positiveNegativeValue == null ?
-						null : (T) positiveNegativeValue[0],
+						null : positiveNegativeValue[0],
 				progressCallback);
 	}
 
@@ -253,7 +258,7 @@ public final class Appender {
 	/**
 	 * Checks if the other column is boolean with the same positive value.
 	 */
-	private static boolean handleBooleanProperties(Object[] positiveNegativeValue, Dictionary<Object> dictionary) {
+	private static boolean handleBooleanProperties(Object[] positiveNegativeValue, Dictionary dictionary) {
 		if (!dictionary.isBoolean()) {
 			return false;
 		} else {
@@ -276,8 +281,8 @@ public final class Appender {
 	/**
 	 * Finds the positive value.
 	 */
-	private static Object[] getPositiveNegativeValue(Dictionary<Object> dictionary, boolean isBoolean) {
-		Object[] posNeg = new Object[2];
+	private static String[] getPositiveNegativeValue(Dictionary dictionary, boolean isBoolean) {
+		String[] posNeg = new String[2];
 		if (isBoolean) {
 			if (dictionary.hasPositive()) {
 				posNeg[0] = dictionary.get(dictionary.getPositiveIndex());
@@ -293,17 +298,35 @@ public final class Appender {
 	/**
 	 * Appends the given categorical columns, making the result boolean if desired.
 	 */
-	private static <T> Column appendCategorical(List<Column> columns, int finalSize, int categories,
-												ColumnType<T> type, boolean isBoolean, T positiveValue,
+	private static Column appendCategorical(List<Column> columns, int finalSize, int categories,
+												ColumnType<String> type, boolean isBoolean, String positiveValue,
 												DoubleConsumer progressCallback) {
-		CategoricalBuffer<T> buffer = Buffers.categoricalBuffer(finalSize, categories);
+		NominalBuffer buffer;
+		IntegerFormats.Format minimal = IntegerFormats.Format.findMinimal(categories);
+		switch (minimal) {
+			case UNSIGNED_INT2:
+				buffer = BufferAccessor.get().newUInt2Buffer(type, finalSize);
+				break;
+			case UNSIGNED_INT4:
+				buffer = BufferAccessor.get().newUInt4Buffer(type, finalSize);
+				break;
+			case UNSIGNED_INT8:
+				buffer = BufferAccessor.get().newUInt8Buffer(type, finalSize);
+				break;
+			case UNSIGNED_INT16:
+				buffer = BufferAccessor.get().newUInt16Buffer(type, finalSize);
+				break;
+			case SIGNED_INT32:
+			default:
+				buffer = BufferAccessor.get().newInt32Buffer(type, finalSize);
+		}
 		if (isBoolean && finalSize > 0) {
 			//ensure that positive value is in mapping even if it is not in the data
 			buffer.set(0, positiveValue);
 		}
 		int rowIndex = 0;
 		for (Column column : columns) {
-			ObjectReader<T> reader = Readers.objectReader(column, type.elementType());
+			ObjectReader<String> reader = Readers.objectReader(column, type.elementType());
 			while (reader.hasRemaining() && rowIndex < finalSize) {
 				buffer.set(rowIndex++, reader.read());
 			}
@@ -311,9 +334,9 @@ public final class Appender {
 		}
 		progressCallback.accept(1.0);
 		if (isBoolean && finalSize > 0) {
-			return buffer.toBooleanColumn(type, positiveValue);
+			return buffer.toBooleanColumn(positiveValue);
 		}
-		return buffer.toColumn(type);
+		return buffer.toColumn();
 	}
 
 	/**
@@ -335,7 +358,7 @@ public final class Appender {
 			}
 			// At least one non-numerical -> throw
 			if (otherColumn.type().category() != Column.Category.NUMERIC) {
-				throw new IncompatibleTypesException(ColumnTypes.REAL, otherColumn.type(), i);
+				throw new IncompatibleTypesException(ColumnType.REAL, otherColumn.type(), i);
 			}
 
 			hasReal |= otherColumn.type().id() == Column.TypeId.REAL;
@@ -354,7 +377,7 @@ public final class Appender {
 			Arrays.fill(data, start, totalLength, Double.NaN);
 			progressCallback.accept(1.0);
 		}
-		return ColumnAccessor.get().newNumericColumn(hasReal ? Column.TypeId.REAL : Column.TypeId.INTEGER, data);
+		return ColumnAccessor.get().newNumericColumn(hasReal ? Column.TypeId.REAL : Column.TypeId.INTEGER_53_BIT, data);
 	}
 
 	/**
@@ -375,7 +398,7 @@ public final class Appender {
 				throw new NullPointerException(MESSAGE_COLUMN_NULL);
 			}
 			if (col.type().id() != Column.TypeId.TIME) {
-				throw new IncompatibleTypesException(ColumnTypes.TIME, col.type(), index - 1);
+				throw new IncompatibleTypesException(ColumnType.TIME, col.type(), index - 1);
 			}
 
 			if (col instanceof TimeColumn) {
@@ -413,7 +436,7 @@ public final class Appender {
 				throw new NullPointerException(MESSAGE_COLUMN_NULL);
 			}
 			if (col.type().id() != Column.TypeId.DATE_TIME) {
-				throw new IncompatibleTypesException(ColumnTypes.DATETIME, col.type(), index - 1);
+				throw new IncompatibleTypesException(ColumnType.DATETIME, col.type(), index - 1);
 			}
 
 			nanos = copyDateTimeData(col, totalLength, seconds, nanos, start);

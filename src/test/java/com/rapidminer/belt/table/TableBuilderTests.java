@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2019 RapidMiner GmbH
+ * Copyright (C) 2017-2020 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -23,12 +23,15 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.DoubleFunction;
 import java.util.function.IntFunction;
 import java.util.function.IntToDoubleFunction;
 
@@ -41,24 +44,25 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.DateTimeBuffer;
-import com.rapidminer.belt.buffer.Int32CategoricalBuffer;
+import com.rapidminer.belt.buffer.Int32NominalBuffer;
 import com.rapidminer.belt.buffer.NumericBuffer;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.buffer.TimeBuffer;
-import com.rapidminer.belt.buffer.UInt2CategoricalBuffer;
+import com.rapidminer.belt.buffer.UInt2NominalBuffer;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnType;
-import com.rapidminer.belt.column.ColumnTypes;
+import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.execution.ExecutionAbortedException;
 import com.rapidminer.belt.reader.NumericReader;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
+import com.rapidminer.belt.table.TableTests.MetaData.NonUnique;
 import com.rapidminer.belt.util.Belt;
 import com.rapidminer.belt.util.ColumnAnnotation;
 import com.rapidminer.belt.util.ColumnMetaData;
 import com.rapidminer.belt.util.ColumnReference;
 import com.rapidminer.belt.util.ColumnRole;
-import com.rapidminer.belt.execution.ExecutionAbortedException;
 import com.rapidminer.belt.util.IntegerFormats;
 
 /**
@@ -253,7 +257,7 @@ public class TableBuilderTests {
 		public void testReplaceIntColumn() {
 			double[] replacement = random(NUMBER_OF_ROWS);
 			Arrays.setAll(replacement, i -> 50 * replacement[i]);
-			Table table = builder().replaceInt("a", i -> replacement[i]).build(CTX);
+			Table table = builder().replaceInt53Bit("a", i -> replacement[i]).build(CTX);
 			Arrays.setAll(replacement, i -> Math.round(replacement[i]));
 			assertArrayEquals(new double[][]{replacement}, readTableToArray(table));
 			assertArrayEquals(new String[]{"a"}, table.labelArray());
@@ -371,7 +375,7 @@ public class TableBuilderTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testAddNullColumnFillerInt() {
-			builder().addInt("b", (IntToDoubleFunction) null);
+			builder().addInt53Bit("b", (IntToDoubleFunction) null);
 		}
 
 		@Test(expected = IllegalStateException.class)
@@ -423,17 +427,17 @@ public class TableBuilderTests {
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceWrongLabelColumnFillerInt() {
-			builder().replaceInt("x", i -> 2 * i);
+			builder().replaceInt53Bit("x", i -> 2 * i);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testReplaceNullLabelColumnFillerInt() {
-			builder().replaceInt(null, i -> 2 * i);
+			builder().replaceInt53Bit(null, i -> 2 * i);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testReplaceNullColumnFillerInt() {
-			builder().replaceInt("a", (IntToDoubleFunction) null);
+			builder().replaceInt53Bit("a", (IntToDoubleFunction) null);
 		}
 
 	}
@@ -551,7 +555,7 @@ public class TableBuilderTests {
 		@Test
 		public void testFromEmpty() {
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS).build(CTX);
-			Table table2 = Builders.newTableBuilder(table).addInt("new", i->i).build(CTX);
+			Table table2 = Builders.newTableBuilder(table).addInt53Bit("new", i->i).build(CTX);
 			assertEquals(1, table2.width());
 			assertEquals(NUMBER_OF_ROWS, table2.height());
 		}
@@ -643,25 +647,25 @@ public class TableBuilderTests {
 
 	}
 
-	public static class NumericColumnTypes {
+	public static class NumericColumnType {
 
 		@Test
 		public void testAddInteger() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addInt("one", i -> single[i]).build(CTX);
+					.addInt53Bit("one", i -> single[i]).build(CTX);
 			double[] expected = new double[single.length];
 			Arrays.setAll(expected, i -> Math.round(single[i]));
 			assertArrayEquals(new double[][]{expected}, readTableToArray(table));
-			assertEquals(Column.TypeId.INTEGER, table.column(0).type().id());
+			assertEquals(Column.TypeId.INTEGER_53_BIT, table.column(0).type().id());
 		}
 
 		@Test
 		public void testAddIntBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addInt("one", i -> single[i]).build(CTX);
-			NumericBuffer buffer = Buffers.integerBuffer(NUMBER_OF_ROWS, false);
+					.addInt53Bit("one", i -> single[i]).build(CTX);
+			NumericBuffer buffer = Buffers.integer53BitBuffer(NUMBER_OF_ROWS, false);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, single[i]);
 			}
@@ -675,8 +679,8 @@ public class TableBuilderTests {
 		public void testAddReal() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addInt("one", i -> single[i]).build(CTX);
-			assertEquals(Column.TypeId.INTEGER, table.column(0).type().id());
+					.addInt53Bit("one", i -> single[i]).build(CTX);
+			assertEquals(Column.TypeId.INTEGER_53_BIT, table.column(0).type().id());
 		}
 
 		@Test
@@ -739,8 +743,6 @@ public class TableBuilderTests {
 
 	public static class ObjectsExceptions {
 
-		private static final ColumnType<String> OBJECT = ColumnTypes.objectType("com.rapidminer.test", String.class, null);
-
 		private final TableBuilder builder = Builders.newTableBuilder(123).addReal("a", i -> i);
 
 		@Test(expected = NullPointerException.class)
@@ -789,139 +791,53 @@ public class TableBuilderTests {
 		}
 
 		@Test(expected = NullPointerException.class)
-		public void testCategoricalNullLabel() {
-			builder.addCategorical(null, i -> "" + i, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalUsedLabel() {
-			builder.addCategorical("a", i -> "" + i, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalInvalidLabel() {
-			builder.addCategorical("", i -> "" + i, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testCategoricalNullGenerator() {
-			builder.addCategorical("b", null, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testCategoricalNullType() {
-			builder.addCategorical("b", i -> "" + i, null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalWrongType() {
-			builder.addCategorical("b", i -> "" + i, OBJECT);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testCategoricalMaxNullLabel() {
-			builder.addCategorical(null, i -> "" + i, 1, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalMaxUsedLabel() {
-			builder.addCategorical("a", i -> "" + i, 1, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalMaxInvalidLabel() {
-			builder.addCategorical("", i -> "" + i, 1, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testCategoricalMaxNullGenerator() {
-			builder.addCategorical("b", null, 1, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testCategoricalMaxNullType() {
-			builder.addCategorical("b", i -> "" + i, 1, null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalMaxWrongType() {
-			builder.addCategorical("b", i -> "" + i, 1, OBJECT);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testCategoricalMaxWrongMax() {
-			builder.addCategorical("b", i -> "" + i, 1, ColumnTypes.NOMINAL).build(CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
 		public void testFreeNullLabel() {
-			builder.addObject(null, i -> "" + i, OBJECT);
+			builder.addTextset(null, i -> null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFreeUsedLabel() {
-			builder.addObject("a", i -> "" + i, OBJECT);
+			builder.addTextset("a", i -> null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testFreeInvalidLabel() {
-			builder.addObject("", i -> "" + i, OBJECT);
+			builder.addTextset("", i -> null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testFreeNullGenerator() {
-			builder.addObject("b", null, OBJECT);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testFreeNullType() {
-			builder.addObject("b", i -> "" + i, null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testFreeWrongType() {
-			builder.addObject("b", i -> "" + i, ColumnTypes.NOMINAL);
+			builder.addTextset("b", null);
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testBooleanNullLabel() {
-			builder.addBoolean(null, i -> "" + i, "1", ColumnTypes.NOMINAL);
+			builder.addBoolean(null, i -> "" + i, "1");
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testBooleanUsedLabel() {
-			builder.addBoolean("a", i -> "" + i, "1", ColumnTypes.NOMINAL);
+			builder.addBoolean("a", i -> "" + i, "1");
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testBooleanInvalidLabel() {
-			builder.addBoolean("", i -> "" + i, "1", ColumnTypes.NOMINAL);
+			builder.addBoolean("", i -> "" + i, "1");
 		}
 
 		@Test(expected = NullPointerException.class)
 		public void testBooleanNullGenerator() {
-			builder.addBoolean("b", null, "1", ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testBooleanNullType() {
-			builder.addBoolean("b", i -> "" + i, "1", null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testBooleanWrongType() {
-			builder.addBoolean("b", i -> "" + i, "1",
-					ColumnTypes.objectType("test", String.class, String::compareTo));
+			builder.addBoolean("b", null, "1");
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testBooleanTooManyValues() {
-			builder.addBoolean("b", i -> "" + i, "1", ColumnTypes.NOMINAL).build(CTX);
+			builder.addBoolean("b", i -> "" + i, "1").build(CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testBooleanWrongPositiveValue() {
-			builder.addBoolean("b", i -> "" + (i % 2), "5", ColumnTypes.NOMINAL).build(CTX);
+			builder.addBoolean("b", i -> "" + (i % 2), "5").build(CTX);
 		}
 
 		@Test(expected = NullPointerException.class)
@@ -975,26 +891,6 @@ public class TableBuilderTests {
 		}
 
 		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceCategoricalUnusedLabel() {
-			builder.replaceCategorical("b", i -> "" + i, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testReplaceCategoricalNullGenerator() {
-			builder.replaceCategorical("a", null, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testReplaceCategoricalNullType() {
-			builder.replaceCategorical("a", i -> "" + i, null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceCategoricalWrongType() {
-			builder.replaceCategorical("a", i -> "" + i, OBJECT);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceNominalMaxUnusedLabel() {
 			builder.replaceNominal("b", i -> "" + i, 1);
 		}
@@ -1010,80 +906,42 @@ public class TableBuilderTests {
 		}
 
 		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceCategoricalMaxUnusedLabel() {
-			builder.replaceCategorical("b", i -> "" + i, 1, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testReplaceCategoricalMaxNullGenerator() {
-			builder.replaceCategorical("a", null, 1, ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testReplaceCategoricalMaxNullType() {
-			builder.replaceCategorical("a", i -> "" + i, 1, null);
+		public void testReplaceTextsetUnusedLabel() {
+			builder.replaceTextset("b", i -> null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceCategoricalMaxWrongType() {
-			builder.replaceCategorical("a", i -> "" + i, 1, OBJECT);
+		public void testReplaceTextUnusedLabel() {
+			builder.replaceText("b", i -> null);
 		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceCategoricalMaxWrongMax() {
-			builder.replaceCategorical("a", i -> "" + i, 1, ColumnTypes.NOMINAL).build(CTX);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceFreeUnusedLabel() {
-			builder.replaceObject("b", i -> "" + i, OBJECT);
+		@Test(expected = NullPointerException.class)
+		public void testReplaceTextNullGenerator() {
+			builder.replaceText("a", null);
 		}
 
 		@Test(expected = NullPointerException.class)
-		public void testReplaceFreeNullGenerator() {
-			builder.replaceObject("a", null, OBJECT);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testReplaceFreeNullType() {
-			builder.replaceObject("a", i -> "" + i, null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceFreeWrongType() {
-			builder.replaceObject("a", i -> "" + i, ColumnTypes.NOMINAL);
+		public void testReplaceTextsetNullGenerator() {
+			builder.replaceTextset("a", null);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceBooleanUnusedLabel() {
-			builder.replaceBoolean("b", i -> "" + i, "1", ColumnTypes.NOMINAL);
+			builder.replaceBoolean("b", i -> "" + i, "1");
 		}
-
 
 		@Test(expected = NullPointerException.class)
 		public void testReplaceBooleanNullGenerator() {
-			builder.replaceBoolean("a", null, "1", ColumnTypes.NOMINAL);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testReplaceBooleanNullType() {
-			builder.replaceBoolean("a", i -> "" + i, "1", null);
-		}
-
-		@Test(expected = IllegalArgumentException.class)
-		public void testReplaceBooleanWrongType() {
-			builder.replaceBoolean("a", i -> "" + i, "1",
-					ColumnTypes.objectType("test", String.class, String::compareTo));
+			builder.replaceBoolean("a", null, "1");
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceBooleanTooManyValues() {
-			builder.replaceBoolean("a", i -> "" + i, "1", ColumnTypes.NOMINAL).build(CTX);
+			builder.replaceBoolean("a", i -> "" + i, "1").build(CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
 		public void testReplaceBooleanWrongPositiveValue() {
-			builder.replaceBoolean("a", i -> "" + (i % 2), "5", ColumnTypes.NOMINAL).build(CTX);
+			builder.replaceBoolean("a", i -> "" + (i % 2), "5").build(CTX);
 		}
 
 		@Test(expected = IllegalArgumentException.class)
@@ -1110,7 +968,7 @@ public class TableBuilderTests {
 
 	}
 
-	public static class ObjectColumnTypes {
+	public static class ObjectColumnType {
 
 		private static final int NUMBER_OF_ROWS = 123;
 
@@ -1122,7 +980,7 @@ public class TableBuilderTests {
 			Object[] expected = new Object[single.length];
 			Arrays.setAll(expected, i -> "" + Math.round(single[i]));
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
-			assertEquals(ColumnTypes.NOMINAL, table.column(0).type());
+			assertEquals(ColumnType.NOMINAL, table.column(0).type());
 		}
 
 		@Test
@@ -1130,71 +988,71 @@ public class TableBuilderTests {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addNominal("one", i -> "" + Math.round(single[i])).build(CTX);
-			Int32CategoricalBuffer<String> buffer = BufferAccessor.get().newInt32Buffer(NUMBER_OF_ROWS);
+			Int32NominalBuffer buffer = BufferAccessor.get().newInt32Buffer(ColumnType.NOMINAL,
+					NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, "" + Math.round(single[i]));
 			}
 			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.add("one", buffer.toColumn(ColumnTypes.NOMINAL)).build(CTX);
+					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToArray(bufferTable), readTableToArray(table));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
 		}
 
 		@Test
-		public void testAddCategorical() {
+		public void testAddText() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
+			DoubleFunction<String> preprocessor = d -> "val" + d;
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addCategorical("one", i -> single[i],
-							ColumnTypes.categoricalType("test", Double.class, null)).build(CTX);
-			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
-			assertEquals(Column.Category.CATEGORICAL, table.column(0).type().category());
+					.addText("one", i -> preprocessor.apply(single[i])).build(CTX);
+			assertEquals(Column.TypeId.TEXT, table.column(0).type().id());
+			assertEquals(Column.Category.OBJECT, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
-			Arrays.setAll(expected, i -> single[i]);
+			Arrays.setAll(expected, i -> preprocessor.apply(single[i]));
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
 		}
 
 		@Test
-		public void testAddCategoricalVsBuffer() {
+		public void testAddTextVsBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			ColumnType<Double> testType = ColumnTypes.categoricalType("test", Double.class, null);
+			DoubleFunction<String> preprocessor = d -> "val" + d;
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addCategorical("one", i -> Math.rint(single[i]), testType).build(CTX);
-			Int32CategoricalBuffer<Double> buffer = BufferAccessor.get().newInt32Buffer(NUMBER_OF_ROWS);
+					.addText("one", i -> preprocessor.apply(single[i])).build(CTX);
+			ObjectBuffer<String> buffer = Buffers.textBuffer(NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
-				buffer.set(i, Math.rint(single[i]));
+				buffer.set(i, preprocessor.apply(single[i]));
 			}
 			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.add("one", buffer.toColumn(testType)).build(CTX);
+					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
 		}
 
-
 		@Test
-		public void testAddFree() {
+		public void testAddTextset() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
+			DoubleFunction<StringSet> preprocessor = d -> new StringSet(Collections.singleton("val" + d));
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addObject("one", i -> single[i],
-							ColumnTypes.objectType("test", Double.class, null)).build(CTX);
-			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
+					.addTextset("one", i -> preprocessor.apply(single[i])).build(CTX);
+			assertEquals(Column.TypeId.TEXT_SET, table.column(0).type().id());
 			assertEquals(Column.Category.OBJECT, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
-			Arrays.setAll(expected, i -> single[i]);
+			Arrays.setAll(expected, i -> preprocessor.apply(single[i]));
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
 		}
 
 		@Test
-		public void testAddFreeVsBuffer() {
+		public void testAddTextsetVsBuffer() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			ColumnType<Double> testType = ColumnTypes.objectType("test", Double.class, null);
+			DoubleFunction<StringSet> preprocessor = d -> new StringSet(Collections.singleton("val" + d));
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addObject("one", i -> single[i], testType).build(CTX);
-			ObjectBuffer<Double> buffer = Buffers.objectBuffer(NUMBER_OF_ROWS);
+					.addTextset("one", i -> preprocessor.apply(single[i])).build(CTX);
+			ObjectBuffer<StringSet> buffer = Buffers.textsetBuffer(NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
-				buffer.set(i, single[i]);
+				buffer.set(i, preprocessor.apply(single[i]));
 			}
 			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.add("one", buffer.toColumn(testType)).build(CTX);
+					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
 		}
@@ -1203,28 +1061,27 @@ public class TableBuilderTests {
 		public void testAddBoolean() {
 			double[] single = random(NUMBER_OF_ROWS);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addBoolean("one", i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE, Boolean.TRUE,
-							ColumnTypes.categoricalType("test", Boolean.class, null)).build(CTX);
-			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
+					.addBoolean("one", i -> single[i] > 0.5 ? "true" : "false", "true").build(CTX);
+			assertEquals(Column.TypeId.NOMINAL, table.column(0).type().id());
 			assertEquals(Column.Category.CATEGORICAL, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
-			Arrays.setAll(expected, i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE);
+			Arrays.setAll(expected, i -> single[i] > 0.5 ? "true" : "false");
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
 		}
 
 		@Test
 		public void testAddBooleanVsBuffer() {
 			double[] single = random(NUMBER_OF_ROWS);
-			ColumnType<Boolean> testType = ColumnTypes.categoricalType("test", Boolean.class, null);
-			IntFunction<Boolean> lambda = i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE;
+			IntFunction<String> lambda = i -> single[i] > 0.5 ? "true" : "false";
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addBoolean("one", lambda, Boolean.TRUE, testType).build(CTX);
-			UInt2CategoricalBuffer<Boolean> buffer = BufferAccessor.get().newUInt2Buffer(NUMBER_OF_ROWS);
+					.addBoolean("one", lambda, "true").build(CTX);
+			UInt2NominalBuffer buffer =
+					BufferAccessor.get().newUInt2Buffer(ColumnType.NOMINAL, NUMBER_OF_ROWS);
 			for (int i = 0; i < single.length; i++) {
 				buffer.set(i, lambda.apply(i));
 			}
 			Table bufferTable = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.add("one", buffer.toColumn(testType)).build(CTX);
+					.add("one", buffer.toColumn()).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(bufferTable));
 			assertEquals(table.column(0).type(), bufferTable.column(0).type());
 		}
@@ -1235,7 +1092,7 @@ public class TableBuilderTests {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addNominal("one", i -> "" + Math.round(single[i])).build(CTX);
-			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt53Bit("one", i -> i)
 					.replaceNominal("one", i -> "" + Math.round(single[i])).build(CTX);
 			assertArrayEquals(readTableToArray(replaceTable), readTableToArray(table));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1244,24 +1101,35 @@ public class TableBuilderTests {
 		@Test
 		public void testAddCategoricalVsReplace() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			ColumnType<Double> testType = ColumnTypes.categoricalType("test", Double.class, null);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addCategorical("one", i -> Math.rint(single[i]), testType).build(CTX);
+					.addNominal("one", i -> Math.rint(single[i])+"").build(CTX);
 			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("one", i -> i)
-					.replaceCategorical("one", i -> Math.rint(single[i]), testType).build(CTX);
+					.replaceNominal("one", i -> Math.rint(single[i])+"").build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
 		}
 
 
 		@Test
-		public void testAddFreeVsReplace() {
+		public void testAddTextsetVsReplace() {
 			double[] single = randomStretched(NUMBER_OF_ROWS);
-			ColumnType<Double> testType = ColumnTypes.objectType("test", Double.class, null);
+			DoubleFunction<StringSet> preprocessor = d -> new StringSet(Collections.singleton("val" + d));
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addObject("one", i -> single[i], testType).build(CTX);
+					.addTextset("one", i -> preprocessor.apply(single[i])).build(CTX);
 			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("one", i -> i)
-					.replaceObject("one", i -> single[i], testType).build(CTX);
+					.replaceTextset("one", i -> preprocessor.apply(single[i])).build(CTX);
+			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
+			assertEquals(table.column(0).type(), replaceTable.column(0).type());
+		}
+
+		@Test
+		public void testAddTextVsReplace() {
+			double[] single = randomStretched(NUMBER_OF_ROWS);
+			DoubleFunction<String> preprocessor = d -> "val" + d;
+			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
+					.addText("one", i -> preprocessor.apply(single[i])).build(CTX);
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addReal("one", i -> i)
+					.replaceText("one", i -> preprocessor.apply(single[i])).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
 		}
@@ -1269,12 +1137,11 @@ public class TableBuilderTests {
 		@Test
 		public void testAddBooleanVsReplace() {
 			double[] single = random(NUMBER_OF_ROWS);
-			ColumnType<Boolean> testType = ColumnTypes.categoricalType("test", Boolean.class, null);
-			IntFunction<Boolean> lambda = i -> single[i] > 0.5 ? Boolean.TRUE : Boolean.FALSE;
+			IntFunction<String> lambda = i -> single[i] > 0.5 ? "true" : "false";
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
-					.addBoolean("one", lambda, Boolean.TRUE, testType).build(CTX);
-			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i->i)
-					.replaceBoolean("one", lambda, Boolean.TRUE, testType).build(CTX);
+					.addBoolean("one", lambda, "true").build(CTX);
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt53Bit("one", i->i)
+					.replaceBoolean("one", lambda, "true").build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
 		}
@@ -1312,7 +1179,7 @@ public class TableBuilderTests {
 			IntFunction<LocalTime> lambda = i -> LocalTime.ofNanoOfDay(Math.round(single[i] * 1727999999999L));
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addTime("one", lambda).build(CTX);
-			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt53Bit("one", i -> i)
 					.replaceTime("one", lambda).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1355,7 +1222,7 @@ public class TableBuilderTests {
 					i -> Instant.ofEpochSecond(Math.round(single[i] * 631137797288063L), 123456789);
 			Table table = Builders.newTableBuilder(NUMBER_OF_ROWS)
 					.addDateTime("one", lambda).build(CTX);
-			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt("one", i -> i)
+			Table replaceTable = Builders.newTableBuilder(NUMBER_OF_ROWS).addInt53Bit("one", i -> i)
 					.replaceDateTime("one", lambda).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
@@ -1385,12 +1252,11 @@ public class TableBuilderTests {
 			int numberOfRows = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			double[] single = randomStretched(numberOfRows);
 			Table table = Builders.newTableBuilder(numberOfRows)
-					.addCategorical("one", i -> single[i], format.maxValue(),
-							ColumnTypes.categoricalType("test", Double.class, null)).build(CTX);
-			assertEquals(Column.TypeId.CUSTOM, table.column(0).type().id());
+					.addNominal("one", i -> single[i]+"", format.maxValue()).build(CTX);
+			assertEquals(Column.TypeId.NOMINAL, table.column(0).type().id());
 			assertEquals(Column.Category.CATEGORICAL, table.column(0).type().category());
 			Object[] expected = new Object[single.length];
-			Arrays.setAll(expected, i -> single[i]);
+			Arrays.setAll(expected, i -> single[i]+"");
 			assertArrayEquals(new Object[][]{expected}, readTableToObjectArray(table));
 		}
 
@@ -1398,11 +1264,10 @@ public class TableBuilderTests {
 		public void testAddCategoricalMaxVsReplace() {
 			int numberOfRows = Math.min(format.maxValue(), IntegerFormats.Format.UNSIGNED_INT16.maxValue() + 1);
 			double[] single = randomStretched(numberOfRows);
-			ColumnType<Double> testType = ColumnTypes.categoricalType("test", Double.class, null);
 			Table table = Builders.newTableBuilder(numberOfRows)
-					.addCategorical("one", i -> Math.rint(single[i]), format.maxValue(), testType).build(CTX);
+					.addNominal("one", i -> Math.rint(single[i])+"", format.maxValue()).build(CTX);
 			Table replaceTable = Builders.newTableBuilder(numberOfRows).addReal("one", i -> i)
-					.replaceCategorical("one", i -> Math.rint(single[i]), format.maxValue(), testType).build(CTX);
+					.replaceNominal("one", i -> Math.rint(single[i])+"", format.maxValue()).build(CTX);
 			assertArrayEquals(readTableToObjectArray(table), readTableToObjectArray(replaceTable));
 			assertEquals(table.column(0).type(), replaceTable.column(0).type());
 		}
@@ -1497,45 +1362,46 @@ public class TableBuilderTests {
 		public void testAddTwoInstances() {
 			Table table = Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
-					.addMetaData("label", new ColumnAnnotation("Test #1"))
-					.addMetaData("label", new ColumnAnnotation("Test #2"))
+					.addMetaData("label", new NonUnique("Test #1"))
+					.addMetaData("label", new NonUnique("Test #2"))
 					.build(CTX);
 			List<ColumnMetaData> list = table.getMetaData("label");
-			List<ColumnMetaData> expected = Arrays.asList(new ColumnAnnotation("Test #1"),
-					new ColumnAnnotation("Test #2"));
+			List<ColumnMetaData> expected = Arrays.asList(new NonUnique("Test #1"),
+					new NonUnique("Test #2"));
 			assertEquals(new HashSet<>(expected), new HashSet<>(list));
 		}
+
 
 		@Test
 		public void testAddDuplicate() {
 			Table table = Builders.newTableBuilder(100)
 					.addReal("label", i -> i)
-					.addMetaData("label", new ColumnAnnotation("Test"))
-					.addMetaData("label", new ColumnAnnotation("Test"))
+					.addMetaData("label", new NonUnique("Test"))
+					.addMetaData("label", new NonUnique("Test"))
 					.build(CTX);
 			List<ColumnMetaData> list = table.getMetaData("label");
-			assertEquals(Collections.singletonList(new ColumnAnnotation("Test")), list);
+			assertEquals(Collections.singletonList(new NonUnique("Test")), list);
 		}
 
 		@Test
 		public void testAddingVariousData() {
 			Table table = Builders.newTableBuilder(100)
-					.addInt("id", i -> i)
-					.addInt("age", i -> 25)
+					.addInt53Bit("id", i -> i)
+					.addInt53Bit("age", i -> 25)
 					.addReal("weight", i -> 73.5)
 					.addReal("mystery", i -> 0f)
 					.addMetaData("id", ColumnRole.ID)
 					.addMetaData("age", new ColumnAnnotation("years"))
 					.addMetaData("mystery", ColumnRole.LABEL)
-					.addMetaData("mystery", new ColumnAnnotation("unit?"))
-					.addMetaData("mystery", new ColumnAnnotation("name?"))
+					.addMetaData("mystery", new NonUnique("unit?"))
+					.addMetaData("mystery", new NonUnique("name?"))
 					.build(CTX);
 
 			assertEquals(Collections.singletonList(ColumnRole.ID), table.getMetaData("id"));
 			assertEquals(Collections.singletonList(new ColumnAnnotation("years")), table.getMetaData("age"));
 			assertEquals(Collections.emptyList(), table.getMetaData("weight"));
-			List<ColumnMetaData> expected = Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("unit?"),
-					new ColumnAnnotation("name?"));
+			List<ColumnMetaData> expected = Arrays.asList(ColumnRole.LABEL, new NonUnique("unit?"),
+					new NonUnique("name?"));
 			assertEquals(new HashSet<>(expected), new HashSet<>(table.getMetaData("mystery")));
 		}
 
@@ -1583,14 +1449,14 @@ public class TableBuilderTests {
 		@Test
 		public void testAddingVariousDataViaList() {
 			Table table = Builders.newTableBuilder(100)
-					.addInt("id", i -> i)
+					.addInt53Bit("id", i -> i)
 					.addReal("mystery", i -> 0f)
 					.addMetaData("mystery", Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("unit?"),
-							new ColumnAnnotation("name?")))
+							new ColumnReference("name?")))
 					.build(CTX);
 
 			List<ColumnMetaData> expected = Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("unit?"),
-					new ColumnAnnotation("name?"));
+					new ColumnReference("name?"));
 			assertEquals(new HashSet<>(expected), new HashSet<>(table.getMetaData("mystery")));
 		}
 
@@ -1620,10 +1486,10 @@ public class TableBuilderTests {
 			Table table = Builders.newTableBuilder(100)
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
-					.addMetaData("two", new ColumnAnnotation("Annotation #1"))
-					.addMetaData("two", new ColumnAnnotation("Annotation #2"))
+					.addMetaData("two", new NonUnique("Annotation #1"))
+					.addMetaData("two", new NonUnique("Annotation #2"))
 					.addReal("three", i -> 3)
-					.removeMetaData("two", ColumnAnnotation.class)
+					.removeMetaData("two", NonUnique.class)
 					.build(CTX);
 
 			assertEquals(Collections.emptyList(), table.getMetaData("two"));
@@ -1635,10 +1501,10 @@ public class TableBuilderTests {
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
-					.addMetaData("two", new ColumnAnnotation("Annotation #1"))
-					.addMetaData("two", new ColumnAnnotation("Annotation #2"))
+					.addMetaData("two", new NonUnique("Annotation #1"))
+					.addMetaData("two", new NonUnique("Annotation #1"))
 					.addReal("three", i -> 3)
-					.removeMetaData("two", ColumnAnnotation.class)
+					.removeMetaData("two", NonUnique.class)
 					.build(CTX);
 
 			assertEquals(Collections.singletonList(ColumnRole.ID), table.getMetaData("two"));
@@ -1714,8 +1580,7 @@ public class TableBuilderTests {
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
-					.addMetaData("two", new ColumnAnnotation("Annotation #1"))
-					.addMetaData("two", new ColumnAnnotation("Annotation #2"))
+					.addMetaData("two", new ColumnAnnotation("Annotation"))
 					.addReal("three", i -> 3)
 					.addMetaData("three", ColumnRole.BATCH)
 					.remove("two")
@@ -1732,8 +1597,7 @@ public class TableBuilderTests {
 					.addReal("one", i -> 1)
 					.addReal("two", i -> 2)
 					.addMetaData("two", ColumnRole.ID)
-					.addMetaData("two", new ColumnAnnotation("Annotation #1"))
-					.addMetaData("two", new ColumnAnnotation("Annotation #2"))
+					.addMetaData("two", new ColumnAnnotation("Annotation"))
 					.addReal("three", i -> 3)
 					.addMetaData("three", ColumnRole.BATCH)
 					.clearMetaData("two")
@@ -1761,25 +1625,25 @@ public class TableBuilderTests {
 		@Test
 		public void testMetaDataInheritance() {
 			Table a = Builders.newTableBuilder(100)
-					.addInt("id", i -> i)
-					.addInt("age", i -> 25)
+					.addInt53Bit("id", i -> i)
+					.addInt53Bit("age", i -> 25)
 					.addReal("weight", i -> 73.5)
 					.addReal("mystery", i -> 0f)
 					.addMetaData("id", ColumnRole.ID)
 					.addMetaData("age", new ColumnAnnotation("years"))
 					.addMetaData("mystery", ColumnRole.LABEL)
-					.addMetaData("mystery", new ColumnAnnotation("unit?"))
-					.addMetaData("mystery", new ColumnAnnotation("name?"))
+					.addMetaData("mystery", new NonUnique("unit?"))
+					.addMetaData("mystery", new NonUnique("name?"))
 					.build(CTX);
 
 			Table b = Builders.newTableBuilder(a)
 					.addMetaData("id", new ColumnAnnotation("id"))
-					.removeMetaData("mystery", ColumnAnnotation.class)
+					.removeMetaData("mystery", NonUnique.class)
 					.build(CTX);
 
 			assertEquals(Collections.singletonList(ColumnRole.ID), a.getMetaData("id"));
-			List<ColumnMetaData> expected = Arrays.asList(ColumnRole.LABEL, new ColumnAnnotation("unit?"),
-					new ColumnAnnotation("name?"));
+			List<ColumnMetaData> expected = Arrays.asList(ColumnRole.LABEL, new NonUnique("unit?"),
+					new NonUnique("name?"));
 			assertEquals(new HashSet<>(expected), new HashSet<>(a.getMetaData("mystery")));
 
 			expected = Arrays.asList(ColumnRole.ID, new ColumnAnnotation("id"));
@@ -1829,7 +1693,135 @@ public class TableBuilderTests {
 					.rename("one", "renamed")
 					.build(CTX);
 			ColumnReference reference = table.getFirstMetaData("two", ColumnReference.class);
-			assertEquals("one", reference.getColumn());
+			assertEquals("renamed", reference.getColumn());
+		}
+
+		@Test
+		public void testRenameTwice() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.rename("renamed", "renamed2")
+					.build(CTX);
+			ColumnReference reference = table.getFirstMetaData("two", ColumnReference.class);
+			assertEquals("renamed2", reference.getColumn());
+		}
+
+		@Test
+		public void testRenameTwo() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.rename("two", "renamed2")
+					.build(CTX);
+			ColumnReference reference = table.getFirstMetaData("renamed2", ColumnReference.class);
+			assertEquals("renamed", reference.getColumn());
+		}
+
+		@Test
+		public void testRenameAndRemoveAndRename() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addReal("three", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.remove("three")
+					.rename("two", "renamed2")
+					.build(CTX);
+			Map<String, List<ColumnMetaData>> expected = new HashMap<>();
+			expected.put("renamed2", Collections.singletonList(new ColumnReference("renamed")));
+			assertEquals(expected, table.getMetaData());
+		}
+
+		@Test
+		public void testRenameAndRemoveRefAndRename() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addReal("three", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.addMetaData("three", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.removeMetaData("three", ColumnReference.class)
+					.rename("two", "renamed2")
+					.build(CTX);
+			Map<String, List<ColumnMetaData>> expected = new HashMap<>();
+			expected.put("renamed2", Collections.singletonList(new ColumnReference("renamed")));
+			assertEquals(expected, table.getMetaData());
+		}
+
+		@Test
+		public void testRenameAndRemoveRefByValAndRename() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addReal("three", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.addMetaData("three", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.removeMetaData("three", new ColumnReference("renamed"))
+					.rename("two", "renamed2")
+					.build(CTX);
+			Map<String, List<ColumnMetaData>> expected = new HashMap<>();
+			expected.put("renamed2", Collections.singletonList(new ColumnReference("renamed")));
+			assertEquals(expected, table.getMetaData());
+		}
+
+		@Test
+		public void testRenameAndAddRefAndRename() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addReal("three", i -> 2)
+					.addMetaData("two", new ColumnReference("one"))
+					.rename("one", "renamed")
+					.addMetaData("three", new ColumnReference("two"))
+					.rename("two", "renamed2")
+					.build(CTX);
+			Map<String, List<ColumnMetaData>> expected = new HashMap<>();
+			expected.put("renamed2", Collections.singletonList(new ColumnReference("renamed")));
+			expected.put("three", Collections.singletonList(new ColumnReference("renamed2")));
+			assertEquals(expected, table.getMetaData());
+		}
+
+		@Test
+		public void testRenameAndAddRefAndRenameMoreMd() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addReal("three", i -> 2)
+					.addMetaData("two", Arrays.asList(new ColumnAnnotation("bla"), new ColumnReference("one")))
+					.rename("one", "renamed")
+					.addMetaData("three", Arrays.asList(ColumnRole.METADATA, new ColumnReference("two"), new ColumnAnnotation("xx")))
+					.rename("two", "renamed2")
+					.build(CTX);
+			Map<String, List<ColumnMetaData>> expected = new HashMap<>();
+			expected.put("renamed2", Arrays.asList(new ColumnAnnotation("bla"), new ColumnReference("renamed")));
+			expected.put("three", Arrays.asList(ColumnRole.METADATA, new ColumnReference("renamed2"), new ColumnAnnotation("xx")));
+			assertEquals(expected, table.getMetaData());
+		}
+
+		@Test
+		public void testRenameAndAddRefAndRemoveRefAndRenameMoreMd() {
+			Table table = Builders.newTableBuilder(100)
+					.addReal("one", i -> 1)
+					.addReal("two", i -> 2)
+					.addReal("three", i -> 2)
+					.addMetaData("two", Arrays.asList(new ColumnAnnotation("bla"), new ColumnReference("one")))
+					.rename("one", "renamed")
+					.addMetaData("three", Arrays.asList(ColumnRole.METADATA, new ColumnReference("two"), new ColumnAnnotation("xx")))
+					.removeMetaData("three", ColumnReference.class)
+					.rename("two", "renamed2")
+					.build(CTX);
+			Map<String, List<ColumnMetaData>> expected = new HashMap<>();
+			expected.put("renamed2", Arrays.asList(new ColumnAnnotation("bla"), new ColumnReference("renamed")));
+			expected.put("three", Arrays.asList(ColumnRole.METADATA, new ColumnAnnotation("xx")));
+			assertEquals(expected, table.getMetaData());
 		}
 
 	}
