@@ -103,9 +103,28 @@ class MappedTimeColumn extends TimeColumn implements CacheMappedColumn {
 
 	@Override
 	public void fillNanosIntoArray(long[] array, int arrayStartIndex) {
-		int end = Math.min(mapping.length, array.length - arrayStartIndex);
+		fillNanos(array, arrayStartIndex, 0);
+	}
+
+	@Override
+	void fill(long[] array, int rowIndex) {
+		fillNanos(array, 0, rowIndex);
+	}
+
+	/**
+	 * Fills the nanosecond data into the array.
+	 *
+	 * @param array
+	 * 		the array to fill into
+	 * @param arrayStartIndex
+	 * 		the index in the array to start filling
+	 * @param rowIndex
+	 * 		the row index to start from
+	 */
+	private void fillNanos(long[] array, int arrayStartIndex, int rowIndex) {
+		int end = Math.min(mapping.length - rowIndex, array.length - arrayStartIndex);
 		for (int i = 0; i < end; i++) {
-			array[arrayStartIndex + i] = lookupLong(i);
+			array[arrayStartIndex + i] = lookupLong(i + rowIndex);
 		}
 	}
 

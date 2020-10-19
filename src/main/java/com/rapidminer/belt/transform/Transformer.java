@@ -38,6 +38,7 @@ import java.util.function.ToDoubleFunction;
 import com.rapidminer.belt.buffer.Int32NominalBuffer;
 import com.rapidminer.belt.buffer.NominalBuffer;
 import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.Workload;
@@ -417,6 +418,35 @@ public final class Transformer {
 
 	/**
 	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
+	 * ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
+	 *
+	 * @param type
+	 * 		the type of the objects in the column to work on
+	 * @param operator
+	 * 		the operator to apply to each value
+	 * @param context
+	 * 		the execution context to use
+	 * @param <R>
+	 * 		type of objects in the column
+	 * @return a buffer containing the result of the operation
+	 * @throws NullPointerException
+	 * 		if any of the parameters is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if the transformation column is not {@link Column.Capability#OBJECT_READABLE}
+	 * @throws IllegalArgumentException
+	 * 		if the objects in the transformation column cannot be read as the given type
+	 */
+	public <R> ObjectBuffer<StringList> applyObjectToTextlist(Class<R> type, Function<R, StringList> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
+		Objects.requireNonNull(type, MESSAGE_TYPE_NULL);
+		return new ParallelExecutor<>(new ApplierObjectToObject<>(transformationColumn, type, operator, ColumnType.TEXTLIST),
+				workload, callback).execute(context);
+	}
+
+	/**
+	 * Applies the given operator to the object-readable transformation column returning the result in a new {@link
 	 * TimeBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
@@ -573,6 +603,28 @@ public final class Transformer {
 
 	/**
 	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
+	 * ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each value
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the operation
+	 * @throws NullPointerException
+	 * 		if any of the parameters is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if the transformation column is not {@link Column.Capability#NUMERIC_READABLE}
+	 */
+	public ObjectBuffer<StringList> applyNumericToTextlist(DoubleFunction<StringList> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
+		return new ParallelExecutor<>(new ApplierNumericToObject<>(transformationColumn, operator, ColumnType.TEXTLIST),
+				workload, callback).execute(context);
+	}
+
+	/**
+	 * Applies the given operator to the numeric-readable transformation column returning the result in a new {@link
 	 * TimeBuffer}. Depending on the input size and the specified workload per data-point, the computation might
 	 * be performed in parallel.
 	 *
@@ -711,6 +763,28 @@ public final class Transformer {
 		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
 		return new ParallelExecutor<>(new ApplierCategoricalToObject<>(transformationColumn,
 				operator, ColumnType.TEXTSET), workload, callback).execute(context);
+	}
+
+	/**
+	 * Applies the given operator to the categorical transformation column returning the result in a new {@link
+	 * ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each value
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the operation
+	 * @throws NullPointerException
+	 * 		if any of the parameters is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if the transformation column is not {@link Column.Category#CATEGORICAL}
+	 */
+	public ObjectBuffer<StringList> applyCategoricalToTextlist(IntFunction<StringList> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_MAPPING_OPERATOR_NULL);
+		return new ParallelExecutor<>(new ApplierCategoricalToObject<>(transformationColumn,
+				operator, ColumnType.TEXTLIST), workload, callback).execute(context);
 	}
 
 	/**

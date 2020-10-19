@@ -16,10 +16,14 @@
 
 package com.rapidminer.belt.execution;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntConsumer;
 
 
 /**
@@ -83,6 +87,71 @@ public final class ExecutionUtils {
 				throw new ExecutionAbortedException("Computation aborted with checked exception", cause);
 			}
 		}
+	}
+
+	/**
+	 * Can be used to execute multiple tasks in parallel. The consumer will be fed with the indices in the range {@code
+	 * [start, end)}. Executing a method {@code doWork} on every column of a given table can be done, e.g., via
+	 * <pre>{@code ExecutionUtils.parallel(0, table.width(), i -> doWork(table.column(i)), context);}</pre>
+	 *
+	 * @param start
+	 * 		start of the index range
+	 * @param end
+	 * 		end of the index range (exclusively)
+	 * @param task
+	 * 		an {@link IntConsumer} that consumes an index and executes some task
+	 * @param context
+	 * 		the {@link Context} used for the parallel execution
+	 * @throws ExecutionAbortedException
+	 * 		if the context goes inactive before the tasks are done
+	 */
+	public static void parallel(int start, int end, IntConsumer task, Context context) {
+		AtomicBoolean sentinel = new AtomicBoolean(true);
+		int tasks = end - start;
+		int taskers = Math.min(tasks, context.getParallelism());
+		AtomicInteger position = new AtomicInteger(start + taskers - 1);
+		List<Callable<Void>> callables = new ArrayList<>(taskers);
+		for (int i = 0; i < taskers; i++) {
+			callables.add(makeTasker(context, sentinel, position, start + i, end, task));
+		}
+		ExecutionUtils.run(callables, context);
+	}
+
+	/**
+	 * Creates a new {@link Callable} used to do parallel computations on multiple tasks in {@link #parallel(int, int,
+	 * IntConsumer, Context)}.
+	 */
+	private static Callable<Void> makeTasker(Context context, AtomicBoolean sentinel, AtomicInteger position,
+											 int firstIndex, int end, IntConsumer task) {
+		return () -> {
+			int currentIndex = firstIndex;
+			do {
+				if (!context.isActive() || !sentinel.get()) {
+					return handleException(sentinel, null);
+				}
+				try {
+					task.accept(currentIndex);
+				} catch (RuntimeException e) {
+					return handleException(sentinel, e);
+				}
+				currentIndex = position.incrementAndGet();
+			} while (currentIndex < end);
+			return null;
+		};
+	}
+
+	/**
+	 * Is used in {@link #makeTasker(Context, AtomicBoolean, AtomicInteger, int, int, IntConsumer)} to handle
+	 * exceptions.
+	 */
+	private static Void handleException(AtomicBoolean sentinel, RuntimeException e) {
+		if (sentinel.getAndSet(false)) {
+			if (e == null) {
+				throw new ExecutionAbortedException("Execution aborted by invoker");
+			}
+			throw e;
+		}
+		return null;
 	}
 
 }

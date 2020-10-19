@@ -63,8 +63,8 @@ public final class StringSet implements Set<String>, Comparable<StringSet> {
 
 	/**
 	 * Creates a new string set by applying the preprocessor to every element of the collection. Preprocessed elements
-	 * are only added if they are not {@code null}. If the collection is {@code null} a empty set is created. If the
-	 * preprocessor is {@code null} not preprocessing takes place.
+	 * are only added if they are not {@code null}. If the collection is {@code null} an empty set is created. If the
+	 * preprocessor is {@code null} no preprocessing takes place.
 	 *
 	 * @param collection
 	 * 		the collection containing the elements to add after preprocessing

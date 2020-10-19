@@ -19,11 +19,14 @@ package com.rapidminer.belt.table;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.function.IntToDoubleFunction;
 import java.util.function.Supplier;
@@ -40,6 +43,7 @@ import com.rapidminer.belt.buffer.UInt8NominalBuffer;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.ExecutionUtils;
@@ -100,10 +104,12 @@ public final class TableBuilder {
 
 		private ColumnSource(Column column) {
 			this.column = column;
+			this.type = column.type().id();
 		}
 
-		private ColumnSource(Supplier<Column> supplier) {
+		private ColumnSource(Supplier<Column> supplier, TypeId type) {
 			this.supplier = supplier;
+			this.type = type;
 		}
 
 	}
@@ -241,7 +247,7 @@ public final class TableBuilder {
 		requireValidUnusedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXT);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TEXT));
 		return this;
 	}
 
@@ -262,7 +268,28 @@ public final class TableBuilder {
 		requireValidUnusedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXTSET);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TEXT_SET));
+		return this;
+	}
+
+	/**
+	 * Adds an object column with type {@link TypeId#TEXT_LIST} that is filled as specified by the generator.
+	 *
+	 * @param label
+	 * 		the label for the new column
+	 * @param generator
+	 * 		the function specifying how the column should be filled
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if the label is invalid or already in use
+	 * @throws NullPointerException
+	 * 		if the label or the generator is {@code null}
+	 */
+	public synchronized TableBuilder addTextlist(String label, IntFunction<StringList> generator) {
+		requireValidUnusedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXTLIST);
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TEXT_LIST));
 		return this;
 	}
 
@@ -284,7 +311,7 @@ public final class TableBuilder {
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 
 		Supplier<Column> supplier = getTimeColumnSupplier(generator);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TIME));
 		return this;
 	}
 
@@ -308,7 +335,7 @@ public final class TableBuilder {
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 
 		Supplier<Column> supplier = getDateTimeColumnSupplier(generator);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.DATE_TIME));
 		return this;
 	}
 
@@ -355,7 +382,7 @@ public final class TableBuilder {
 		Objects.requireNonNull(metaData, "List of column meta data must not be null");
 		ensureMetaDataOwnership();
 		for (ColumnMetaData item : metaData) {
-			Objects.requireNonNull(metaData, "List of column meta data must not contain null values");
+			Objects.requireNonNull(item, "List of column meta data must not contain null values");
 			addMetaDataUnchecked(label, item);
 		}
 		return this;
@@ -596,7 +623,7 @@ public final class TableBuilder {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXT);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TEXT));
 		return this;
 	}
 
@@ -618,7 +645,29 @@ public final class TableBuilder {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXTSET);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TEXT_SET));
+		return this;
+	}
+
+	/**
+	 * Replaces the column with the given label by an object column of type {@link TypeId#TEXT_LIST} filled by the given
+	 * generator.
+	 *
+	 * @param label
+	 * 		the label of the column to replace
+	 * @param generator
+	 * 		the function specifying how the column should be filled
+	 * @return the builder
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label
+	 * @throws NullPointerException
+	 * 		if the generator is {@code null}
+	 */
+	public synchronized TableBuilder replaceTextlist(String label, IntFunction<StringList> generator) {
+		requireUsedLabel(label);
+		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
+		Supplier<Column> supplier = getObjectColumnSupplier(generator, ColumnType.TEXTLIST);
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TEXT_LIST));
 		return this;
 	}
 
@@ -639,7 +688,7 @@ public final class TableBuilder {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Supplier<Column> supplier = getTimeColumnSupplier(generator);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.TIME));
 		return this;
 	}
 
@@ -662,7 +711,7 @@ public final class TableBuilder {
 		requireUsedLabel(label);
 		Objects.requireNonNull(generator, MESSAGE_GENERATOR_NULL);
 		Supplier<Column> supplier = getDateTimeColumnSupplier(generator);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, TypeId.DATE_TIME));
 		return this;
 	}
 
@@ -788,6 +837,98 @@ public final class TableBuilder {
 	}
 
 	/**
+	 * Returns the currently existing column labels as unmodifiable set.
+	 *
+	 * @return the column labels as unmodifiable set
+	 */
+	public synchronized Set<String> labels() {
+		return Collections.unmodifiableSet(columnSources.keySet());
+	}
+
+	/**
+	 * Checks whether the builder currently contains a column using the given label.
+	 *
+	 * @param label
+	 * 		the label to check
+	 * @return {@code true} iff the builder contains a column with the given label
+	 */
+	public synchronized boolean contains(String label){
+		return columnSources.containsKey(label);
+	}
+
+	/**
+	 * Returns the {@link TypeId} of the column specified by the given label.
+	 *
+	 * @param label
+	 * 		the label of the column to look up
+	 * @return the {@link TypeId} of the column specified by the label
+	 * @throws NullPointerException
+	 * 		if the label is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label
+	 */
+	public synchronized TypeId columnTypeId(String label) {
+		requireUsedLabel(label);
+		return columnSources.get(label).type;
+	}
+
+	/**
+	 * Returns the meta data attached to the column with the given label (if any).
+	 *
+	 * @param label
+	 * 		the column label
+	 * @return an unmodifiable list of meta data
+	 * @throws NullPointerException
+	 * 		if the given label is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label
+	 */
+	public synchronized List<ColumnMetaData> getMetaData(String label){
+		requireUsedLabel(label);
+		return Table.getMetaData(label, columnMetaData);
+	}
+
+	/**
+	 * Returns the meta data with the given type attached to the column with the given label (if any).
+	 *
+	 * @param label
+	 * 		the column label
+	 * @param type
+	 * 		the meta data type
+	 * @return the attached meta data
+	 * @throws NullPointerException
+	 * 		if the given label or type is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label
+	 * @see #getFirstMetaData(String, Class)
+	 */
+	public synchronized  <T extends ColumnMetaData> List<T> getMetaData(String label, Class<T> type) {
+		requireUsedLabel(label);
+		return Table.getMetaData(label, type, columnMetaData);
+	}
+
+	/**
+	 * Returns the first meta datum with the given type attached to the column with the given label (if any). Use of
+	 * this method instead of {@link #getMetaData(String, Class)} is recommended if it is known that there can be at
+	 * most one match, e.g., if the meta data type has uniqueness level {@link
+	 * com.rapidminer.belt.util.ColumnMetaData.Uniqueness#COLUMN}.
+	 *
+	 * @param label
+	 * 		the column label
+	 * @param type
+	 * 		the meta data type
+	 * @return the first attached meta datum or {@code null}
+	 * @throws NullPointerException
+	 * 		if the given label or type is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if there is no column with the given label
+	 */
+	public synchronized <T extends ColumnMetaData> T getFirstMetaData(String label, Class<T> type) {
+		requireUsedLabel(label);
+		return Table.getFirstMetaData(label, type, columnMetaData);
+	}
+
+	/**
 	 * Adds a categorical column with the given type that is filled as specified by the generator.
 	 *
 	 * @param label
@@ -810,7 +951,7 @@ public final class TableBuilder {
 			throw new IllegalArgumentException("Type must be categorical");
 		}
 		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, type.id()));
 		return this;
 	}
 
@@ -842,7 +983,7 @@ public final class TableBuilder {
 			throw new IllegalArgumentException("Type must be categorical");
 		}
 		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type, maxNumberOfValues);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, type.id()));
 		return this;
 	}
 
@@ -1084,7 +1225,7 @@ public final class TableBuilder {
 		if (type.category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException("Type must have categorical as category.");
 		}
-		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type)));
+		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type), type.id()));
 		return this;
 	}
 
@@ -1126,7 +1267,7 @@ public final class TableBuilder {
 			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
 		}
 		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, type.id()));
 		return this;
 	}
 
@@ -1157,7 +1298,7 @@ public final class TableBuilder {
 			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
 		}
 		Supplier<Column> supplier = getCategoricalColumnSupplier(generator, type, maxNumberOfValues);
-		columnSources.put(label, new ColumnSource(supplier));
+		columnSources.put(label, new ColumnSource(supplier, type.id()));
 		return this;
 	}
 
@@ -1188,7 +1329,7 @@ public final class TableBuilder {
 		if (type.category() != Column.Category.CATEGORICAL) {
 			throw new IllegalArgumentException(MESSAGE_TYPE_CATEGORICAL);
 		}
-		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type)));
+		columnSources.put(label, new ColumnSource(getBooleanColumnSupplier(generator, positiveValue, type), type.id()));
 		return this;
 	}
 

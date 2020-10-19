@@ -533,7 +533,7 @@ public class NumericRowReaderTests {
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(position + 2, reader.get(0), EPSILON);
+				assertEquals(position + 2, reader.get(i), EPSILON);
 			}
 		}
 
@@ -558,7 +558,7 @@ public class NumericRowReaderTests {
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(position + 2, reader.get(0), EPSILON);
+				assertEquals(position + 2, reader.get(i), EPSILON);
 			}
 		}
 
@@ -583,7 +583,7 @@ public class NumericRowReaderTests {
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(position + 2, reader.get(0), EPSILON);
+				assertEquals(position + 2, reader.get(i), EPSILON);
 			}
 		}
 
@@ -608,7 +608,7 @@ public class NumericRowReaderTests {
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(position + 2, reader.get(0), EPSILON);
+				assertEquals(position + 2, reader.get(i), EPSILON);
 			}
 		}
 
@@ -625,11 +625,11 @@ public class NumericRowReaderTests {
 			assertEquals(-1, reader.position());
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(0, reader.get(0), EPSILON);
+				assertEquals(0, reader.get(i), EPSILON);
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(1, reader.get(0), EPSILON);
+				assertEquals(1, reader.get(i), EPSILON);
 			}
 		}
 
@@ -646,11 +646,11 @@ public class NumericRowReaderTests {
 			assertEquals(0, reader.position());
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(1, reader.get(0), EPSILON);
+				assertEquals(1, reader.get(i), EPSILON);
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(2, reader.get(0), EPSILON);
+				assertEquals(2, reader.get(i), EPSILON);
 			}
 		}
 
@@ -684,11 +684,11 @@ public class NumericRowReaderTests {
 			assertEquals(-1, reader.position());
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(0, reader.get(0), EPSILON);
+				assertEquals(0, reader.get(i), EPSILON);
 			}
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(1, reader.get(0), EPSILON);
+				assertEquals(1, reader.get(i), EPSILON);
 			}
 		}
 
@@ -704,7 +704,7 @@ public class NumericRowReaderTests {
 			reader.setPosition(nRows - 2);
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(nRows - 1, reader.get(0), EPSILON);
+				assertEquals(nRows - 1, reader.get(i), EPSILON);
 			}
 			assertEquals(nRows - 1, reader.position());
 		}
@@ -723,7 +723,7 @@ public class NumericRowReaderTests {
 			reader.setPosition(nRows - 2);
 			reader.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(nRows - 1, reader.get(0), EPSILON);
+				assertEquals(nRows - 1, reader.get(i), EPSILON);
 			}
 			assertEquals(nRows - 1, reader.position());
 		}
@@ -737,42 +737,67 @@ public class NumericRowReaderTests {
 			Column[] columns = new Column[nColumns];
 			Arrays.setAll(columns, i -> ColumnTestUtils.getNumericColumn(TypeId.REAL, testArray));
 			NumericRowReader reader = new NumericRowReader(Arrays.asList(columns), 10 * nColumns);
+			NumericRowMock mock = new NumericRowMock(Arrays.asList(columns), 10 * nColumns);
 			reader.setPosition(16);
+			mock.setPosition(16);
 			assertEquals(16, reader.position());
 			reader.move();
+			mock.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(17, reader.get(0), EPSILON);
+				assertEquals(17, reader.get(i), EPSILON);
 			}
+			assertArrayEquals(fillArray(reader.width(), reader.position()), reader.fill(new double[reader.width()]), EPSILON);
+			assertArrayEquals(fillArray(mock.width(), mock.position()), mock.fill(new double[mock.width()]), EPSILON);
 			reader.setPosition(18);
+			mock.setPosition(18);
 			assertEquals(18, reader.position());
 			reader.move();
+			mock.move();
+			assertArrayEquals(fillArray(reader.width(), reader.position()), reader.fill(new double[reader.width()]), EPSILON);
+			assertArrayEquals(fillArray(mock.width(), mock.position()), mock.fill(new double[mock.width()]), EPSILON);
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(19, reader.get(0), EPSILON);
+				assertEquals(19, reader.get(i), EPSILON);
 			}
 			reader.setPosition(11);
+			mock.setPosition(11);
 			assertEquals(11, reader.position());
 			reader.move();
+			mock.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(12, reader.get(0), EPSILON);
+				assertEquals(12, reader.get(i), EPSILON);
 			}
+			assertArrayEquals(fillArray(reader.width(), reader.position()), reader.fill(new double[reader.width()]), EPSILON);
+			assertArrayEquals(fillArray(mock.width(), mock.position()), mock.fill(new double[mock.width()]), EPSILON);
 			reader.setPosition(11);
+			mock.setPosition(11);
 			assertEquals(11, reader.position());
 			reader.move();
+			mock.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(12, reader.get(0), EPSILON);
+				assertEquals(12, reader.get(i), EPSILON);
 			}
+			assertArrayEquals(fillArray(reader.width(), reader.position()), reader.fill(new double[reader.width()]), EPSILON);
+			assertArrayEquals(fillArray(mock.width(), mock.position()), mock.fill(new double[mock.width()]), EPSILON);
 			reader.setPosition(25);
+			mock.setPosition(25);
 			assertEquals(25, reader.position());
 			reader.move();
+			mock.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(26, reader.get(0), EPSILON);
+				assertEquals(26, reader.get(i), EPSILON);
 			}
+			assertArrayEquals(fillArray(reader.width(), reader.position()), reader.fill(new double[reader.width()]), EPSILON);
+			assertArrayEquals(fillArray(mock.width(), mock.position()), mock.fill(new double[mock.width()]), EPSILON);
 			reader.setPosition(23);
+			mock.setPosition(23);
 			assertEquals(23, reader.position());
 			reader.move();
+			mock.move();
 			for (int i = 0; i < reader.width(); i++) {
-				assertEquals(24, reader.get(0), EPSILON);
+				assertEquals(24, reader.get(i), EPSILON);
 			}
+			assertArrayEquals(fillArray(reader.width(), reader.position()), reader.fill(new double[reader.width()]), EPSILON);
+			assertArrayEquals(fillArray(mock.width(), mock.position()), mock.fill(new double[mock.width()]), EPSILON);
 		}
 	}
 
@@ -822,5 +847,49 @@ public class NumericRowReaderTests {
 			String expected = "Numeric Row reader (" + nRows + "x" + nColumns + ")\n" + "Row position: " + (nRows - 1);
 			assertEquals(expected, reader.toString());
 		}
+	}
+
+	/**
+	 * This is used to test the default method {@link NumericRow#fill(double[])}.
+	 */
+	private static class NumericRowMock implements NumericRow {
+
+		private final NumericRowReader reader;
+
+		public NumericRowMock(List<Column> columns, int bufferHint){
+			reader = new NumericRowReader(columns, bufferHint);
+		}
+
+		@Override
+		public double get(int index) {
+			return reader.get(index);
+		}
+
+		@Override
+		public int width() {
+			return reader.width();
+		}
+
+		@Override
+		public int position() {
+			return reader.position();
+		}
+
+		public void setPosition(int i) {
+			reader.setPosition(i);
+		}
+
+		public void move() {
+			reader.move();
+		}
+	}
+
+	/**
+	 * Helper method that creates an array of length {@code numberOfValues} and fills it with {@code value}.
+	 */
+	private static double[] fillArray(int numberOfValues, double value){
+		double[] result = new double[numberOfValues];
+		Arrays.fill(result, value);
+		return result;
 	}
 }

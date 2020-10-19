@@ -50,5 +50,19 @@ public interface NumericRow {
 	 */
 	int position();
 
+	/**
+	 * Fills the given values array with the numeric row's values.
+	 *
+	 * @param values
+	 * 		the array to be filled
+	 * @return the filled array
+	 */
+	default double[] fill(double[] values) {
+		for (int i = 0; i < width() && i < values.length; i++) {
+			values[i] = get(i);
+		}
+		return values;
+	}
+
 }
 

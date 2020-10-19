@@ -25,12 +25,15 @@ public enum ColumnRole implements ColumnMetaData {
 
 	BATCH,
 	CLUSTER,
+	ENCODING,
 	ID,
+	INTERPRETATION,
 	LABEL,
 	METADATA,
 	OUTLIER,
 	PREDICTION,
 	SCORE,
+	SOURCE,
 	WEIGHT;
 
 	private static final String TYPE_ID = "com.rapidminer.belt.meta.column.role";

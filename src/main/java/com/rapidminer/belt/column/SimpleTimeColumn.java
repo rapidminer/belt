@@ -101,8 +101,27 @@ class SimpleTimeColumn extends TimeColumn {
 
 	@Override
 	public void fillNanosIntoArray(long[] array, int arrayStartIndex) {
-		int length = Math.min(nanoOfDay.length, array.length - arrayStartIndex);
-		System.arraycopy(nanoOfDay, 0, array, arrayStartIndex, length);
+		fillNanos(array, arrayStartIndex, 0);
+	}
+
+	@Override
+	void fill(long[] array, int rowIndex) {
+		fillNanos(array, 0, rowIndex);
+	}
+
+	/**
+	 * Fills the nanosecond data into the array.
+	 *
+	 * @param array
+	 * 		the array to fill into
+	 * @param arrayStartIndex
+	 * 		the index in the array to start filling
+	 * @param rowIndex
+	 * 		the row index to start from
+	 */
+	private void fillNanos(long[] array, int arrayStartIndex, int rowIndex) {
+		int length = Math.min(nanoOfDay.length - rowIndex, array.length - arrayStartIndex);
+		System.arraycopy(nanoOfDay, rowIndex, array, arrayStartIndex, length);
 	}
 
 	@Override
@@ -117,6 +136,16 @@ class SimpleTimeColumn extends TimeColumn {
 	@Override
 	public int[] sort(Order order) {
 		return SortingLong.sort(nanoOfDay, order);
+	}
+
+	/**
+	 * Returns the array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	long[] array() {
+		return nanoOfDay;
 	}
 
 	private LocalTime lookupLocalTime(int i) {

@@ -72,7 +72,7 @@ public class StringSetTests {
 		List<String> list = Arrays.asList("a", "cc", "b", "d");
 		StringSet stringSet1 = new StringSet(list, v -> v != null ? v + "!" : v);
 		List<String> list2 = Arrays.asList("d", "cc", "a", "b", "d");
-		StringSet stringSet2 = new StringSet(list, v -> v != null ? v + "!" : v);
+		StringSet stringSet2 = new StringSet(list2, v -> v != null ? v + "!" : v);
 
 		assertTrue(stringSet1.equals(stringSet2));
 		assertTrue(stringSet2.equals(stringSet1));

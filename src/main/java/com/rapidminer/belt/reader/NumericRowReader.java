@@ -219,5 +219,9 @@ public final class NumericRowReader implements NumericRow {
 		return "Numeric Row reader (" + tableHeight + "x" + bufferWidth + ")" + "\n" + "Row position: " + position();
 	}
 
-
+	@Override
+	public double[] fill(double[] values) {
+		System.arraycopy(buffer, bufferRowIndex, values, 0, Math.min(width(), values.length));
+		return values;
+	}
 }

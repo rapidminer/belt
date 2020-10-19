@@ -43,6 +43,7 @@ public final class Columns {
 		InternalColumns internalColumns = new InternalColumnsImpl();
 		com.rapidminer.belt.buffer.ColumnAccessor.set(internalColumns);
 		com.rapidminer.belt.table.ColumnAccessor.set(internalColumns);
+		com.rapidminer.belt.column.io.ColumnAccessor.set(internalColumns);
 	}
 
 	/**

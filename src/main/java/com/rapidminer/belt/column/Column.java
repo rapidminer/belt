@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.Readers;
 import com.rapidminer.belt.table.Table;
@@ -82,7 +83,13 @@ public abstract class Column {
 		 * Sets of strings. Data can be read as {@link StringSet}. This can be done, for example, via {@link
 		 * Readers#objectReader(Column, Class)}.
 		 */
-		TEXT_SET("Text-Set");
+		TEXT_SET("Text-Set"),
+
+		/**
+		 * List of strings. Data can be read as {@link StringList}. This can be done, for example, via {@link
+		 * Readers#objectReader(Column, Class)}.
+		 */
+		TEXT_LIST("Text-List");
 
 		private final String displayName;
 

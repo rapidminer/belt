@@ -1660,7 +1660,7 @@ public class TableTests {
 
 		@Test(expected = NullPointerException.class)
 		public void testTypedGetWithNullType() {
-			table.getMetaData("one", null);
+			table.getMetaData("one", (Class<? extends ColumnMetaData>) null);
 		}
 
 		@Test

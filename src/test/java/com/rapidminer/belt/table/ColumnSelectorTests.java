@@ -548,6 +548,19 @@ public class ColumnSelectorTests {
 			assertEquals(table.labels(), selector.labels());
 			assertEquals(ColumnSelector.toColumnList(table.labels(), table), selector.columns());
 		}
+
+		@Test
+		public void testMatchesPredicate() {
+			// this predicate should select the regular columns + the label columns
+			ColumnSelector selector = table.select().matchesPredicate((c, s) -> {
+				ColumnMetaData md = table.getFirstMetaData(s, ColumnRole.class);
+				return md == null || md == ColumnRole.LABEL;
+			});
+			List<String> matches = selector.labels();
+			List<String> expected = Arrays.asList("two", "four", "five");
+			assertEquals(expected, matches);
+			assertEquals(ColumnSelector.toColumnList(expected, table), selector.columns());
+		}
 	}
 
 	public static class ToColumnList {

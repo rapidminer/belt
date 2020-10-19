@@ -711,9 +711,88 @@ context.call(Arrays.asList(() -> mixed(table, context)));
 
 # IO
 
-The Belt library will provide a low-level API for efficient IO.
-However, this functionality is still a work-in-progress.
-This section will be updated once the API has been completed.
+With the `ColumnIO` class Belt allows to write and read columns with primitive representation using `ByteBuffer`s.
+
+Writing a small numeric-readable column into a file can be done like this:
+
+```Java
+Path path = Paths.get("myfile");
+try (FileChannel channel = FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+	ByteBuffer buffer = ByteBuffer.allocate(column.size() * 8);
+	ColumnIO.putNumericDoubles(column, 0, buffer);
+	buffer.flip();
+	channel.write(buffer);
+} catch (IOException e) {
+	e.printStackTrace();
+}
+```
+
+There are different put-methods for the different column types, see the table at the end of this section. 
+If the column is too big for one `ByteBuffer`, writing in a loop is recommended, as here for a time column:
+
+```Java
+int written = 0;
+while(written < column.size()) {
+	buffer.clear();
+	written += ColumnIO.putTimeLongs(column, written, buffer);
+	buffer.flip();
+	channel.write(buffer);
+}
+```
+
+The `ColumnIO` class provides read methods like `ColumnIO.readReal(length)` that return a column builder which can be 
+fed with `ByteBuffer`s. Creating a small integer column from a file works as follows:
+
+```Java
+Path path = Paths.get("myfile");
+try (FileChannel channel = FileChannel.open(path)) {
+	ByteBuffer buffer = ByteBuffer.allocate(1024);
+	int read = channel.read(buffer);
+	buffer.flip();
+	Column readColumn = ColumnIO.readInteger53Bit(read/8).put(buffer).toColumn();
+	System.out.println(readColumn);
+} catch (IOException e) {
+	e.printStackTrace();
+}
+```
+
+Note that when building integer columns, the provided double values are rounded, same as when using 
+`Buffers.integer53BitBuffer(length)`.
+
+In the common case that the column is too big to fit into a single `ByteBuffer`, reading can be done in a loop:
+
+```Java
+NominalColumnBuilder builder = ColumnIO.readNominal(dictionaryValues, size);
+while (builder.position() < size) {
+	buffer.clear();
+	channel.read(buffer);
+	buffer.flip();
+	builder.putIntegers(buffer);
+}
+Column column = builder.toColumn();
+```
+
+Note that for nominal columns the category indices can be written and read but the dictionary values are not stored in 
+`ByteBuffer`s automatically. When using `ColumnIO.readNominal(dictionaryValues, size)` it is required that the 
+dictionary values are known as a `LinkedHashSet` where the order of the set aligns with the category indices, starting 
+with `null` which is matched to the category index 0.
+
+### Overview of write and read methods
+
+This table gives an overview over the `ColumnIO` methods to use for writing and reading different column types. 
+(For information on types of columns visit the section on [Column types](#belt-column-types)).
+Additional information can be found in the [Javadoc](https://rapidminer.github.io/belt/apidocs/). 
+
+type | writing | reading | format | missing value
+--- | --- | --- | --- | ---
+REAL | `putNumericDoubles` | `readReal(length).put` | `double` values | `Double.NaN` 
+INTEGER_53_BIT | `putNumericDoubles` | `readInteger53Bit(length).put` | `double` values | `Double.NaN` 
+NOMINAL | `putCategoricalIntegers` | `readNominal(lengt).putIntegers` | `int` category indices | 0
+NOMINAL with maximal dictionary index 32767 | `putCategoricalShorts` | `readNominal(lengt).putShorts` | `short` category indices | 0
+NOMINAL with maximal dictionary index 127 | `putCategoricalBytes` | `readNominal(lengt).putBytes` | `byte` category indices | 0
+DATE_TIME | `putDateTimeLongs` | `readDateTime(length).putSeconds` | `long` values representing seconds since epoch | `Long.MAX_VALUE`
+DATE_TIME with subsecond precision additional| `putDateTimeNanoInts` | `readDateTime(length).putNanos` | `int` values between 0 and 999,999,999 representing nanoseconds | undefined
+TIME | `putTimeLongs` | `readTime(length).put` | `long` values representing nanoseconds of the day | `Long.MAX_VALUE` 
 
 # Appendix
 
@@ -824,7 +903,7 @@ All columns that have a non-zero `Comparator` accessible via `column.type().comp
 
 #### Type id
 
-Every one of the types described in detail in the next section is associated with one of the type ids `REAL`, `INTEGER_53_BIT`, `NOMINAL`, `DATE_TIME`, `TIME`, `TEXT` or `TEXT_SET`. 
+Every one of the types described in detail in the next section is associated with one of the type ids `REAL`, `INTEGER_53_BIT`, `NOMINAL`, `DATE_TIME`, `TIME`, `TEXT`, `TEXT_LIST` or `TEXT_SET`. 
  
 #### Element type
 
@@ -843,8 +922,10 @@ NOMINAL | `int` category indices together with a dictionary of `String` values |
 DATE_TIME | Java `Instant` objects | OBJECT | OBJECT_READABLE, SORTABLE | `Instant.class`
 TIME | Java `LocalTime` objects | OBJECT | OBJECT_READABLE, NUMERIC_READABLE, SORTABLE | `LocalTime.class`
 TEXT | Java `String` objects | OBJECT | OBJECT_READABLE, SORTABLE | `String.class`
+TEXT_LIST | Custom `StringList` objects | OBJECT | OBJECT_READABLE, SORTABLE | `StringList.class`
 TEXT_SET | Custom `StringSet` objects | OBJECT | OBJECT_READABLE, SORTABLE | `StringSet.class`
 
+Text-list columns have elements that are immutable `List<String>`s, defined by the `StringList` class and
 Text-set columns have elements that are immutable `Set<String>`s, defined by the `StringSet` class.
 Time columns are numeric-readable as nano-seconds since 00:00. 
 Real, 53 Bit Integer, Nominal and Time columns are numeric-readable, the others are only object-readable.
@@ -1299,7 +1380,7 @@ Values can be accessed with `buffer.get(index)` but only as `Instant` objects an
 
 Object buffers are used to create object columns. 
 Note that the standard column types time and date-time have their own buffer.
-So object buffers are only of interest for the other object column types like `ColumnType.TEXT` or `ColumnType.TEXT_SET`.
+So object buffers are only of interest for the other object column types like `ColumnType.TEXT`, `ColumnType.TEXT_LIST` or `ColumnType.TEXT_SET`.
  
 ```java
 ObjectBuffer<String> buffer = Buffers.textBuffer(10);
@@ -1320,7 +1401,8 @@ Missing values are again set via `null`.
 
 When creating an object buffer from a column via `Buffers.textBuffer(column)`, the column must be object-readable and the column's element type must be `String`. 
 
-Analogously, buffers for `ColumnType.TEXT_SET` can be created using the `Buffers.textsetBuffer` methods.
+Analogously, buffers for `ColumnType.TEXT_SET` can be created using the `Buffers.textsetBuffer` methods, 
+and for `ColumnType.TEXT_LIST` using the `Buffers.textlistBuffer` methods.
 
 ### Sparse buffers
 

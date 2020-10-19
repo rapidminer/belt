@@ -65,6 +65,16 @@ public abstract class DateTimeColumn extends Column {
 	 *
 	 * @param array
 	 * 		the array to fill the data into
+	 * @param rowIndex
+	 * 		the index in the column to start from.
+	 */
+	abstract void fillSeconds(long[] array, int rowIndex);
+
+	/**
+	 * Fills the raw second data into the given array.
+	 *
+	 * @param array
+	 * 		the array to fill the data into
 	 * @param arrayStartIndex
 	 * 		the index in the array where to start
 	 */

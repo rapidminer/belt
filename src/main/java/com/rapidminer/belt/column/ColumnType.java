@@ -28,6 +28,7 @@ import java.util.Set;
 
 import com.rapidminer.belt.column.Column.Category;
 import com.rapidminer.belt.column.Column.TypeId;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.Readers;
 
@@ -90,6 +91,12 @@ public final class ColumnType<T> {
 	 */
 	public static final ColumnType<StringSet> TEXTSET;
 
+	/**
+	 * Complex id for columns holding lists of strings. Data can be read as {@link StringList}. This can be done, for
+	 * example, via {@link Readers#objectReader(Column, Class)}.
+	 */
+	public static final ColumnType<StringList> TEXTLIST;
+
 	private static final Map<TypeId, ColumnType<?>> ID_TO_TYPE;
 
 	private static final EnumSet<Column.Capability> CATEGORICAL;
@@ -120,10 +127,11 @@ public final class ColumnType<T> {
 		DATETIME = new ColumnType<>(TypeId.DATE_TIME, Category.OBJECT, Instant.class, Instant::compareTo);
 		TEXT = new ColumnType<>(TypeId.TEXT, Category.OBJECT, String.class, String::compareTo);
 		TEXTSET = new ColumnType<>(TypeId.TEXT_SET, Category.OBJECT, StringSet.class, StringSet::compareTo);
+		TEXTLIST = new ColumnType<>(TypeId.TEXT_LIST, Category.OBJECT, StringList.class, StringList::compareTo);
 
 		// init id to type map
 		ID_TO_TYPE = new EnumMap<>(TypeId.class);
-		for (ColumnType<?> columnType : Arrays.asList(NOMINAL, INTEGER_53_BIT, REAL, TIME, DATETIME, TEXT, TEXTSET)) {
+		for (ColumnType<?> columnType : Arrays.asList(NOMINAL, INTEGER_53_BIT, REAL, TIME, DATETIME, TEXT, TEXTSET, TEXTLIST)) {
 			ID_TO_TYPE.put(columnType.id(), columnType);
 		}
 	}

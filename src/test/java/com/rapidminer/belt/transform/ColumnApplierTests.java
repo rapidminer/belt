@@ -38,9 +38,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.rapidminer.belt.buffer.NominalBuffer;
 import com.rapidminer.belt.buffer.DateTimeBuffer;
 import com.rapidminer.belt.buffer.Int32NominalBuffer;
+import com.rapidminer.belt.buffer.NominalBuffer;
 import com.rapidminer.belt.buffer.NumericBuffer;
 import com.rapidminer.belt.buffer.ObjectBuffer;
 import com.rapidminer.belt.buffer.TimeBuffer;
@@ -49,6 +49,7 @@ import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.reader.NumericRow;
@@ -375,6 +376,25 @@ public class ColumnApplierTests {
 		}
 	}
 
+	public static class InputValidationOneColumnNumericToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullOperator() {
+			table.transform(0).applyNumericToTextlist(null, CTX);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(0).applyNumericToTextlist(i -> null, null);
+		}
+
+		@Test(expected = UnsupportedOperationException.class)
+		public void testWrongCapability() {
+			new Transformer(ColumnTestUtils.getObjectColumn(ColumnType.TEXT, new Object[10]))
+					.applyNumericToTextlist(i -> null, CTX);
+		}
+	}
+
 	public static class InputValidationOneColumnNumericToTime {
 
 		@Test(expected = NullPointerException.class)
@@ -484,6 +504,25 @@ public class ColumnApplierTests {
 		public void testWrongCapability() {
 			new Transformer(ColumnTestUtils.getObjectColumn(ColumnType.TEXT, new Object[10]))
 					.applyCategoricalToTextset(i -> new StringSet(null), CTX);
+		}
+	}
+
+	public static class InputValidationOneColumnCategoricalToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullOperator() {
+			table.transform(0).applyCategoricalToTextlist(null, CTX);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(0).applyCategoricalToTextlist(i -> new StringList(null), null);
+		}
+
+		@Test(expected = UnsupportedOperationException.class)
+		public void testWrongCapability() {
+			new Transformer(ColumnTestUtils.getObjectColumn(ColumnType.TEXT, new Object[10]))
+					.applyCategoricalToTextlist(i -> new StringList(null), CTX);
 		}
 	}
 
@@ -633,6 +672,35 @@ public class ColumnApplierTests {
 		@Test(expected = UnsupportedOperationException.class)
 		public void testWrongCapability() {
 			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToTextset(String.class, i -> new StringSet(null),
+					CTX);
+		}
+	}
+
+	public static class InputValidationOneColumnObjectToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullOperator() {
+			table.transform(0).applyObjectToTextlist(String.class, null, CTX);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullType() {
+			table.transform(0).applyObjectToTextlist(null, i -> new StringList(null), CTX);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(0).applyObjectToTextlist(String.class, i -> new StringList(null), null);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testWrongType() {
+			table.transform(0).applyObjectToTextlist(String.class, i -> new StringList(null), CTX);
+		}
+
+		@Test(expected = UnsupportedOperationException.class)
+		public void testWrongCapability() {
+			new Transformer(OBJECT_NOT_READABLE_COLUMN).applyObjectToTextlist(String.class, i -> new StringList(null),
 					CTX);
 		}
 	}
@@ -1065,6 +1133,36 @@ public class ColumnApplierTests {
 
 	}
 
+	public static class InputValidationMoreColumnsObjectToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullType() {
+			table.transform(new int[]{0, 1}).applyObjectToTextlist(null, row -> null, CTX);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(new int[]{0, 1}).applyObjectToTextlist(String.class, row -> null, null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullFunction() {
+			table.transform(new int[]{0, 1}).applyObjectToTextlist(String.class, null, CTX);
+		}
+
+		@Test(expected = UnsupportedOperationException.class)
+		public void testWrongCapabilityFormat() {
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyObjectToTextlist(String.class, row -> new StringList(null), CTX);
+		}
+
+		@Test(expected = IllegalArgumentException.class)
+		public void testWrongTypeFormat() {
+			table.transform(new int[]{0, 1}).applyObjectToTextlist(String.class, row -> new StringList(null), CTX);
+		}
+
+	}
+
 	public static class InputValidationMoreColumnsObjectToTime {
 
 		@Test(expected = NullPointerException.class)
@@ -1161,6 +1259,24 @@ public class ColumnApplierTests {
 		}
 	}
 
+	public static class InputValidationMoreColumnsCategoricalToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(new int[]{0, 1}).applyCategoricalToTextlist(row -> new StringList(null), null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullFunction() {
+			table.transform(new int[]{0, 1}).applyCategoricalToTextlist(null, CTX);
+		}
+
+		@Test(expected = UnsupportedOperationException.class)
+		public void testWrongCapabilityFormat() {
+			table.transform(new int[]{0, 1}).applyCategoricalToTextlist(row -> new StringList(null), CTX);
+		}
+	}
+
 	public static class InputValidationMoreColumnsCategoricalToTime {
 
 		@Test(expected = NullPointerException.class)
@@ -1235,6 +1351,25 @@ public class ColumnApplierTests {
 		}
 	}
 
+	public static class InputValidationMoreColumnsNumericToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(new int[]{0, 1}).applyNumericToTextlist(row -> new StringList(null), null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullFunction() {
+			table.transform(new int[]{0, 1}).applyNumericToTextlist(null, CTX);
+		}
+
+		@Test(expected = UnsupportedOperationException.class)
+		public void testWrongCapabilityFormat() {
+			new RowTransformer(Collections.singletonList(OBJECT_NOT_READABLE_COLUMN))
+					.applyNumericToTextlist(row -> null, CTX);
+		}
+	}
+
 	public static class InputValidationMoreColumnsNumericToTime {
 
 		@Test(expected = NullPointerException.class)
@@ -1297,6 +1432,20 @@ public class ColumnApplierTests {
 		@Test(expected = NullPointerException.class)
 		public void testNullFunction() {
 			table.transform(new int[]{0, 1}).applyMixedToTextset(null, CTX);
+		}
+
+	}
+
+	public static class InputValidationMoreColumnsGeneralToTextlist {
+
+		@Test(expected = NullPointerException.class)
+		public void testNullContext() {
+			table.transform(new int[]{0, 1}).applyMixedToTextlist(row -> new StringList(null), null);
+		}
+
+		@Test(expected = NullPointerException.class)
+		public void testNullFunction() {
+			table.transform(new int[]{0, 1}).applyMixedToTextlist(null, CTX);
 		}
 
 	}
@@ -4465,6 +4614,15 @@ public class ColumnApplierTests {
 			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[0], getMappingList());
 			ObjectBuffer<String> buffer = new RowTransformer(Arrays.asList(column, column, column))
 					.applyMixedToText(row -> row.getObject(0, String.class) + row.getNumeric(1), CTX);
+			assertEquals(0, buffer.size());
+		}
+
+		@Test
+		public void testNullSizeTextlist() {
+			Column column = ColumnTestUtils.getSimpleCategoricalColumn(ColumnType.NOMINAL, new int[0],
+					getMappingList());
+			ObjectBuffer<StringList> buffer = new RowTransformer(Arrays.asList(column, column, column))
+					.applyMixedToTextlist(row -> new StringList(i -> row.getObject(0, String.class) + row.getNumeric(1), 2), CTX);
 			assertEquals(0, buffer.size());
 		}
 

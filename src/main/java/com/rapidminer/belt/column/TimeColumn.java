@@ -52,6 +52,15 @@ public abstract class TimeColumn extends Column {
 	 */
 	public abstract void fillNanosIntoArray(long[] array, int arrayStartIndex);
 
+	/**
+	 * Fills the nanoseconds data into the given array.
+	 *
+	 * @param array
+	 * 		the array to fill the data into
+	 * @param rowIndex
+	 * 		the rowIndex to start from
+	 */
+	abstract void fill(long[] array, int rowIndex);
 
 	@Override
 	public Column stripData() {

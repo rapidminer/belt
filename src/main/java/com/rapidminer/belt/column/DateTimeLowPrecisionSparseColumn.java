@@ -120,6 +120,12 @@ class DateTimeLowPrecisionSparseColumn extends DateTimeColumn {
 	}
 
 	@Override
+	void fillSeconds(long[] array, int rowIndex) {
+		ColumnUtils.fillSparseLongsIntoLongArray(array, 0, rowIndex, defaultValue, nonDefaultIndices,
+				nonDefaultValues, size);
+	}
+
+	@Override
 	Column map(int[] mapping, boolean preferView) {
 		if (mapping.length == 0) {
 			return stripData();
@@ -155,7 +161,7 @@ class DateTimeLowPrecisionSparseColumn extends DateTimeColumn {
 
 	@Override
 	public void fillSecondsIntoArray(long[] array, int arrayStartIndex) {
-		ColumnUtils.fillSparseLongsIntoLongArray(array, arrayStartIndex, defaultValue, nonDefaultIndices,
+		ColumnUtils.fillSparseLongsIntoLongArray(array, arrayStartIndex,0, defaultValue, nonDefaultIndices,
 				nonDefaultValues, size);
 	}
 

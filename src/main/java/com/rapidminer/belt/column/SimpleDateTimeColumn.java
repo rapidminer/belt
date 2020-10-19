@@ -174,6 +174,32 @@ class SimpleDateTimeColumn extends DateTimeColumn {
 		System.arraycopy(nanos, 0, array, arrayStartIndex, length);
 	}
 
+	@Override
+	void fillSeconds(long[] array, int rowIndex) {
+		int length = Math.min(seconds.length - rowIndex, array.length);
+		System.arraycopy(seconds, rowIndex, array, 0, length);
+	}
+
+	/**
+	 * Returns the seconds array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	long[] secondsArray() {
+		return seconds;
+	}
+
+	/**
+	 * Returns the nanos array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	int[] nanoArray() {
+		return nanos;
+	}
+
 	private Instant lookupLowPrecision(int i) {
 		long s = seconds[i];
 		if (s == SimpleDateTimeColumn.MISSING_VALUE) {

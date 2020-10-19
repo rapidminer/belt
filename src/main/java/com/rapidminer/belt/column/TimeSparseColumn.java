@@ -149,6 +149,12 @@ class TimeSparseColumn extends TimeColumn {
 	}
 
 	@Override
+	void fill(long[] array, int rowIndex) {
+		ColumnUtils.fillSparseLongsIntoLongArray(array, 0, rowIndex, defaultValue, nonDefaultIndices,
+				nonDefaultValues, size);
+	}
+
+	@Override
 	public void fill(Object[] array, int rowIndex, int arrayOffset, int arrayStepSize) {
 		ColumnUtils.fillSparseLongsIntoObjectArray(array, rowIndex, arrayOffset, arrayStepSize, defaultValueAsLocalTime,
 				nonDefaultIndices, nonDefaultValues, size, this::nanosOfDayToLocalTime);
@@ -187,7 +193,7 @@ class TimeSparseColumn extends TimeColumn {
 
 	@Override
 	public void fillNanosIntoArray(long[] array, int arrayStartIndex) {
-		ColumnUtils.fillSparseLongsIntoLongArray(array, arrayStartIndex, defaultValue, nonDefaultIndices,
+		ColumnUtils.fillSparseLongsIntoLongArray(array, arrayStartIndex, 0, defaultValue, nonDefaultIndices,
 				nonDefaultValues, size);
 	}
 

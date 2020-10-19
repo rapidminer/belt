@@ -607,7 +607,9 @@ public final class ColumnUtils {
 	 * @param array
 	 * 		the array to be filled
 	 * @param arrayStartIndex
-	 * 		The index at which to start filling the array. Must be non-negative.
+	 * 		the index at which to start filling the array. Must be non-negative.
+	 * @param rowIndex
+	 * 		the row index from where to start reading the sparse long column implementation.
 	 * @param defaultValue
 	 * 		the long data's default value
 	 * @param nonDefaultIndices
@@ -617,20 +619,24 @@ public final class ColumnUtils {
 	 * @param size
 	 * 		the logical data size
 	 */
-	static void fillSparseLongsIntoLongArray(long[] array, int arrayStartIndex, long defaultValue,
+	static void fillSparseLongsIntoLongArray(long[] array, int arrayStartIndex, int rowIndex, long defaultValue,
 											 int[] nonDefaultIndices, long[] nonDefaultValues, int size) {
 		// fill all free slots in the array with default values
 		for (int i = arrayStartIndex, len = array.length; i < len; i++) {
 			array[i] = defaultValue;
 		}
 
-		int maxRowIndex = Math.min(array.length - arrayStartIndex, size);
+		if (nonDefaultIndices.length == 0) {
+			// only default values
+			return;
+		}
 
-		if (nonDefaultIndices.length > 0) {
-			int nonDefaultIndex = 0;
+		int maxRowIndex = Math.min(array.length - arrayStartIndex + rowIndex, size);
+		int nonDefaultIndex = ColumnUtils.findNextIndex(nonDefaultIndices, rowIndex);
+		if (nonDefaultIndex < nonDefaultIndices.length) {
 			int nonDefaultPosition = nonDefaultIndices[nonDefaultIndex];
 			while (nonDefaultPosition < maxRowIndex) {
-				array[nonDefaultPosition + arrayStartIndex] = nonDefaultValues[nonDefaultIndex];
+				array[nonDefaultPosition + arrayStartIndex - rowIndex] = nonDefaultValues[nonDefaultIndex];
 				nonDefaultIndex++;
 				if (nonDefaultIndex >= nonDefaultIndices.length) {
 					break;

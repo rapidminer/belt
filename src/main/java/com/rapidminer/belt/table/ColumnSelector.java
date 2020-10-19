@@ -44,6 +44,7 @@ public final class ColumnSelector {
 	private static final String MESSAGE_TYPE_ID_NULL = "Type id must not be null.";
 	private static final String MESSAGE_METADATA_NULL = "Column metadata must not be null.";
 	private static final String MESSAGE_METADATA_CLASS_NULL = "Column metadata type must not be null.";
+	private static final String MESSAGE_PREDICATE_NULL = "Predicate must not be null.";
 
 	private final Table table;
 
@@ -215,6 +216,22 @@ public final class ColumnSelector {
 	public <T extends ColumnMetaData> ColumnSelector withoutMetaData(Class<T> type) {
 		Objects.requireNonNull(type, MESSAGE_METADATA_CLASS_NULL);
 		setOrAnd((c, s) -> withoutMetaData(s, type));
+		return this;
+	}
+
+	/**
+	 * Adds the requirement to the selector that all selected columns must match the given predicate. The predicate
+	 * takes a column and its label and must decide whether the given column matches.
+	 *
+	 * @param predicate
+	 * 		the predicate that all columns must fulfil
+	 * @return the column selector to enable chaining
+	 * @throws NullPointerException
+	 * 		if predicate is {@code null}
+	 */
+	public ColumnSelector matchesPredicate(BiPredicate<Column, String> predicate) {
+		Objects.requireNonNull(predicate, MESSAGE_PREDICATE_NULL);
+		setOrAnd(predicate);
 		return this;
 	}
 

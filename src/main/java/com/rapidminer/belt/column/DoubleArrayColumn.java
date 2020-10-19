@@ -117,4 +117,13 @@ class DoubleArrayColumn extends NumericColumn {
 		return Sorting.sort(data, order);
 	}
 
+	/**
+	 * Returns the array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	double[] array() {
+		return data;
+	}
 }

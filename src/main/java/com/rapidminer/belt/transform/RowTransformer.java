@@ -36,6 +36,7 @@ import com.rapidminer.belt.buffer.TimeBuffer;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.Workload;
@@ -665,6 +666,36 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
+	 * in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link ObjectRow})
+	 * @param type
+	 * 		the type of the objects in the columns
+	 * @param context
+	 * 		the execution context to use
+	 * @param <R>
+	 * 		type of objects in the columns
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Capability#OBJECT_READABLE}
+	 * @throws IllegalArgumentException
+	 * 		if the objects in the transformation columns cannot be read as the given type
+	 */
+	public <R> ObjectBuffer<StringList> applyObjectToTextlist(Class<R> type, Function<ObjectRow<R>, StringList> operator,
+															  Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierNObjectToObject<>(transformationColumns, type, operator, ColumnType.TEXTLIST), workload, callback)
+				.execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the object-readable transformation columns returning the result
 	 * in a new {@link TimeBuffer}. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel.
 	 *
@@ -772,6 +803,30 @@ public final class RowTransformer {
 
 	/**
 	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
+	 * in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link CategoricalRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Category#CATEGORICAL}
+	 */
+	public ObjectBuffer<StringList> applyCategoricalToTextlist(Function<CategoricalRow, StringList> operator,
+															 Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierNCategoricalToObject<>(transformationColumns, operator, ColumnType.TEXTLIST), workload, callback)
+				.execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the categorical transformation columns returning the result
 	 * in a
 	 * new {@link TimeBuffer}. Depending on the input size and the specified workload per data-point, the
 	 * computation might be performed in parallel.
@@ -861,6 +916,29 @@ public final class RowTransformer {
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(
 				new ApplierNNumericToObject<>(transformationColumns, operator, ColumnType.TEXTSET), workload, callback)
+				.execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the numeric-readable transformation columns returning the
+	 * result in a new {@link ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the
+	 * specified workload per data-point, the computation might be performed in parallel.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link NumericRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 * @throws UnsupportedOperationException
+	 * 		if any of the transformation columns is not {@link Column.Capability#NUMERIC_READABLE}
+	 */
+	public ObjectBuffer<StringList> applyNumericToTextlist(Function<NumericRow, StringList> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierNNumericToObject<>(transformationColumns, operator, ColumnType.TEXTLIST), workload, callback)
 				.execute(context);
 	}
 
@@ -957,6 +1035,31 @@ public final class RowTransformer {
 		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
 		return new ParallelExecutor<>(
 				new ApplierMixedToObject<>(transformationColumns, operator, ColumnType.TEXTSET), workload, callback).execute(context);
+	}
+
+	/**
+	 * Applies the given operator of arbitrary arity to the transformation columns returning the result in a new {@link
+	 * ObjectBuffer} of type {@link Column.TypeId#TEXT_LIST}. Depending on the input size and the specified workload per
+	 * data-point, the computation might be performed in parallel.
+	 *
+	 * <p>This method uses an operator starting from a {@link MixedRow} which allows to read the row in different
+	 * ways. This is not as performant as reading the row only in one specific way. So whenever possible it is
+	 * recommended to use the methods {@link #applyNumericToTextlist}, {@link #applyCategoricalToTextlist} or {@link
+	 * #applyObjectToTextlist} instead.
+	 *
+	 * @param operator
+	 * 		the operator to apply to each tuple (see {@link MixedRow})
+	 * @param context
+	 * 		the execution context to use
+	 * @return a buffer containing the result of the mapping
+	 * @throws NullPointerException
+	 * 		if any of the arguments is {@code null}
+	 */
+	public ObjectBuffer<StringList> applyMixedToTextlist(Function<MixedRow, StringList> operator, Context context) {
+		Objects.requireNonNull(context, MESSAGE_CONTEXT_NULL);
+		Objects.requireNonNull(operator, MESSAGE_OPERATOR_NULL);
+		return new ParallelExecutor<>(
+				new ApplierMixedToObject<>(transformationColumns, operator, ColumnType.TEXTLIST), workload, callback).execute(context);
 	}
 
 	/**

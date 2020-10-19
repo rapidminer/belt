@@ -154,6 +154,12 @@ class DateTimeHighPrecisionSparseColumn extends DateTimeColumn {
 	}
 
 	@Override
+	void fillSeconds(long[] array, int rowIndex) {
+		ColumnUtils.fillSparseLongsIntoLongArray(array, 0, rowIndex, defaultValue, nonDefaultIndices,
+				nonDefaultValues, size);
+	}
+
+	@Override
 	public void fill(Object[] array, int rowIndex, int arrayOffset, int arrayStepSize) {
 		if (arrayStepSize < 1) {
 			throw new IllegalArgumentException("step size must not be smaller than 1");
@@ -295,7 +301,7 @@ class DateTimeHighPrecisionSparseColumn extends DateTimeColumn {
 
 	@Override
 	public void fillSecondsIntoArray(long[] array, int arrayStartIndex) {
-		ColumnUtils.fillSparseLongsIntoLongArray(array, arrayStartIndex, defaultValue, nonDefaultIndices,
+		ColumnUtils.fillSparseLongsIntoLongArray(array, arrayStartIndex, 0, defaultValue, nonDefaultIndices,
 				nonDefaultValues, size);
 	}
 
@@ -321,6 +327,16 @@ class DateTimeHighPrecisionSparseColumn extends DateTimeColumn {
 		long[] seconds = new long[size];
 		fillSecondsIntoArray(seconds, 0);
 		return new SimpleDateTimeColumn(Mapping.apply(seconds, mapping, MISSING_VALUE), Mapping.apply(nanos, mapping));
+	}
+
+	/**
+	 * Returns the nanos array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	int[] nanoArray() {
+		return nanos;
 	}
 
 }

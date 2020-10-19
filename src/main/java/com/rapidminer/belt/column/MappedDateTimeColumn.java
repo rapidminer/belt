@@ -228,15 +228,12 @@ class MappedDateTimeColumn extends DateTimeColumn implements CacheMappedColumn {
 
 	@Override
 	public void fillSecondsIntoArray(long[] array, int arrayStartIndex) {
-		int end = Math.min(mapping.length, array.length - arrayStartIndex);
-		for (int i = 0; i < end; i++) {
-			int index = mapping[i];
-			if (index < 0 || index >= seconds.length) {
-				array[arrayStartIndex + i] = DateTimeColumn.MISSING_VALUE;
-			} else {
-				array[arrayStartIndex + i] = seconds[index];
-			}
-		}
+		fillSeconds(array, arrayStartIndex, 0);
+	}
+
+	@Override
+	void fillSeconds(long[] array, int rowIndex) {
+		fillSeconds(array, 0, rowIndex);
 	}
 
 	@Override
@@ -251,6 +248,48 @@ class MappedDateTimeColumn extends DateTimeColumn implements CacheMappedColumn {
 				array[arrayStartIndex + i] = 0;
 			} else {
 				array[arrayStartIndex + i] = nanos[index];
+			}
+		}
+	}
+
+	/**
+	 * Returns the nanos array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	int[] nanoArray() {
+		return nanos;
+	}
+
+	/**
+	 * Returns the mapping array backing this column. To ensure column immutability, this array must never be modified or
+	 * exposed to pubic APIs!
+	 *
+	 * @return the data array
+	 */
+	int[] getMapping() {
+		return mapping;
+	}
+
+	/**
+	 * Fills the seconds as raw longs into the array.
+	 *
+	 * @param array
+	 * 		the array to fill into
+	 * @param arrayStartIndex
+	 * 		the start index in the array
+	 * @param rowIndex
+	 * 		the start index in the column
+	 */
+	private void fillSeconds(long[] array, int arrayStartIndex, int rowIndex) {
+		int end = Math.min(mapping.length - rowIndex, array.length - arrayStartIndex);
+		for (int i = 0; i < end; i++) {
+			int index = mapping[i + rowIndex];
+			if (index < 0 || index >= seconds.length) {
+				array[arrayStartIndex + i] = DateTimeColumn.MISSING_VALUE;
+			} else {
+				array[arrayStartIndex + i] = seconds[index];
 			}
 		}
 	}

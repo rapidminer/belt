@@ -25,6 +25,7 @@ import com.rapidminer.belt.column.Column.Category;
 import com.rapidminer.belt.column.Column.TypeId;
 import com.rapidminer.belt.column.ColumnType;
 import com.rapidminer.belt.column.DateTimeColumn;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.CategoricalReader;
 import com.rapidminer.belt.util.IntegerFormats.Format;
@@ -330,6 +331,49 @@ public final class Buffers {
 			throw new IllegalArgumentException(MSG_TYPE_INCOMPATIBLE_WITH + column.type().elementType());
 		}
 		return new ObjectBuffer<>(ColumnType.TEXTSET, column);
+	}
+
+	/**
+	 * Creates a buffer of the given length to create a {@link Column} of type {@link TypeId#TEXT_LIST}. The buffer is
+	 * initially filled with {@code null} (missing value).
+	 *
+	 * @param length
+	 * 		the length of the buffer
+	 * @return the new buffer
+	 * @throws IllegalArgumentException
+	 * 		if the given length is negative
+	 */
+	public static ObjectBuffer<StringList> textlistBuffer(int length) {
+		if (length < 0) {
+			throw new IllegalArgumentException(MSG_ILLEGAL_CAPACITY + length);
+		}
+		return new ObjectBuffer<>(ColumnType.TEXTLIST, length);
+	}
+
+	/**
+	 * Creates a buffer to create a {@link Column} of type {@link TypeId#TEXT_LIST} by copying the data from the
+	 * given column.
+	 *
+	 * @param column
+	 * 		the column to create a copy of
+	 * @return the new buffer
+	 * @throws NullPointerException
+	 * 		if the given column is {@code null}
+	 * @throws IllegalArgumentException
+	 * 		if the given column does not have the capability {@link Capability#OBJECT_READABLE} or its elements cannot be
+	 * 		cast to {@link StringList}
+	 */
+	public static ObjectBuffer<StringList> textlistBuffer(Column column) {
+		if (column == null) {
+			throw new NullPointerException(MSG_NULL_COLUMN);
+		}
+		if (!column.type().hasCapability(Capability.OBJECT_READABLE)) {
+			throw new IllegalArgumentException("Column must be object readable");
+		}
+		if (!ColumnType.TEXTLIST.elementType().isAssignableFrom(column.type().elementType())) {
+			throw new IllegalArgumentException(MSG_TYPE_INCOMPATIBLE_WITH + column.type().elementType());
+		}
+		return new ObjectBuffer<>(ColumnType.TEXTLIST, column);
 	}
 
 	/**

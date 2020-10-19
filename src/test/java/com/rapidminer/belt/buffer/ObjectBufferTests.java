@@ -28,6 +28,7 @@ import com.rapidminer.belt.column.CategoricalColumn;
 import com.rapidminer.belt.column.Column;
 import com.rapidminer.belt.column.ColumnTestUtils;
 import com.rapidminer.belt.column.ColumnType;
+import com.rapidminer.belt.column.type.StringList;
 import com.rapidminer.belt.column.type.StringSet;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
@@ -83,6 +84,11 @@ public class ObjectBufferTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testBufferNegativeLengthText() {
 		Buffers.textBuffer(-1);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testBufferNegativeLengthTextList() {
+		Buffers.textlistBuffer(-1);
 	}
 
 	@Test
@@ -289,6 +295,33 @@ public class ObjectBufferTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testWrongType() {
 		Buffers.textsetBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null));
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void testNullColumnTextlist() {
+		Buffers.textlistBuffer( null);
+	}
+
+	@Test
+	public void testFromColumnTextlist() {
+		Column column = Buffers.textlistBuffer(13).toColumn();
+		ObjectBuffer<StringList> buffer = Buffers.textlistBuffer(column);
+		assertEquals(13, buffer.size());
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void testNullTypeTextlist() {
+		new ObjectBuffer<>(null, Buffers.textlistBuffer(3).toColumn());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testWrongCapabilityTextlist() {
+		Buffers.textlistBuffer(Buffers.realBuffer(4).toColumn());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testWrongTypeTextlist() {
+		Buffers.textlistBuffer(ColumnAccessor.get().newDateTimeColumn(new long[0], null));
 	}
 
 	@Test(expected = NullPointerException.class)

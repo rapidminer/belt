@@ -1236,12 +1236,7 @@ public final class Table {
 	 */
 	public List<ColumnMetaData> getMetaData(String label) {
 		requireExistingLabel(label);
-		List<ColumnMetaData> meta = metaDataMap.get(label);
-		if (meta == null) {
-			return Collections.emptyList();
-		} else {
-			return Collections.unmodifiableList(meta);
-		}
+		return Table.getMetaData(label, metaDataMap);
 	}
 
 	/**
@@ -1260,18 +1255,7 @@ public final class Table {
 	 */
 	public <T extends ColumnMetaData> List<T> getMetaData(String label, Class<T> type) {
 		requireExistingLabel(label);
-		List<ColumnMetaData> meta = metaDataMap.get(label);
-		if (meta == null) {
-			return Collections.emptyList();
-		} else {
-			List<T> subset = new ArrayList<>(meta.size());
-			for (ColumnMetaData data : meta) {
-				if (type.isInstance(data)) {
-					subset.add(type.cast(data));
-				}
-			}
-			return subset;
-		}
+		return Table.getMetaData(label, type, metaDataMap);
 	}
 
 	/**
@@ -1292,17 +1276,7 @@ public final class Table {
 	 */
 	public <T extends ColumnMetaData> T getFirstMetaData(String label, Class<T> type) {
 		requireExistingLabel(label);
-		List<ColumnMetaData> metaData = metaDataMap.get(label);
-		if (metaData == null) {
-			return null;
-		} else {
-			for (ColumnMetaData data : metaData) {
-				if (type.isInstance(data)) {
-					return type.cast(data);
-				}
-			}
-			return null;
-		}
+		return Table.getFirstMetaData(label, type, metaDataMap);
 	}
 
 	/**
@@ -1327,6 +1301,45 @@ public final class Table {
 			strippedColumns[index++] = column.stripData();
 		}
 		return new Table(strippedColumns, labels, labelMap, metaDataMap, 0);
+	}
+
+	/**
+	 * Helper method
+	 */
+	static List<ColumnMetaData> getMetaData(String label, Map<String, List<ColumnMetaData>> metaDataMap) {
+		List<ColumnMetaData> meta = metaDataMap.get(label);
+		if (meta == null) {
+			return Collections.emptyList();
+		} else {
+			return Collections.unmodifiableList(meta);
+		}
+	}
+
+	static <T extends ColumnMetaData> T getFirstMetaData(String label, Class<T> type, Map<String, List<ColumnMetaData>> metaDataMap) {
+		List<ColumnMetaData> metaData = metaDataMap.get(label);
+		if (metaData != null) {
+			for (ColumnMetaData data : metaData) {
+				if (type.isInstance(data)) {
+					return type.cast(data);
+				}
+			}
+		}
+		return null;
+	}
+
+	static <T extends ColumnMetaData> List<T> getMetaData(String label, Class<T> type, Map<String, List<ColumnMetaData>> metaDataMap) {
+		List<ColumnMetaData> meta = metaDataMap.get(label);
+		if (meta == null) {
+			return Collections.emptyList();
+		} else {
+			List<T> subset = new ArrayList<>(meta.size());
+			for (ColumnMetaData data : meta) {
+				if (type.isInstance(data)) {
+					subset.add(type.cast(data));
+				}
+			}
+			return subset;
+		}
 	}
 
 	/**

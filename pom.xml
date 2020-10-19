@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.rapidminer</groupId>
     <artifactId>belt</artifactId>
-    <version>1.0.0-BETA5</version>
+    <version>1.0.0-BETA6</version>
     <packaging>jar</packaging>
     <name>belt</name>
     <organization>
@@ -49,6 +49,7 @@
                         <excludes>com/rapidminer/belt/column/TimeColumn.java</excludes>
                         <excludes>com/rapidminer/belt/buffer/ColumnAccessor.java</excludes>
                         <excludes>com/rapidminer/belt/table/ColumnAccessor.java</excludes>
+                        <excludes>com/rapidminer/belt/column/io/ColumnAccessor.java</excludes>
                         <excludes>com/rapidminer/belt/transform/BufferAccessor.java</excludes>
                         <excludes>com/rapidminer/belt/table/BufferAccessor.java</excludes>
                     </sourceFileExcludes>
