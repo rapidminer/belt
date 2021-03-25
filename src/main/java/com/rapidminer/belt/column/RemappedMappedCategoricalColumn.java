@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -24,8 +24,9 @@ import static com.rapidminer.belt.util.IntegerFormats.readUInt2;
 import static com.rapidminer.belt.util.IntegerFormats.readUInt4;
 
 import java.util.Comparator;
-import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.rapidminer.belt.reader.CategoricalReader;
 import com.rapidminer.belt.reader.NumericReader;
@@ -470,8 +471,8 @@ class RemappedMappedCategoricalColumn extends CategoricalColumn implements Cache
 	}
 
 	@Override
-	public Column map(int[] remapping, boolean preferView, Map<int[], int[]> cache) {
-		int[] mergedMapping = cache.computeIfAbsent(getRowMapping(), k -> Mapping.merge(remapping, mapping));
+	public Column map(int[] remapping, boolean preferView, ConcurrentHashMap<int[], CompletableFuture<int[]>> cache) {
+		int[] mergedMapping = waitForOrCompute(mapping, remapping, cache);
 		boolean keepView = preferView || mergedMapping.length > size() * MAPPING_THRESHOLD;
 		return keepView ? deriveMappedColumn(mergedMapping) : deriveSimpleColumn(mergedMapping);
 	}

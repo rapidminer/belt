@@ -17,7 +17,6 @@
 package com.rapidminer.belt.table;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -30,14 +29,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 
 import com.rapidminer.belt.buffer.Buffers;
 import com.rapidminer.belt.buffer.NominalBuffer;
@@ -56,10 +51,13 @@ import com.rapidminer.belt.util.Belt;
 
 
 /**
- * @author Michael Knopf
+ * Tests similar to the ones in {@link StatisticsTests} but the compute methods are called twice so that the cached
+ * statistics are used.
+ *
+ * @author Kevin Majchrzak
  */
 @RunWith(Enclosed.class)
-public class StatisticsTests {
+public class StatisticsCachedTests {
 
 	private static final double EPSILON = 1e-10;
 	private static final Context CTX = Belt.defaultContext();
@@ -86,6 +84,7 @@ public class StatisticsTests {
 					.addReal("real", i -> i)
 					.build(CTX);
 			assertTrue(Statistics.compute(table.column("real"), Collections.emptySet(), CTX).isEmpty());
+			assertTrue(Statistics.compute(table.column("real"), Collections.emptySet(), CTX).isEmpty());
 		}
 
 		@Test
@@ -97,6 +96,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -116,6 +118,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -133,6 +138,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -166,6 +174,10 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN,
+							Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN,
 							Statistic.VAR, Statistic.SD),
@@ -185,6 +197,9 @@ public class StatisticsTests {
 					.addReal("real", i -> -Double.MAX_VALUE)
 					.build(CTX);
 
+			Statistics.compute(table.column("real"),
+					EnumSet.of(Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("real"),
 					EnumSet.of(Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -205,6 +220,9 @@ public class StatisticsTests {
 					.addReal("real", i -> Double.MAX_VALUE)
 					.build(CTX);
 
+			Statistics.compute(table.column("real"),
+					EnumSet.of(Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("real"),
 					EnumSet.of(Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -227,6 +245,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -247,6 +268,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("real");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -266,6 +290,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.VAR, Statistic.SD),
 					CTX);
@@ -280,6 +307,9 @@ public class StatisticsTests {
 					.addReal("real", i -> i % 3 == 0 ? Double.NaN : 42.0)
 					.build(CTX);
 
+			Statistics.compute(table.column("real"),
+					EnumSet.of(Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("real"),
 					EnumSet.of(Statistic.VAR, Statistic.SD),
 					CTX);
@@ -297,6 +327,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.VAR, Statistic.SD),
 					CTX);
@@ -322,6 +355,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.VAR, Statistic.SD),
 					CTX);
@@ -339,6 +375,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.VAR, Statistic.SD),
 					CTX);
@@ -358,10 +397,15 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("real");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.VAR, Statistic.SD),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column,
 					EnumSet.of(Statistic.VAR, Statistic.SD),
 					CTX);
 
+			assertEquals(stats.get(Statistic.VAR), Statistics.compute(column, Statistic.VAR, CTX));
+			assertEquals(stats.get(Statistic.SD), Statistics.compute(column, Statistic.SD, CTX));
 			assertEquals(stats.get(Statistic.VAR), Statistics.compute(column, Statistic.VAR, CTX));
 			assertEquals(stats.get(Statistic.SD), Statistics.compute(column, Statistic.SD, CTX));
 		}
@@ -375,6 +419,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -395,6 +442,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -412,6 +462,9 @@ public class StatisticsTests {
 					.addReal("real", i -> Double.NaN)
 					.build(CTX);
 
+			Statistics.compute(table.column("real"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("real"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -429,6 +482,9 @@ public class StatisticsTests {
 					.addReal("real", i -> i == 42 ? 42.0 : Double.NaN)
 					.build(CTX);
 
+			Statistics.compute(table.column("real"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("real"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -449,6 +505,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("real"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("real"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -470,10 +529,17 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("real");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column,
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
 
+			assertEquals(stats.get(Statistic.P25), Statistics.compute(column, Statistic.P25, CTX));
+			assertEquals(stats.get(Statistic.P50), Statistics.compute(column, Statistic.P50, CTX));
+			assertEquals(stats.get(Statistic.P75), Statistics.compute(column, Statistic.P75, CTX));
+			assertEquals(stats.get(Statistic.MEDIAN), Statistics.compute(column, Statistic.MEDIAN, CTX));
 			assertEquals(stats.get(Statistic.P25), Statistics.compute(column, Statistic.P25, CTX));
 			assertEquals(stats.get(Statistic.P50), Statistics.compute(column, Statistic.P50, CTX));
 			assertEquals(stats.get(Statistic.P75), Statistics.compute(column, Statistic.P75, CTX));
@@ -489,6 +555,7 @@ public class StatisticsTests {
 			Table table = Builders.newTableBuilder(50)
 					.addNominal("categories", i -> "foo")
 					.build(CTX);
+			assertTrue(Statistics.compute(table.column("categories"), Collections.emptySet(), CTX).isEmpty());
 			assertTrue(Statistics.compute(table.column("categories"), Collections.emptySet(), CTX).isEmpty());
 		}
 
@@ -523,6 +590,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("categories");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
+					CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
 					CTX);
@@ -567,6 +637,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("categories");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE, Statistic.INDEX_COUNTS),
+					CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE, Statistic.INDEX_COUNTS),
 					CTX);
@@ -600,6 +673,9 @@ public class StatisticsTests {
 
 			Column column = table.column("categories");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
+					CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
 					CTX);
@@ -647,10 +723,16 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("categories");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
 					CTX);
 
+			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
+			assertEquals(stats.get(Statistic.LEAST), Statistics.compute(column, Statistic.LEAST, CTX));
+			assertEquals(stats.get(Statistic.MODE), Statistics.compute(column, Statistic.MODE, CTX));
 			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
 			assertEquals(stats.get(Statistic.LEAST), Statistics.compute(column, Statistic.LEAST, CTX));
 			assertEquals(stats.get(Statistic.MODE), Statistics.compute(column, Statistic.MODE, CTX));
@@ -665,6 +747,7 @@ public class StatisticsTests {
 			Table table = Builders.newTableBuilder(50)
 					.addTextset("custom", i -> new StringSet(null))
 					.build(CTX);
+			assertTrue(Statistics.compute(table.column("custom"), Collections.emptySet(), CTX).isEmpty());
 			assertTrue(Statistics.compute(table.column("custom"), Collections.emptySet(), CTX).isEmpty());
 		}
 
@@ -683,7 +766,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("freetext");
 
+			Statistics.compute(column, Statistic.COUNT, CTX);
 			Result single = Statistics.compute(column, Statistic.COUNT, CTX);
+			Statistics.compute(column, EnumSet.of(Statistic.COUNT), CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column, EnumSet.of(Statistic.COUNT), CTX);
 
 			assertEquals(100, single.getNumeric(), EPSILON);
@@ -700,7 +785,9 @@ public class StatisticsTests {
 
 			Column column = table.column("freetext");
 
+			Statistics.compute(column, Statistic.COUNT, CTX);
 			Result single = Statistics.compute(column, Statistic.COUNT, CTX);
+			Statistics.compute(column, EnumSet.of(Statistic.COUNT), CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column, EnumSet.of(Statistic.COUNT), CTX);
 
 			assertEquals(0, single.getNumeric(), EPSILON);
@@ -718,6 +805,7 @@ public class StatisticsTests {
 			Table table = Builders.newTableBuilder(50)
 					.addNominal("categories", i -> "foo")
 					.build(CTX);
+			assertTrue(Statistics.compute(table.column("categories"), Collections.emptySet(), CTX).isEmpty());
 			assertTrue(Statistics.compute(table.column("categories"), Collections.emptySet(), CTX).isEmpty());
 		}
 
@@ -751,6 +839,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("categories");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
+					CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
 					CTX);
@@ -774,6 +865,9 @@ public class StatisticsTests {
 
 			Column column = table.column("custom");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
+					CTX);
 			Map<Statistic, Result> multiple = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
 					CTX);
@@ -814,10 +908,16 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("custom");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.LEAST, Statistic.MODE),
 					CTX);
 
+			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
+			assertEquals(stats.get(Statistic.LEAST), Statistics.compute(column, Statistic.LEAST, CTX));
+			assertEquals(stats.get(Statistic.MODE), Statistics.compute(column, Statistic.MODE, CTX));
 			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
 			assertEquals(stats.get(Statistic.LEAST), Statistics.compute(column, Statistic.LEAST, CTX));
 			assertEquals(stats.get(Statistic.MODE), Statistics.compute(column, Statistic.MODE, CTX));
@@ -836,6 +936,7 @@ public class StatisticsTests {
 					.addTime("time", i -> LocalTime.MIDNIGHT)
 					.build(CTX);
 			assertTrue(Statistics.compute(table.column("time"), Collections.emptySet(), CTX).isEmpty());
+			assertTrue(Statistics.compute(table.column("time"), Collections.emptySet(), CTX).isEmpty());
 		}
 
 		@Test
@@ -847,6 +948,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("time"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("time"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -867,6 +971,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("time"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("time"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
@@ -887,10 +994,17 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("time");
 
-			Map<Statistic, Result> stats = Statistics.compute(column,
+			Statistics.compute(shuffled.column("time"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
+					CTX);
+			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("time"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX, Statistic.MEAN),
 					CTX);
 
+			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
+			assertEquals(stats.get(Statistic.MIN), Statistics.compute(column, Statistic.MIN, CTX));
+			assertEquals(stats.get(Statistic.MAX), Statistics.compute(column, Statistic.MAX, CTX));
+			assertEquals(stats.get(Statistic.MEAN), Statistics.compute(column, Statistic.MEAN, CTX));
 			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
 			assertEquals(stats.get(Statistic.MIN), Statistics.compute(column, Statistic.MIN, CTX));
 			assertEquals(stats.get(Statistic.MAX), Statistics.compute(column, Statistic.MAX, CTX));
@@ -903,6 +1017,7 @@ public class StatisticsTests {
 					.addTime("time", i -> i % 3 == 0 ? null : LocalTime.MIDNIGHT)
 					.build(CTX);
 
+			Statistics.compute(table.column("time"), Statistic.SD, CTX);
 			Result result = Statistics.compute(table.column("time"), Statistic.SD, CTX);
 			assertEquals(LocalTime.ofNanoOfDay(0), result.getObject(LocalTime.class));
 		}
@@ -913,6 +1028,7 @@ public class StatisticsTests {
 					.addTime("time", i -> null)
 					.build(CTX);
 
+			Statistics.compute(table.column("time"), Statistic.SD, CTX);
 			Result result = Statistics.compute(table.column("time"), Statistic.SD, CTX);
 			assertNull(result.getObject());
 		}
@@ -923,6 +1039,7 @@ public class StatisticsTests {
 					.addTime("time", i -> i == 42 ? LocalTime.NOON : null)
 					.build(CTX);
 
+			Statistics.compute(table.column("time"), Statistic.SD, CTX);
 			Result result = Statistics.compute(table.column("time"), Statistic.SD, CTX);
 			assertNull(result.getObject());
 		}
@@ -947,6 +1064,7 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("time"), Statistic.SD, CTX);
 			Result result = Statistics.compute(shuffled.column("time"), Statistic.SD, CTX);
 			assertEquals(LocalTime.ofNanoOfDay((long) (1.414213562373095 * HOUR)), result.getObject(LocalTime.class));
 		}
@@ -962,7 +1080,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("time");
 
+			Statistics.compute(column, EnumSet.of(Statistic.SD), CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column, EnumSet.of(Statistic.SD), CTX);
+			Statistics.compute(shuffled.column("time"), Statistic.SD, CTX);
 			Result result = Statistics.compute(shuffled.column("time"), Statistic.SD, CTX);
 
 			assertEquals(stats.get(Statistic.SD), result);
@@ -977,6 +1097,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("time"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("time"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -997,6 +1120,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("time"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("time"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -1014,6 +1140,9 @@ public class StatisticsTests {
 					.addTime("time", i -> null)
 					.build(CTX);
 
+			Statistics.compute(table.column("time"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("time"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -1031,6 +1160,9 @@ public class StatisticsTests {
 					.addTime("time", i -> i == 42 ? LocalTime.NOON : null)
 					.build(CTX);
 
+			Statistics.compute(table.column("time"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(table.column("time"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -1051,6 +1183,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("time"),
+					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("time"),
 					EnumSet.of(Statistic.P25, Statistic.P50, Statistic.P75, Statistic.MEDIAN),
 					CTX);
@@ -1074,6 +1209,7 @@ public class StatisticsTests {
 					.addDateTime("datetime", i -> Instant.now())
 					.build(CTX);
 			assertTrue(Statistics.compute(table.column("datetime"), Collections.emptySet(), CTX).isEmpty());
+			assertTrue(Statistics.compute(table.column("datetime"), Collections.emptySet(), CTX).isEmpty());
 		}
 
 		@Test
@@ -1085,6 +1221,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("datetime"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("datetime"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX),
 					CTX);
@@ -1103,6 +1242,9 @@ public class StatisticsTests {
 
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 
+			Statistics.compute(shuffled.column("datetime"),
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(shuffled.column("datetime"),
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX),
 					CTX);
@@ -1122,6 +1264,9 @@ public class StatisticsTests {
 			Table shuffled = table.map(permutation(rng, table.height()), false, CTX);
 			Column column = shuffled.column("datetime");
 
+			Statistics.compute(column,
+					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX),
+					CTX);
 			Map<Statistic, Result> stats = Statistics.compute(column,
 					EnumSet.of(Statistic.COUNT, Statistic.MIN, Statistic.MAX),
 					CTX);
@@ -1129,121 +1274,10 @@ public class StatisticsTests {
 			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
 			assertEquals(stats.get(Statistic.MIN), Statistics.compute(column, Statistic.MIN, CTX));
 			assertEquals(stats.get(Statistic.MAX), Statistics.compute(column, Statistic.MAX, CTX));
+			assertEquals(stats.get(Statistic.COUNT), Statistics.compute(column, Statistic.COUNT, CTX));
+			assertEquals(stats.get(Statistic.MIN), Statistics.compute(column, Statistic.MIN, CTX));
+			assertEquals(stats.get(Statistic.MAX), Statistics.compute(column, Statistic.MAX, CTX));
 
-		}
-
-	}
-
-	public static class Validation {
-
-		@Test(expected = NullPointerException.class)
-		public void testSupportedNullColumn() {
-			Statistics.supported(null, Statistic.COUNT);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testSupportedNullStatistic() {
-			Column column = Buffers.realBuffer(100).toColumn();
-			Statistics.supported(column, null);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullColumnSingle() {
-			Statistics.compute(null, Statistic.COUNT, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullColumnMultiple() {
-			Statistics.compute(null, EnumSet.of(Statistic.COUNT), CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullStatisticSingle() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[0]);
-			Statistics.compute(column, (Statistic) null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullStatisticMultiple() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[0]);
-			Statistics.compute(column, (Set<Statistic>) null, CTX);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullContextSingle() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[0]);
-			Statistics.compute(column, Statistic.COUNT, null);
-		}
-
-		@Test(expected = NullPointerException.class)
-		public void testNullContextMultiple() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[0]);
-			Statistics.compute(column, EnumSet.of(Statistic.COUNT), null);
-		}
-
-		@Test(expected = UnsupportedOperationException.class)
-		public void testUnsupportedStatisticSingle() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[0]);
-			Statistics.compute(column, Statistic.LEAST, CTX);
-		}
-
-		@Test(expected = UnsupportedOperationException.class)
-		public void testUnsupportedStatisticMultiple() {
-			Column column = ColumnAccessor.get().newNumericColumn(Column.TypeId.REAL, new double[0]);
-			Statistics.compute(column, EnumSet.of(Statistic.LEAST), CTX);
-		}
-
-	}
-
-	@RunWith(Parameterized.class)
-	public static class Supported {
-
-		@Parameter
-		public Column implementation;
-
-		@Parameter(value = 1)
-		public String name;
-
-		@Parameters(name = "{1}")
-		public static Iterable<Object[]> columnImplementations() {
-			return Arrays.asList(
-					new Object[]{Buffers.realBuffer(100).toColumn(), "real"},
-					new Object[]{Buffers.integer53BitBuffer(100).toColumn(), "integer"},
-					new Object[]{Buffers.<String>nominalBuffer(100).toColumn(), "nominal"},
-					new Object[]{Buffers.dateTimeBuffer(100, false).toColumn(), "datetime"},
-					new Object[]{Buffers.timeBuffer(100).toColumn(), "time"}
-			);
-		}
-
-		@Test
-		public void testSupported() {
-			for (Statistic statistic: Statistic.values()) {
-				if (Statistics.supported(implementation, statistic)) {
-					Result single = Statistics.compute(implementation, statistic, CTX);
-					Result singletonSet = Statistics.compute(implementation, EnumSet.of(statistic), CTX).get(statistic);
-					assertNotNull(single);
-					assertNotNull(singletonSet);
-					assertEquals(single, singletonSet);
-				}
-			}
-		}
-
-		@Test
-		public void testUnsupported() {
-			int expectedExceptions = 0;
-			int exceptionCount = 0;
-			for (Statistic statistic: Statistic.values()) {
-				if (!Statistics.supported(implementation, statistic)) {
-					expectedExceptions++;
-					try {
-						Statistics.compute(implementation, statistic, CTX);
-					} catch (UnsupportedOperationException e) {
-						exceptionCount++;
-					}
-				}
-			}
-			assertTrue(exceptionCount > 0);
-			assertEquals(expectedExceptions, exceptionCount);
 		}
 
 	}

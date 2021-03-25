@@ -615,8 +615,29 @@ public class ColumnIOTests {
 			Arrays.fill(expected, expected.length / 2, expected.length, Double.NaN);
 
 			assertEquals(type, column.type());
-			assertEquals(data.length/2, numberPut);
+			assertEquals(data.length / 2, numberPut);
 			assertArrayEquals(expected, result, EPSILON);
+		}
+
+		@Test
+		public void testInputBufferPosition() {
+			byte[] bytes = new byte[data.length << 3];
+			ByteBuffer wrap = ByteBuffer.wrap(bytes);
+			wrap.order(byteOrder)
+					.asDoubleBuffer()
+					.put(data);
+
+			wrap.position(12345 << 3);
+
+			final NumericColumnBuilder builder = readNumeric(data.length / 2, type.id()).put(wrap);
+			assertEquals((12345 << 3) + ((data.length / 2) << 3), wrap.position());
+
+			Column column = builder.toColumn();
+			double[] result = new double[column.size()];
+			column.fill(result, 0);
+			double[] expected = new double[data.length/2];
+			Arrays.setAll(expected, i-> data[i+12345]);
+			assertArrayEquals(expected, result, 1e-15);
 		}
 
 	}
@@ -699,6 +720,27 @@ public class ColumnIOTests {
 			Arrays.fill(expected, expected.length / 2, expected.length, Long.MAX_VALUE);
 
 			assertEquals(data.length / 2, numberPut);
+			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testInputBufferPosition() {
+			byte[] bytes = new byte[data.length << 3];
+			ByteBuffer wrap = ByteBuffer.wrap(bytes);
+			wrap.order(byteOrder)
+					.asLongBuffer()
+					.put(data);
+
+			wrap.position(12345 << 3);
+
+			final TimeColumnBuilder builder = ColumnIO.readTime(data.length / 2).put(wrap);
+			assertEquals((12345 << 3) + ((data.length / 2) << 3), wrap.position());
+
+			Column column = builder.toColumn();
+			long[] result = new long[column.size()];
+			((TimeColumn) column).fillNanosIntoArray(result, 0);
+			long[] expected = new long[data.length/2];
+			Arrays.setAll(expected, i->data[i+12345]);
 			assertArrayEquals(expected, result);
 		}
 
@@ -876,6 +918,46 @@ public class ColumnIOTests {
 
 			assertEquals(data.length / 2, numberPut);
 			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testInputBufferPosition() {
+			byte[] bytes = new byte[data.length << 3];
+			ByteBuffer wrap = ByteBuffer.wrap(bytes);
+			wrap.order(byteOrder)
+					.asLongBuffer()
+					.put(data);
+
+			wrap.position(12345 << 3);
+
+			final DateTimeColumnBuilder builder =
+					ColumnIO.readDateTime(data.length / 2).putSeconds(wrap);
+			assertEquals((12345 << 3) + ((data.length / 2) << 3), wrap.position());
+
+			byte[] nanoBytes = new byte[data.length << 2];
+			ByteBuffer nanoWrap = ByteBuffer.wrap(nanoBytes);
+			nanoWrap.order(byteOrder)
+					.asIntBuffer()
+					.put(nanoData);
+
+			nanoWrap.position(12345 << 2);
+
+			builder.putNanos(nanoWrap);
+			assertEquals((12345 << 2) + ((data.length / 2) << 2), nanoWrap.position());
+
+			final Column column = builder.toColumn();
+
+			long[] result = new long[column.size()];
+			((DateTimeColumn) column).fillSecondsIntoArray(result, 0);
+			long[] expected = new long[data.length/2];
+			Arrays.setAll(expected, i-> data[i+12345]);
+			assertArrayEquals(expected, result);
+
+			int[] nanoResult = new int[column.size()];
+			((DateTimeColumn) column).fillNanosIntoArray(nanoResult, 0);
+			int[] expectedNanos = new int[data.length/2];
+			Arrays.setAll(expectedNanos, i->nanoData[i+12345]);
+			assertArrayEquals(expectedNanos, nanoResult);
 		}
 
 	}
@@ -1121,6 +1203,79 @@ public class ColumnIOTests {
 
 			assertEquals(data.length / 2, numberPut);
 			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testInputBufferPositionInt() {
+			byte[] bytes = new byte[data.length << 2];
+			ByteBuffer wrap = ByteBuffer.wrap(bytes);
+			wrap.order(byteOrder)
+					.asIntBuffer()
+					.put(data);
+
+			wrap.position(12345 << 2);
+
+			final NominalColumnBuilder builder =
+					ColumnIO.readNominal(dict, data.length / 2).putIntegers(wrap);
+			assertEquals((12345 << 2) + ((data.length / 2) << 2), wrap.position());
+
+			Column column = builder.toColumn();
+			int[] result = new int[column.size()];
+			builder.toColumn().fill(result, 0);
+
+			final int[] expected = new int[data.length / 2];
+			Arrays.setAll(expected, i -> data[i + 12345]);
+			assertArrayEquals(expected, result);
+		}
+
+		@Test
+		public void testInputBufferPositionShort() {
+			if (dictSize < Short.MAX_VALUE) {
+				byte[] bytes = new byte[data.length << 1];
+				ByteBuffer wrap = ByteBuffer.wrap(bytes);
+				for (int datum : data) {
+					wrap.putShort((short) datum);
+				}
+
+				wrap.position(12345 << 1);
+
+				final NominalColumnBuilder builder =
+						ColumnIO.readNominal(dict, data.length / 2).putShorts(wrap);
+				assertEquals((12345 << 1) + ((data.length / 2) << 1), wrap.position());
+
+				Column column = builder.toColumn();
+				int[] result = new int[column.size()];
+				builder.toColumn().fill(result, 0);
+
+				final int[] expected = new int[data.length / 2];
+				Arrays.setAll(expected, i -> data[i + 12345]);
+				assertArrayEquals(expected, result);
+			}
+		}
+
+		@Test
+		public void testInputBufferPositionByte() {
+			if (dictSize < Byte.MAX_VALUE) {
+				byte[] bytes = new byte[data.length];
+				ByteBuffer wrap = ByteBuffer.wrap(bytes);
+				for (int datum : data) {
+					wrap.put((byte) datum);
+				}
+
+				wrap.position(12345);
+
+				final NominalColumnBuilder builder =
+						ColumnIO.readNominal(dict, data.length / 2).putBytes(wrap);
+				assertEquals((12345) + ((data.length / 2)), wrap.position());
+
+				Column column = builder.toColumn();
+				int[] result = new int[column.size()];
+				builder.toColumn().fill(result, 0);
+
+				final int[] expected = new int[data.length / 2];
+				Arrays.setAll(expected, i -> data[i + 12345]);
+				assertArrayEquals(expected, result);
+			}
 		}
 
 	}

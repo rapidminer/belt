@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -18,7 +18,8 @@ package com.rapidminer.belt.column;
 
 import java.time.LocalTime;
 import java.util.Comparator;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.rapidminer.belt.util.Mapping;
 import com.rapidminer.belt.util.Order;
@@ -134,8 +135,8 @@ class MappedTimeColumn extends TimeColumn implements CacheMappedColumn {
 	}
 
 	@Override
-	public Column map(int[] mapping, boolean preferView, Map<int[], int[]> cache) {
-		int[] merged = cache.computeIfAbsent(this.mapping, k -> Mapping.merge(mapping, this.mapping));
+	public Column map(int[] mapping, boolean preferView, ConcurrentHashMap<int[], CompletableFuture<int[]>> cache) {
+		int[] merged = waitForOrCompute(this.mapping, mapping, cache);
 		return mapMerged(merged, preferView);
 	}
 

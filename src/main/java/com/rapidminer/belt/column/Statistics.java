@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -372,7 +372,7 @@ public class Statistics {
 	}
 
 	/**
-	 * Container for the (intermediate) results of a reduction computing the coun, min, and max value of a time column.
+	 * Container for the (intermediate) results of a reduction computing the count, min, and max value of a time column.
 	 */
 	private static final class InstantCounts {
 		private int count;
@@ -552,25 +552,31 @@ public class Statistics {
 		NumericDeviation deviation = DEFAULT_NUMERIC_DEVIATION;
 		NumericPercentiles percentiles = DEFAULT_NUMERIC_PERCENTILES;
 		for (Statistic stat : statistics) {
-			switch (stat) {
-				case VAR:
-				case SD:
-					if (deviation == DEFAULT_NUMERIC_DEVIATION) {
-						deviation = computeNumericDeviation(column, counts, ctx);
-					}
-					break;
-				case P25:
-				case P50:
-				case P75:
-				case MEDIAN:
-					if (percentiles == DEFAULT_NUMERIC_PERCENTILES) {
-						percentiles = computeNumericPercentiles(column, counts.count);
-					}
-					break;
-				default:
-					break;
+			Result cachedResult = column.getStat(stat);
+			if (cachedResult != null) {
+				resultMap.put(stat, cachedResult);
+			} else {
+				// not cached yet, need to compute it
+				switch (stat) {
+					case VAR:
+					case SD:
+						if (deviation == DEFAULT_NUMERIC_DEVIATION) {
+							deviation = computeNumericDeviation(column, counts, ctx);
+						}
+						break;
+					case P25:
+					case P50:
+					case P75:
+					case MEDIAN:
+						if (percentiles == DEFAULT_NUMERIC_PERCENTILES) {
+							percentiles = computeNumericPercentiles(column, counts.count);
+						}
+						break;
+					default:
+						break;
+				}
+				resultMap.put(stat, extractNumericStatistic(stat, counts, deviation, percentiles));
 			}
-			resultMap.put(stat, extractNumericStatistic(stat, counts, deviation, percentiles));
 		}
 		return resultMap;
 	}
@@ -642,57 +648,75 @@ public class Statistics {
 	}
 
 	private static NumericCounts computeNumericCounts(Column column, Context ctx) {
-		// Compute the means per batch and merge results in the combiner to increase the numeric stability.
-		Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
-		NumericCounts result = transformer.reduceNumeric(
-				NumericCounts::new,
-				(stats, value) -> {
-					if (!Double.isNaN(value)) {
-						stats.min = Double.min(stats.min, value);
-						stats.max = Double.max(stats.max, value);
-						stats.tmpCount++;
-						stats.tmpSum += value;
-					}
-				},
-				(statsA, statsB) -> {
-					// Compute count and mean from temporary fields.
-					computeCountsFromTmpFields(statsA);
-					computeCountsFromTmpFields(statsB);
-					// Combine the two mean values.
-					if (statsB.count > 0) {
-						if (statsA.count > 0) {
-							double weight = (double) statsA.count / (statsA.count + statsB.count);
-							statsA.mean = weight * statsA.mean + (1.0 - weight) * statsB.mean;
-						} else {
-							statsA.mean = statsB.mean;
-						}
-					}
-					// Update counts etc.
-					statsA.count += statsB.count;
-					statsA.min = Double.min(statsA.min, statsB.min);
-					statsA.max = Double.max(statsA.max, statsB.max);
-				},
-				ctx
-		);
 
-		// In case of a sequential execution, the combiner might not be invoked at all.
-		computeCountsFromTmpFields(result);
-
-		if (result.count == 0) {
-			// Min and max are still be set to POSITIVE_INFINITY and NEGATIVE_INFINITY respectively.
-			result.min = Double.NaN;
-			result.max = Double.NaN;
-		} else if (result.mean < result.min) {
-			// This can happen if a temporary sum (see reduction) becomes so small that we lose precision or end up with
-			// an infinite value. If the mean is still finite, it must be close to the minimum, otherwise it could be
-			// everywhere in between the minimum and maximum value.
-			result.mean = Double.isFinite(result.mean) ? result.min : Double.NaN;
-		} else if (result.mean > result.max) {
-			// See explanation for the case above.
-			result.mean = Double.isFinite(result.mean) ? result.max : Double.NaN;
+		// use cached statistics if possible
+		NumericCounts cachedCounts = getCachedNumericCounts(column);
+		if (cachedCounts != null) {
+			return cachedCounts;
 		}
+		synchronized (column) {
+			// check cached statistics again
+			cachedCounts = getCachedNumericCounts(column);
+			if (cachedCounts != null) {
+				return cachedCounts;
+			}
 
-		return result;
+			// Compute the means per batch and merge results in the combiner to increase the numeric stability.
+			Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
+
+			NumericCounts result = transformer.reduceNumeric(
+					NumericCounts::new,
+					(stats, value) -> {
+						if (!Double.isNaN(value)) {
+							stats.min = Double.min(stats.min, value);
+							stats.max = Double.max(stats.max, value);
+							stats.tmpCount++;
+							stats.tmpSum += value;
+						}
+					},
+					(statsA, statsB) -> {
+						// Compute count and mean from temporary fields.
+						computeCountsFromTmpFields(statsA);
+						computeCountsFromTmpFields(statsB);
+						// Combine the two mean values.
+						if (statsB.count > 0) {
+							if (statsA.count > 0) {
+								double weight = (double) statsA.count / (statsA.count + statsB.count);
+								statsA.mean = weight * statsA.mean + (1.0 - weight) * statsB.mean;
+							} else {
+								statsA.mean = statsB.mean;
+							}
+						}
+						// Update counts etc.
+						statsA.count += statsB.count;
+						statsA.min = Double.min(statsA.min, statsB.min);
+						statsA.max = Double.max(statsA.max, statsB.max);
+					},
+					ctx
+			);
+
+			// In case of a sequential execution, the combiner might not be invoked at all.
+			computeCountsFromTmpFields(result);
+
+			if (result.count == 0) {
+				// Min and max are still be set to POSITIVE_INFINITY and NEGATIVE_INFINITY respectively.
+				result.min = Double.NaN;
+				result.max = Double.NaN;
+			} else if (result.mean < result.min) {
+				// This can happen if a temporary sum (see reduction) becomes so small that we lose precision or end
+				// up with
+				// an infinite value. If the mean is still finite, it must be close to the minimum, otherwise it
+				// could be
+				// everywhere in between the minimum and maximum value.
+				result.mean = Double.isFinite(result.mean) ? result.min : Double.NaN;
+			} else if (result.mean > result.max) {
+				// See explanation for the case above.
+				result.mean = Double.isFinite(result.mean) ? result.max : Double.NaN;
+			}
+
+			cacheNumericCounts(column, result);
+			return result;
+		}
 	}
 
 	private static void computeCountsFromTmpFields(NumericCounts stats) {
@@ -714,57 +738,71 @@ public class Statistics {
 	}
 
 	private static NumericDeviation computeNumericDeviation(Column column, NumericCounts counts, Context ctx) {
-		// We want to compute the sample variance which is only defined for two or more samples (division by n-1).
-		// Furthermore, an infinite mean does not allow for a meaningful computation of the variance. To begin with,
-		// it might be both an actual infinite value or a finite one outside of double range.
-		if (counts.count < 2 || Double.isNaN(counts.mean) || Double.isInfinite(counts.mean)) {
-			NumericDeviation result = new NumericDeviation();
-			result.count = counts.count;
-			return result;
+		NumericDeviation cachedDeviation = getCachedNumericDeviation(column);
+		if (cachedDeviation != null) {
+			return cachedDeviation;
 		}
 
-		// Compute the population (not sample) variance per batch and merge results in the combiner to increase the
-		// numeric stability.
-		double mean = counts.mean;
-		Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
-		NumericDeviation result = transformer.reduceNumeric(
-				NumericDeviation::new,
-				(stats, value) -> {
-					if (!Double.isNaN(value)) {
-						double diff = value - mean;
-						stats.tmpSumOfSquares += diff * diff;
-						stats.tmpCount++;
-					}
-				},
-				(statsA, statsB) -> {
-					// Compute variance from temporary fields.
-					computeVarianceFromTmpFields(statsA);
-					computeVarianceFromTmpFields(statsB);
-					// Combine the two variance values.
-					if (statsB.count > 0) {
-						if (statsA.count > 0) {
-							double weight = (double) statsA.count / (statsA.count + statsB.count);
-							statsA.var = weight * statsA.var + (1.0 - weight) * statsB.var;
-						} else {
-							statsA.var = statsB.var;
+		synchronized (column) {
+			cachedDeviation = getCachedNumericDeviation(column);
+			if (cachedDeviation != null) {
+				return cachedDeviation;
+			}
+
+			// We want to compute the sample variance which is only defined for two or more samples (division by n-1).
+			// Furthermore, an infinite mean does not allow for a meaningful computation of the variance. To begin with,
+			// it might be both an actual infinite value or a finite one outside of double range.
+			if (counts.count < 2 || Double.isNaN(counts.mean) || Double.isInfinite(counts.mean)) {
+				NumericDeviation result = new NumericDeviation();
+				result.count = counts.count;
+				return result;
+			}
+
+			// Compute the population (not sample) variance per batch and merge results in the combiner to increase the
+			// numeric stability.
+			double mean = counts.mean;
+			Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
+			NumericDeviation result = transformer.reduceNumeric(
+					NumericDeviation::new,
+					(stats, value) -> {
+						if (!Double.isNaN(value)) {
+							double diff = value - mean;
+							stats.tmpSumOfSquares += diff * diff;
+							stats.tmpCount++;
 						}
-					}
-					// Update count.
-					statsA.count += statsB.count;
-				},
-				ctx
-		);
+					},
+					(statsA, statsB) -> {
+						// Compute variance from temporary fields.
+						computeVarianceFromTmpFields(statsA);
+						computeVarianceFromTmpFields(statsB);
+						// Combine the two variance values.
+						if (statsB.count > 0) {
+							if (statsA.count > 0) {
+								double weight = (double) statsA.count / (statsA.count + statsB.count);
+								statsA.var = weight * statsA.var + (1.0 - weight) * statsB.var;
+							} else {
+								statsA.var = statsB.var;
+							}
+						}
+						// Update count.
+						statsA.count += statsB.count;
+					},
+					ctx
+			);
 
-		// In case of a sequential execution, the combiner might not be invoked at all.
-		computeVarianceFromTmpFields(result);
+			// In case of a sequential execution, the combiner might not be invoked at all.
+			computeVarianceFromTmpFields(result);
 
-		// The population variance is defined as 1/n * sum(...), the sample variance as 1/(n-1) * sum(...). Thus, we
-		// need to scale the variance by n/(n-1).
-		double correction = ((double) result.count) / (result.count - 1);
-		result.var *= correction;
-		result.sd = Math.sqrt(result.var);
+			// The population variance is defined as 1/n * sum(...), the sample variance as 1/(n-1) * sum(...). Thus, we
+			// need to scale the variance by n/(n-1).
+			double correction = ((double) result.count) / (result.count - 1);
+			result.var *= correction;
+			result.sd = Math.sqrt(result.var);
 
-		return result;
+			cacheNumericDeviation(column, result);
+
+			return result;
+		}
 	}
 
 	private static void computeVarianceFromTmpFields(NumericDeviation stats) {
@@ -785,18 +823,32 @@ public class Statistics {
 	}
 
 	private static NumericPercentiles computeNumericPercentiles(Column column, int count) {
-		NumericPercentiles percentiles = new NumericPercentiles();
-		if (count == 0) {
+		NumericPercentiles cachedPercentiles = getCachedNumericPercentiles(column);
+		if (cachedPercentiles != null) {
+			return cachedPercentiles;
+		}
+		synchronized (column) {
+			cachedPercentiles = getCachedNumericPercentiles(column);
+			if (cachedPercentiles != null) {
+				return cachedPercentiles;
+			}
+
+			NumericPercentiles percentiles = new NumericPercentiles();
+			if (count == 0) {
+				return percentiles;
+			}
+			// A count of one only tells us that there is a single non-missing value. It might still be part of a larger
+			// column (of otherwise missing values).
+			Column sorted = column.map(column.sort(Order.ASCENDING), true);
+			NumericReader reader = Readers.numericReader(sorted);
+			percentiles.p25 = computePercentile(reader, count, 0.25);
+			percentiles.p50 = computePercentile(reader, count, 0.5);
+			percentiles.p75 = computePercentile(reader, count, 0.75);
+
+			cacheNumericPercentiles(column, percentiles);
+
 			return percentiles;
 		}
-		// A count of one only tells us that there is a single non-missing value. It might still be part of a larger
-		// column (of otherwise missing values).
-		Column sorted = column.map(column.sort(Order.ASCENDING), true);
-		NumericReader reader = Readers.numericReader(sorted);
-		percentiles.p25 = computePercentile(reader, count, 0.25);
-		percentiles.p50 = computePercentile(reader, count, 0.5);
-		percentiles.p75 = computePercentile(reader, count, 0.75);
-		return percentiles;
 	}
 
 	/**
@@ -863,7 +915,9 @@ public class Statistics {
 			CategoricalIndexCounts valueCount = new CategoricalIndexCounts(indexCounts);
 			resultMap.put(Statistic.INDEX_COUNTS, new Result(Double.NaN, 0, valueCount));
 			if (statistics.size() > 1) {
-				CategoricalCounts counts = extractCategoricalCounts(dictionary, nValues, indexCounts);
+				CategoricalCounts cachedCategoricalCounts = getCachedCategoricalCounts(column);
+				CategoricalCounts counts = cachedCategoricalCounts != null ? cachedCategoricalCounts :
+						extractCategoricalCounts(dictionary, nValues, indexCounts);
 				for (Statistic statistic : statistics) {
 					if (statistic != Statistic.INDEX_COUNTS) {
 						resultMap.put(statistic, extractCategoricalStatistic(statistic, counts));
@@ -893,21 +947,42 @@ public class Statistics {
 	}
 
 	private static int computeCategoricalElementCount(Column column, Context ctx) {
-		// In case we are only interested in the element count, use a primitive (light weight) reducer
-		return new Transformer(column).reduceCategorical(
-				CategoricalReader.MISSING_CATEGORY,
-				(count, index) -> index == CategoricalReader.MISSING_CATEGORY ? count : count + 1,
-				(countA, countB) -> countA + countB,
-				ctx);
+		if (column.getStat(Statistic.COUNT) != null) {
+			return (int) column.getStat(Statistic.COUNT).numericValue;
+		}
+		synchronized (column) {
+			if (column.getStat(Statistic.COUNT) != null) {
+				return (int) column.getStat(Statistic.COUNT).numericValue;
+			}
+			// In case we are only interested in the element count, use a primitive (light weight) reducer
+			int result = new Transformer(column).reduceCategorical(
+					CategoricalReader.MISSING_CATEGORY,
+					(count, index) -> index == CategoricalReader.MISSING_CATEGORY ? count : count + 1,
+					(countA, countB) -> countA + countB,
+					ctx);
+			column.cacheStat(Statistic.COUNT, new Result(result));
+			return result;
+		}
 	}
 
 	private static CategoricalCounts computeCategoricalCounts(Column column, Context ctx) {
-		// Count occurrences of each dictionary index.
-		Dictionary dictionary = column.getDictionary();
-		int nValues = dictionary.maximalIndex() + 1;
-		int[] indexCounts = calculateIndexCounts(column, ctx, nValues);
-		return extractCategoricalCounts(dictionary, nValues, indexCounts);
-
+		CategoricalCounts cachedCounts = getCachedCategoricalCounts(column);
+		if (cachedCounts != null) {
+			return cachedCounts;
+		}
+		synchronized (column) {
+			cachedCounts = getCachedCategoricalCounts(column);
+			if (cachedCounts != null) {
+				return cachedCounts;
+			}
+			// Count occurrences of each dictionary index.
+			Dictionary dictionary = column.getDictionary();
+			int nValues = dictionary.maximalIndex() + 1;
+			int[] indexCounts = calculateIndexCounts(column, ctx, nValues);
+			CategoricalCounts result = extractCategoricalCounts(dictionary, nValues, indexCounts);
+			cacheCategoricalCounts(column, result);
+			return result;
+		}
 	}
 
 	private static CategoricalCounts extractCategoricalCounts(Dictionary dictionary, int nValues,
@@ -1016,53 +1091,269 @@ public class Statistics {
 	}
 
 	private static int computeObjectCount(Column column, Context ctx) {
-		Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
-		int[] objectCount = transformer.reduceObjects(
-				Object.class,
-				() -> new int[1],
-				(count, value) -> {
-					if (value != null) {
-						count[0]++;
-					}
-				},
-				(countA, countB) -> countA[0] += countB[0],
-				ctx
-		);
-		return objectCount[0];
+		Result cachedCount = column.getStat(Statistic.COUNT);
+		if (cachedCount != null) {
+			return (int) cachedCount.numericValue;
+		}
+		synchronized (column) {
+			cachedCount = column.getStat(Statistic.COUNT);
+			if (cachedCount != null) {
+				return (int) cachedCount.numericValue;
+			}
+
+			Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
+			int[] objectCount = transformer.reduceObjects(
+					Object.class,
+					() -> new int[1],
+					(count, value) -> {
+						if (value != null) {
+							count[0]++;
+						}
+					},
+					(countA, countB) -> countA[0] += countB[0],
+					ctx
+			);
+
+			column.cacheStat(Statistic.COUNT, new Result(objectCount[0]));
+
+			return objectCount[0];
+		}
 	}
 
 	private static InstantCounts computeInstantCounts(Column column, Context ctx) {
-		Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
-		InstantCounts instantCounts = transformer.reduceObjects(
-				Instant.class,
-				InstantCounts::new,
-				(counts, instant) -> {
-					if (instant != null) {
-						counts.count++;
-						if (instant.compareTo(counts.min) < 0) {
-							counts.min = instant;
-						}
-						if (instant.compareTo(counts.max) > 0) {
-							counts.max = instant;
-						}
-					}
-				},
-				(countsA, countsB) -> {
-					countsA.count += countsB.count;
-					if (countsB.min.compareTo(countsA.min) < 0) {
-						countsA.min = countsB.min;
-					}
-					if (countsB.max.compareTo(countsA.max) > 0) {
-						countsA.max = countsB.max;
-					}
-				},
-				ctx
-		);
-		if (instantCounts.count == 0) {
-			instantCounts.min = null;
-			instantCounts.max = null;
+		InstantCounts cachedCounts = getCachedInstantCounts(column);
+		if (cachedCounts != null) {
+			return cachedCounts;
 		}
-		return instantCounts;
+
+		synchronized (column) {
+			cachedCounts = getCachedInstantCounts(column);
+			if (cachedCounts != null) {
+				return cachedCounts;
+			}
+
+			Transformer transformer = new Transformer(column).workload(Workload.MEDIUM);
+			InstantCounts instantCounts = transformer.reduceObjects(
+					Instant.class,
+					InstantCounts::new,
+					(counts, instant) -> {
+						if (instant != null) {
+							counts.count++;
+							if (instant.compareTo(counts.min) < 0) {
+								counts.min = instant;
+							}
+							if (instant.compareTo(counts.max) > 0) {
+								counts.max = instant;
+							}
+						}
+					},
+					(countsA, countsB) -> {
+						countsA.count += countsB.count;
+						if (countsB.min.compareTo(countsA.min) < 0) {
+							countsA.min = countsB.min;
+						}
+						if (countsB.max.compareTo(countsA.max) > 0) {
+							countsA.max = countsB.max;
+						}
+					},
+					ctx
+			);
+			if (instantCounts.count == 0) {
+				instantCounts.min = null;
+				instantCounts.max = null;
+			}
+
+			cacheInstantCounts(column, instantCounts);
+
+			return instantCounts;
+		}
+	}
+
+	/**
+	 * Caches the given statistics in the given column.
+	 *
+	 * @param column
+	 * 		the column used to cache the statistics
+	 * @param instantCounts
+	 * 		the statistics to cache
+	 */
+	private static void cacheInstantCounts(Column column, InstantCounts instantCounts) {
+		column.cacheStat(Statistic.COUNT, new Result(instantCounts.count));
+		column.cacheStat(Statistic.MIN, new Result(Double.NaN, 0, instantCounts.min));
+		column.cacheStat(Statistic.MAX, new Result(Double.NaN, 0, instantCounts.max));
+	}
+
+	/**
+	 * Returns the cached instant counts if they exist and {@code null} otherwise.
+	 *
+	 * @param column
+	 * 		the column holding the cached instant counts
+	 * @return the instant counts
+	 */
+	private static InstantCounts getCachedInstantCounts(Column column) {
+		Result cachedCount = column.getStat(Statistic.COUNT);
+		Result cachedMin = column.getStat(Statistic.MIN);
+		Result cachedMax = column.getStat(Statistic.MAX);
+		if (cachedCount != null && cachedMin != null && cachedMax != null) {
+			InstantCounts result = new InstantCounts();
+			result.count = (int) cachedCount.numericValue;
+			result.max = (Instant) cachedMax.complexValue;
+			result.min = (Instant) cachedMin.complexValue;
+			return result;
+		}
+		return null;
+	}
+
+	/**
+	 * Caches the given statistics in the given column.
+	 *
+	 * @param column
+	 * 		the column used to cache the statistics
+	 * @param numericCounts
+	 * 		the statistics to cache
+	 */
+	private static void cacheNumericCounts(Column column, NumericCounts numericCounts) {
+		column.cacheStat(Statistic.COUNT, new Result(numericCounts.count));
+		column.cacheStat(Statistic.MIN, new Result(numericCounts.min));
+		column.cacheStat(Statistic.MAX, new Result(numericCounts.max));
+		column.cacheStat(Statistic.MEAN, new Result(numericCounts.mean));
+	}
+
+	/**
+	 * Returns the cached numeric counts if they exist and {@code null} otherwise.
+	 *
+	 * @param column
+	 * 		the column holding the cached numeric counts
+	 * @return the numeric counts
+	 */
+	private static NumericCounts getCachedNumericCounts(Column column) {
+		Result cachedCount = column.getStat(Statistic.COUNT);
+		Result cachedMin = column.getStat(Statistic.MIN);
+		Result cachedMax = column.getStat(Statistic.MAX);
+		Result cachedMean = column.getStat(Statistic.MEAN);
+
+		if (cachedCount != null && cachedMin != null && cachedMax != null && cachedMean != null) {
+			NumericCounts cachedCounts = new NumericCounts();
+			cachedCounts.count = (int) cachedCount.numericValue;
+			cachedCounts.max = cachedMax.numericValue;
+			cachedCounts.min = cachedMin.numericValue;
+			cachedCounts.mean = cachedMean.numericValue;
+			return cachedCounts;
+		}
+		return null;
+	}
+
+	/**
+	 * Caches the given statistics in the given column.
+	 *
+	 * @param column
+	 * 		the column used to cache the statistics
+	 * @param deviation
+	 * 		the statistics to cache
+	 */
+	private static void cacheNumericDeviation(Column column, NumericDeviation deviation) {
+		column.cacheStat(Statistic.COUNT, new Result(deviation.count));
+		column.cacheStat(Statistic.SD, new Result(deviation.sd));
+		column.cacheStat(Statistic.VAR, new Result(deviation.var));
+	}
+
+	/**
+	 * Returns the cached numeric deviation if they exist and {@code null} otherwise.
+	 *
+	 * @param column
+	 * 		the column holding the cached numeric deviation
+	 * @return the numeric deviation
+	 */
+	private static NumericDeviation getCachedNumericDeviation(Column column) {
+		Result cachedCount = column.getStat(Statistic.COUNT);
+		Result cachedSD = column.getStat(Statistic.SD);
+		Result cachedVar = column.getStat(Statistic.VAR);
+		if (cachedCount != null && cachedSD != null && cachedVar != null) {
+			NumericDeviation cachedDeviation = new NumericDeviation();
+			cachedDeviation.count = (int) cachedCount.numericValue;
+			cachedDeviation.sd = cachedSD.numericValue;
+			cachedDeviation.var = cachedVar.numericValue;
+			return cachedDeviation;
+		}
+		return null;
+	}
+
+	/**
+	 * Caches the given statistics in the given column.
+	 *
+	 * @param column
+	 * 		the column used to cache the statistics
+	 * @param percentiles
+	 * 		the statistics to cache
+	 */
+	private static void cacheNumericPercentiles(Column column, NumericPercentiles percentiles) {
+		column.cacheStat(Statistic.P25, new Result(percentiles.p25));
+		column.cacheStat(Statistic.P50, new Result(percentiles.p50));
+		column.cacheStat(Statistic.P75, new Result(percentiles.p75));
+		column.cacheStat(Statistic.MEDIAN, new Result(percentiles.p50));
+	}
+
+	/**
+	 * Returns the cached numeric percentiles if they exist and {@code null} otherwise.
+	 *
+	 * @param column
+	 * 		the column holding the cached numeric percentiles
+	 * @return the numeric percentiles
+	 */
+	private static NumericPercentiles getCachedNumericPercentiles(Column column) {
+		Result cachedP25 = column.getStat(Statistic.P25);
+		Result cachedP50 = column.getStat(Statistic.P50);
+		Result cachedP75 = column.getStat(Statistic.P75);
+		if (cachedP25 != null && cachedP50 != null && cachedP75 != null) {
+			NumericPercentiles cachedPercentiles = new NumericPercentiles();
+			cachedPercentiles.p25 = cachedP25.numericValue;
+			cachedPercentiles.p50 = cachedP50.numericValue;
+			cachedPercentiles.p75 = cachedP75.numericValue;
+			return cachedPercentiles;
+		}
+		return null;
+	}
+
+	/**
+	 * Caches the given statistics in the given column.
+	 *
+	 * @param column
+	 * 		the column used to cache the statistics
+	 * @param counts
+	 * 		the statistics to cache
+	 */
+	private static void cacheCategoricalCounts(Column column, CategoricalCounts counts) {
+		column.cacheStat(Statistic.COUNT, new Result(counts.count));
+		column.cacheStat(Statistic.LEAST, new Result(counts.leastCount, counts.leastIndex, counts.least));
+		column.cacheStat(Statistic.MODE, new Result(counts.modeCount, counts.modeIndex, counts.mode));
+	}
+
+	/**
+	 * Returns the cached categorical counts if they exist and {@code null} otherwise.
+	 *
+	 * @param column
+	 * 		the column holding the cached categorical counts
+	 * @return the categorical counts
+	 */
+	private static CategoricalCounts getCachedCategoricalCounts(Column column) {
+		Result cachedCount = column.getStat(Statistic.COUNT);
+		Result cachedMode = column.getStat(Statistic.MODE);
+		Result cachedLeast = column.getStat(Statistic.LEAST);
+		if (cachedCount != null && cachedMode != null && cachedLeast != null) {
+			CategoricalCounts result = new CategoricalCounts();
+			result.count = (int) cachedCount.numericValue;
+
+			result.mode = cachedMode.complexValue;
+			result.modeCount = (int) cachedMode.numericValue;
+			result.modeIndex = cachedMode.categoricalIndex;
+
+			result.least = cachedLeast.complexValue;
+			result.leastCount = (int) cachedLeast.numericValue;
+			result.leastIndex = cachedLeast.categoricalIndex;
+
+			return result;
+		}
+		return null;
 	}
 
 }

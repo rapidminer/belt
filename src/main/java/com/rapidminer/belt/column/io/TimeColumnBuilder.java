@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -90,7 +90,7 @@ public final class TimeColumnBuilder {
 		wrapper.get(data, position, length);
 		checkArray(data, position, position + length);
 
-		buffer.position(wrapper.position() << SHIFT_FOR_8_BYTE_NUMBER);
+		buffer.position(buffer.position() + (wrapper.position() << SHIFT_FOR_8_BYTE_NUMBER));
 		position += length;
 		return this;
 	}

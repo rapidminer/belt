@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1339,14 +1338,31 @@ public final class TableBuilder {
 	private Table createTable(String[] labels, Map<String, List<ColumnMetaData>> columnMetaData,
 							  ColumnSource[] sources, Context context) {
 		return ExecutionUtils.run(() -> {
-			Column[] columns = new Column[sources.length];
-			for (int i = 0; i < sources.length; i++) {
-				context.requireActive();
-				columns[i] = getColumn(sources[i]);
-			}
-			if (columns.length == 0) {
+			if (sources.length == 0) {
 				return new Table(numberOfRows);
 			}
+
+			Column[] columns = new Column[sources.length];
+			int[] nonFinishedIndices = new int[sources.length];
+			int index = 0;
+			for (int i = 0; i < sources.length; i++) {
+				if (sources[i].column != null) {
+					columns[i] = sources[i].column;
+				} else {
+					nonFinishedIndices[index++] = i;
+				}
+			}
+
+			context.requireActive();
+
+			if (index > 1) {
+				ExecutionUtils.parallel(0, index, i -> columns[nonFinishedIndices[i]] =
+						getColumn(sources[nonFinishedIndices[i]]), context);
+			} else if (index == 1) {
+				int nonFinishedIndex = nonFinishedIndices[0];
+				columns[nonFinishedIndex] = getColumn(sources[nonFinishedIndex]);
+			}
+
 			return new Table(columns, labels, columnMetaData);
 		}, context);
 	}

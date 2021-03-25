@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -146,10 +146,23 @@ public abstract class Column {
 
 	}
 
+	/**
+	 * Used internally by {@link Statistics} to cache statistics on this column. We use an array instead of an EnumMap
+	 * because it allows for easier synchronization and better performance without relying on implementation details of
+	 * EnumMap.
+	 */
+	private Statistics.Result[] cachedStats;
+
+	/**
+	 * Used internally to initialize {@link #cachedStats}.
+	 */
+	private static final int NUMBER_OF_STATS = Statistics.Statistic.values().length;
+
 	private final int size;
 
 	Column(int size) {
 		this.size = size;
+		cachedStats = null;
 	}
 
 	/**
@@ -371,5 +384,34 @@ public abstract class Column {
 	 * @return a column of the same type, with the same dictionary but with length 0
 	 */
 	public abstract Column stripData();
+
+	/**
+	 * Used internally by {@link Statistics} to cache statistics on this column. Not synchronized for performance
+	 * reasons. When calling getStat / cacheStat without external synchronization outdated values might be observed.
+	 *
+	 * @param stat
+	 * 		the type of statistic to cache
+	 * @param result
+	 * 		the value to cache
+	 */
+	void cacheStat(Statistics.Statistic stat, Statistics.Result result) {
+		if (cachedStats == null) {
+			cachedStats = new Statistics.Result[NUMBER_OF_STATS];
+		}
+		cachedStats[stat.ordinal()] = result;
+	}
+
+	/**
+	 * Returns the cached value for the requested statistic or {@code null} if no value has been cached for the
+	 * statistic. Not synchronized for performance reasons. When calling getStat / cacheStat without external
+	 * synchronization outdated values might be observed.
+	 *
+	 * @param stat
+	 * 		the requested statistic
+	 * @return the cached value or {@code null} if no value has been cached for the statistic
+	 */
+	Statistics.Result getStat(Statistics.Statistic stat) {
+		return cachedStats != null ? cachedStats[stat.ordinal()] : null;
+	}
 
 }

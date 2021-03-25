@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -388,7 +388,7 @@ public class TableTests {
 			Table table = new Table(columns, randomLabels(3));
 
 			int[] mapping = {4, 123, 6, 11, 456, 99, 6};
-			Table mappedTable = table.map(mapping, true);
+			Table mappedTable = table.map(mapping, true, CTX);
 
 			NumericRowReader reader = Readers.numericRowReader(mappedTable);
 			double[][] tableValues = readAllColumnsToArrays(reader);
@@ -411,10 +411,10 @@ public class TableTests {
 			Table table = new Table(columns, randomLabels(3));
 
 			int[] mapping = {4, 123, 6, 11, 456, 99, 6, 0, 4, 21, 123};
-			Table mappedTable = table.map(mapping, true);
+			Table mappedTable = table.map(mapping, true, CTX);
 
 			int[] mapping2 = {1, 0, 6, 10, 8, 5};
-			Table mappedTable2 = mappedTable.map(mapping2, true);
+			Table mappedTable2 = mappedTable.map(mapping2, true, CTX);
 
 			NumericRowReader reader = Readers.numericRowReader(mappedTable2);
 			double[][] tableValues = readAllColumnsToArrays(reader);

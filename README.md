@@ -6,10 +6,6 @@ It provides utility methods for creating, reading, and modifying such tables.
 This copy of RapidMiner Belt is licensed under the Affero General Public License version 3.
 See the attached [LICENSE file](LICENSE) for details.
 
-**This is a beta version.**
-Be cautious when using the Belt project in production code:
-the API is not finalized yet and might undergo smaller changes until the release of version 1.0.
-
 ## Table of Contents
 
 - [Concepts and example](#belt-introduction)

@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
 import java.util.function.DoublePredicate;
@@ -401,7 +402,7 @@ public final class Table {
 		Objects.requireNonNull(rows, "Row index array must not be null");
 		return ExecutionUtils.run(() -> {
 			int[] copy = Arrays.copyOf(rows, rows.length);
-			return map(copy, view);
+			return map(copy, view, ctx);
 		}, ctx);
 	}
 
@@ -440,7 +441,7 @@ public final class Table {
 			for (int i = from; i < to; i++) {
 				rows[i - from] = i;
 			}
-			return map(rows, false);
+			return map(rows, false, ctx);
 		}, ctx);
 	}
 
@@ -468,7 +469,7 @@ public final class Table {
 		return ExecutionUtils.run(() -> {
 			int[] mapping = columns[column].sort(order);
 			context.requireActive();
-			return map(mapping, false);
+			return map(mapping, false, context);
 		}, context);
 	}
 
@@ -512,7 +513,7 @@ public final class Table {
 
 			context.requireActive();
 
-			return map(mapping, false);
+			return map(mapping, false, context);
 		}, context);
 	}
 
@@ -571,7 +572,7 @@ public final class Table {
 
 			context.requireActive();
 
-			return map(mapping, false);
+			return map(mapping, false, context);
 		}, context);
 	}
 
@@ -792,7 +793,7 @@ public final class Table {
 			throw new IndexOutOfBoundsException(String.format(INVALID_COLUMN_MESSAGE, column, width));
 		}
 		int[] mapping = new Filterer(columns[column]).workload(workload).filterNumeric(predicate, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -816,7 +817,7 @@ public final class Table {
 	public Table filterNumeric(int[] columns, Predicate<NumericRow> filter, Workload workload, Context context) {
 		List<Column> filterColumns = getColumns(columns);
 		int[] mapping = new RowFilterer(filterColumns, false).workload(workload).filterNumeric(filter, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -922,7 +923,7 @@ public final class Table {
 			throw new IndexOutOfBoundsException(String.format(INVALID_COLUMN_MESSAGE, column, width));
 		}
 		int[] mapping = new Filterer(columns[column]).workload(workload).filterCategorical(predicate, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -947,7 +948,7 @@ public final class Table {
 								   Context context) {
 		List<Column> filterColumns = getColumns(columns);
 		int[] mapping = new RowFilterer(filterColumns, false).workload(workload).filterCategorical(filter, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -1056,7 +1057,7 @@ public final class Table {
 			throw new IndexOutOfBoundsException(String.format(INVALID_COLUMN_MESSAGE, column, width));
 		}
 		int[] mapping = new Filterer(columns[column]).workload(workload).filterObject(type, predicate, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -1083,7 +1084,7 @@ public final class Table {
 								   Context context) {
 		List<Column> filterColumns = getColumns(columns);
 		int[] mapping = new RowFilterer(filterColumns, false).workload(workload).filterObjects(type, filter, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -1195,7 +1196,7 @@ public final class Table {
 	public Table filterMixed(int[] columns, Predicate<MixedRow> filter, Workload workload, Context context) {
 		List<Column> filterColumns = getColumns(columns);
 		int[] mapping = new RowFilterer(filterColumns, false).workload(workload).filterMixed(filter, context);
-		return map(mapping, false);
+		return map(mapping, false, context);
 	}
 
 	/**
@@ -1374,8 +1375,8 @@ public final class Table {
 
 	/**
 	 * Creates a new tables with rows reordered according to the given index mapping. If the mapping contains invalid
-	 * indices (i.e., values outside of the range {@code [0, size())}), the new table will contain missing value at that
-	 * place. In particular, sub- and supersets, as well as duplicate indices are supported.
+	 * indices (i.e., values outside of the range {@code [0, size())}), the new table will contain missing value at
+	 * that place. In particular, sub- and supersets, as well as duplicate indices are supported.
 	 *
 	 * <p>The second parameter allows to indicate whether a view (shallow copy) is preferred over a deep copy of the
 	 * underlying data. This might be the case when deriving multiple tables from one and the same source (e.g., when
@@ -1385,29 +1386,27 @@ public final class Table {
 	 * 		the index mapping
 	 * @param preferView
 	 * 		whether a view is preferred over a deep copy
+	 * @param context
+	 * 		the context to use
 	 * @return a mapped table
 	 */
-	Table map(int[] mapping, boolean preferView) {
+	Table map(int[] mapping, boolean preferView, Context context) {
 		if (width == 0) {
 			return new Table(mapping.length);
 		}
 		Column[] mappedColumns = new Column[columns.length];
-		int index = 0;
 
 		// If the table already contains mapped columns, cache merged mappings to prevent duplicates.
-		Map<int[], int[]> cache = null;
+		ConcurrentHashMap<int[], CompletableFuture<int[]>> cache = new ConcurrentHashMap<>();
 
-		for (Column column : columns) {
+		ExecutionUtils.parallel(0, columns.length, index -> {
+			Column column = columns[index];
 			if (column instanceof CacheMappedColumn) {
-				if (cache == null) {
-					cache = new ConcurrentHashMap<>();
-				}
 				mappedColumns[index] = ((CacheMappedColumn) column).map(mapping, preferView, cache);
 			} else {
 				mappedColumns[index] = ColumnAccessor.get().map(column, mapping, preferView);
 			}
-			index++;
-		}
+		}, context);
 		return new Table(mappedColumns, labels, labelMap, metaDataMap, mapping.length);
 	}
 

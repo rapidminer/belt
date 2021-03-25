@@ -1,6 +1,6 @@
 /**
  * This file is part of the RapidMiner Belt project.
- * Copyright (C) 2017-2020 RapidMiner GmbH
+ * Copyright (C) 2017-2021 RapidMiner GmbH
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
  * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
@@ -26,11 +26,12 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.SplittableRandom;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -1316,7 +1317,7 @@ public class NumericReadableTests {
 		}
 
 		@Test
-		public void testCache() {
+		public void testCache() throws ExecutionException, InterruptedException {
 			int nValues = 12380;
 
 			double[] data = impl.generator.generate(28378892L, nValues);
@@ -1326,10 +1327,10 @@ public class NumericReadableTests {
 			Arrays.setAll(mapping, i -> i);
 
 			// Create cache and entry for the above mapping
-			Map<int[], int[]> cache = new HashMap<>();
+			ConcurrentHashMap<int[], CompletableFuture<int[]>> cache = new ConcurrentHashMap<>();
 			((CacheMappedColumn) column).map(mapping, false, cache);
 			assertEquals(1, cache.size());
-			int[] remapping = new ArrayList<>(cache.values()).get(0);
+			int[] remapping = new ArrayList<>(cache.values()).get(0).get();
 
 			// Modify cache to test whether it is used (invalidate every fourth value)
 			Arrays.setAll(remapping, i -> i % 4 == 0 ? -1 : remapping[i]);
@@ -1346,7 +1347,7 @@ public class NumericReadableTests {
 		}
 
 		@Test
-		public void testCachePreferView() {
+		public void testCachePreferView() throws ExecutionException, InterruptedException {
 			int nValues = 12380;
 
 			double[] data = impl.generator.generate(82375234L, nValues);
@@ -1356,10 +1357,10 @@ public class NumericReadableTests {
 			Arrays.setAll(mapping, i -> i);
 
 			// Create cache and entry for the above mapping
-			Map<int[], int[]> cache = new HashMap<>();
+			ConcurrentHashMap<int[], CompletableFuture<int[]>> cache = new ConcurrentHashMap<>();
 			((CacheMappedColumn) column).map(mapping, true, cache);
 			assertEquals(1, cache.size());
-			int[] remapping = new ArrayList<>(cache.values()).get(0);
+			int[] remapping = new ArrayList<>(cache.values()).get(0).get();
 
 			// Modify cache to test whether it is used (invalidate every fourth value)
 			Arrays.setAll(remapping, i -> i % 4 == 0 ? -1 : remapping[i]);
