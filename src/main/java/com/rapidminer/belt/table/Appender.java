@@ -18,11 +18,9 @@ package com.rapidminer.belt.table;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.DoubleConsumer;
@@ -37,7 +35,6 @@ import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.execution.ExecutionUtils;
 import com.rapidminer.belt.reader.ObjectReader;
 import com.rapidminer.belt.reader.Readers;
-import com.rapidminer.belt.util.ColumnMetaData;
 import com.rapidminer.belt.util.IntegerFormats;
 
 
@@ -156,13 +153,6 @@ public final class Appender {
 			//return empty table with height 0
 			return new Table(0);
 		}
-		DoubleConsumer progressConsumer;
-		if (progressCallback == null) {
-			progressConsumer = v -> {
-			};
-		} else {
-			progressConsumer = progressCallback;
-		}
 
 		// checks if all tables have the same column names
 		checkForCompatibility(tables);
@@ -187,35 +177,59 @@ public final class Appender {
 			return new Table(finalSize);
 		}
 
-		String[] labels = tables.get(0).labelArray();
+		String[] labels = firstTable.labelArray();
 		Column[] newColumns = new Column[labels.length];
-		Map<String, List<ColumnMetaData>> metaDataMap = new HashMap<>();
 
-		List<Column> columns = new ArrayList<>(width);
-		int index = 0;
-		for (String label : firstTable.labelArray()) {
-			columns.clear();
+		DoubleConsumer intermediateConsumer;
+		if (progressCallback == null) {
+			intermediateConsumer = d -> {};
+		} else {
+			intermediateConsumer = new DoubleConsumer() {
+
+				private double previousValue = 0;
+
+				@Override
+				public void accept(double value) {
+					// without synchronization some updates in this method will get lost, but progress good enough
+					previousValue += value;
+					double sendValue = previousValue;
+					if (sendValue <= 1) {
+						// due to double imprecision, values slightly bigger than 1 can happen
+						progressCallback.accept(sendValue);
+					}
+				}
+			};
+		}
+
+		ExecutionUtils.parallel(0, labels.length, index -> {
+			String label = labels[index];
+			List<Column> columns = new ArrayList<>(width);
 			for (Table table : tables) {
 				columns.add(table.column(label));
 			}
-			final int currentIndex = index;
 			try {
 				newColumns[index] =
-						append(columns, finalSize, v -> progressConsumer.accept((currentIndex + v) / width), context);
+						append(columns, finalSize, progressCallback == null ? intermediateConsumer :
+										new DoubleConsumer() {
+
+											private double previousValue = 0;
+
+											@Override
+											public void accept(double value) {
+												intermediateConsumer.accept((value - previousValue) / width);
+												previousValue = value;
+											}
+										}
+								, context);
 			} catch (IncompatibleTypesException e) {
 				e.setColumnName(label);
 				throw e;
 			}
-
-			List<ColumnMetaData> oldMetaData = firstTable.getMetaData(label);
-			if (!oldMetaData.isEmpty()) {
-				metaDataMap.put(label, oldMetaData);
-			}
-			index++;
-			progressConsumer.accept(index / (double) width);
-			context.requireActive();
+		}, context);
+		if (progressCallback != null) {
+			progressCallback.accept(1);
 		}
-		return new Table(newColumns, labels, metaDataMap);
+		return new Table(newColumns, labels, firstTable.getMetaData());
 
 	}
 

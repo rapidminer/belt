@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -866,26 +867,28 @@ public class AppenderTests {
 		}
 
 		@Test
-		public void testCallbackMonotonicity() {
+		public void testCallbackNotConstant() {
 			TableBuilder builder = Builders.newTableBuilder(17);
 			builder.addTime("time", i -> LocalTime.of(i, i));
 			builder.addNominal("nominal", i -> "value_" + i);
 			builder.addMetaData("nominal", ColumnRole.ID);
 			builder.addDateTime("date-time", i -> Instant.EPOCH);
 			Table table = builder.build(Belt.defaultContext());
-			Table[] tables = new Table[99];
+			Table[] tables = new Table[9];
 			Arrays.fill(tables, table);
 			List<Table> tableList = Arrays.asList(tables);
 			final double[] callbackResult = new double[]{-1.0};
+			AtomicBoolean found = new AtomicBoolean(false);
 			Appender.append(tableList, p -> {
-				if (callbackResult[0] > p) {
-					throw new IllegalStateException();
-				} else {
-					callbackResult[0] = p;
+				if (p > 0 && p < 1) {
+					found.set(true);
 				}
+				callbackResult[0] = p;
 			}, Belt.defaultContext());
+			assertTrue(found.get());
 			assertEquals(1.0, callbackResult[0], EPSILON);
 		}
+
 	}
 
 	public static class TableAppendInput {

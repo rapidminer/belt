@@ -258,6 +258,36 @@ public final class Tables {
 	}
 
 	/**
+	 * Compacts all nominal dictionaries with gaps.
+	 *
+	 * @param table
+	 * 		the table with the dictionaries to compact
+	 * @return a new table with all columns with compact dictionaries or the same table if that was	already the case
+	 * @since 1.0.1; moved from Belt Adapter
+	 */
+	public static Table compactDictionaries(Table table) {
+		Column[] newColumns = null;
+		int index = 0;
+		for (Column column : table.getColumns()) {
+			if (column.type().id() == Column.TypeId.NOMINAL) {
+				Dictionary dict = column.getDictionary();
+				if (dict.size() != dict.maximalIndex()) {
+					if (newColumns == null) {
+						newColumns = Arrays.copyOf(table.getColumns(), table.width());
+					}
+					newColumns[index] = Columns.compactDictionary(column);
+				}
+			}
+			index++;
+		}
+		if (newColumns == null) {
+			return table;
+		} else {
+			return new Table(newColumns, table.labelArray(), table.getMetaData());
+		}
+	}
+
+	/**
 	 * Checks for the case where the column requirement is subset or equal.
 	 */
 	private static void checkSubsetOrEqual(Table table, Table schema, ColumnSetRequirement columnRequirement,

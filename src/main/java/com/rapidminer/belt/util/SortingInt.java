@@ -179,7 +179,7 @@ public final class SortingInt {
 	 * <p>The method assumes that the index array contains a valid mapping.
 	 *
 	 * @param src
-	 * 		the source array (remains unchanged))
+	 * 		the source array (remains unchanged)
 	 * @param indices
 	 * 		the index mapping (will be reordered)
 	 * @param buffer

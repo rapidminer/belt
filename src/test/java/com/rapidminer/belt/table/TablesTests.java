@@ -18,6 +18,8 @@ package com.rapidminer.belt.table;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.time.LocalTime;
@@ -32,6 +34,10 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
+import com.rapidminer.belt.buffer.Buffers;
+import com.rapidminer.belt.buffer.NominalBuffer;
+import com.rapidminer.belt.column.Column;
+import com.rapidminer.belt.column.Columns;
 import com.rapidminer.belt.execution.Context;
 import com.rapidminer.belt.util.Belt;
 
@@ -438,6 +444,59 @@ public class TablesTests {
 		}
 	}
 
+	public static class GapRemoval {
+
+		@Test
+		public void testGapRemoval(){
+			final NominalBuffer nominalBuffer = Buffers.nominalBuffer(100);
+			nominalBuffer.set(0, "red");
+			nominalBuffer.set(1, "green");
+			for (int i = 1; i <= 50; i++) {
+				nominalBuffer.set(i, "blue");
+			}
+			for (int i = 51; i < 100; i++) {
+				nominalBuffer.set(i, "green");
+			}
+			Table table =
+					Builders.newTableBuilder(100).add("nominal", nominalBuffer.toColumn()).add("nominal2",
+							nominalBuffer.toColumn()).add("nominal3", nominalBuffer.toColumn()).build(Belt.defaultContext());
+			table = table.rows(0, 50, Belt.defaultContext());
+			table =
+					Builders.newTableBuilder(50).add("nominal",
+							Columns.removeUnusedDictionaryValues(table.column("nominal"), Columns.CleanupOption.REMOVE,
+									Belt.defaultContext())).add("nominal2",
+							table.column("nominal2")).add("nominal3",
+							Columns.removeUnusedDictionaryValues(table.column("nominal3"), Columns.CleanupOption.COMPACT,
+									Belt.defaultContext())).build(Belt.defaultContext());
+			final Table compacted = Tables.compactDictionaries(table);
+			assertNotSame(table, compacted);
+			for (Column column : compacted.columnList()) {
+				assertEquals(column.getDictionary().maximalIndex(), column.getDictionary().size());
+			}
+		}
+
+		@Test
+		public void testNoGapRemoval(){
+			final NominalBuffer nominalBuffer = Buffers.nominalBuffer(100);
+			nominalBuffer.set(0, "red");
+			nominalBuffer.set(1, "green");
+			for (int i = 1; i <= 50; i++) {
+				nominalBuffer.set(i, "blue");
+			}
+			for (int i = 51; i < 100; i++) {
+				nominalBuffer.set(i, "green");
+			}
+			Table table =
+					Builders.newTableBuilder(100).add("nominal", nominalBuffer.toColumn()).add("nominal2",
+							nominalBuffer.toColumn()).add("nominal3", nominalBuffer.toColumn()).build(Belt.defaultContext());
+			table = table.rows(0, 50, Belt.defaultContext());
+			final Table compacted = Tables.compactDictionaries(table);
+			assertSame(table, compacted);
+			for (Column column : compacted.columnList()) {
+				assertEquals(column.getDictionary().maximalIndex(), column.getDictionary().size());
+			}
+		}
+	}
 
 	public static class Incompatible {
 

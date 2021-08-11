@@ -34,6 +34,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import com.rapidminer.belt.execution.Context;
+import com.rapidminer.belt.execution.SequentialContext;
 import com.rapidminer.belt.util.Belt;
 
 
@@ -59,7 +60,9 @@ public class ContextTests {
 
 		@Parameterized.Parameters(name = "{0}")
 		public static Iterable<Context> workloads() {
-			return Arrays.asList(Belt.defaultContext(), Context.singleThreaded(Belt.defaultContext()));
+			return Arrays.asList(Belt.defaultContext(),
+					Context.singleThreaded(Belt.defaultContext()),
+					new SequentialContext());
 		}
 
 		@Test
